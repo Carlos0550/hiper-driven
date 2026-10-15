@@ -38,4 +38,8 @@ Cerrá con un resumen corto que incluya:
 - Rama donde quedó el commit y hash del commit.
 - Estado: worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo>/`, push pendiente de autorización (o realizado si se autorizó).
 
+### Rulings que tomaste en nombre del humano (obligatorio)
+
+Antes de borrar nada, recolectá **TODAS** las líneas `Ruling:` del `ledger.md` (decisiones de adjudicación, hallazgos parkeados, conflictos resueltos) y listalas acá, en el orden en que las tomaste, cada una con **qué cuesta si te equivocaste**. La lista es exhaustiva: si está en el ledger, está en tu mensaje. Es el único lugar donde esas decisiones llegan al humano — él las lee y re-trabaja lo que hayas resuelto mal. Un ruling que muere con la sesión fue una decisión tomada en secreto.
+
 Acá, y solo acá, el trabajo HD se da por terminado.
