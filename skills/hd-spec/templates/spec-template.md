@@ -8,7 +8,7 @@
 # Spec: <nombre-del-trabajo>
 
 - **Modo**: mega cambio | cambio chico
-- **Rama**: <rama-de-trabajo> (base: <rama-base>) — por repo involucrado
+- **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — por repo involucrado
 - **Fecha**: <fecha>
 - **Estado**: borrador | aprobado por el usuario
 

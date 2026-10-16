@@ -1,7 +1,8 @@
 <!--
   Template de progreso de revisión — Framework Hiper-driven (HD)
-  Un bloque por worktree (o por unidad de revisión en cambio chico).
-  Se analiza SECUENCIALMENTE. Cada bloque termina con un veredicto.
+  Un bloque por unidad de revisión (ola/plan; los parches viven en
+  .hd/<trabajo>/waves/). Se analiza SECUENCIALMENTE.
+  Cada bloque termina con un veredicto.
 -->
 
 # Progreso de revisión: <nombre-del-trabajo>
@@ -9,7 +10,7 @@
 - **Fecha de revisión**: <fecha>
 - **Spec de referencia**: .hd/<nombre-del-trabajo>/spec.md
 
-## Worktree: <nombre-del-worktree> — APROBADO | DENEGADO
+## Unidad: ola<N>-<plan-NN> (<archivo .patch auditado>) — APROBADO | DENEGADO
 
 **Plan(s) revisado(s)**: plan-NN, ...
 
@@ -32,9 +33,12 @@
 
 ---
 
-<!-- Repetir el bloque por cada worktree, en orden de revisión. -->
+<!-- Repetir el bloque por cada unidad, en orden de revisión. -->
 
 ## Veredicto global
 
-<!-- Todo en verde: proceder al merge local por parches (sin commits).
-     Algo en rojo: lanzar corrección y re-revisar antes de mergear. -->
+<!-- Todo en verde (o adjudicado con rulings en el ledger): correr los tests
+     de todas las olas en la rama, colapsar los commits del trabajo
+     (reset --mixed a la base, con el hash del árbol verificado antes y
+     después) y avisar al humano (Fase 4).
+     Algo en rojo: lanzar corrección y re-revisar antes de avanzar. -->

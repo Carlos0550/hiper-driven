@@ -1,6 +1,6 @@
 ---
 name: hd-discovery
-description: Fase 1 del framework Hiper-driven (HD). Usar al iniciar CUALQUIER trabajo HD, incluidas las validaciones de ideas (spikes). Destila la idea primitiva de la solicitud, investiga el codebase y el contexto, resuelve dudas con preguntas de a una por turno. Un spike termina acá con una recomendación, sin código; el resto pasa a hd-spec.
+description: Fase 1 del framework Hiper-driven (HD). Usar al iniciar CUALQUIER trabajo HD, incluidas las validaciones de ideas (spikes). Destila la idea primitiva de la solicitud, investiga el codebase y el contexto, resuelve dudas con preguntas de a una por turno. Un spike termina acá con una recomendación, sin código; el resto pasa a hd-spec, que esta misma fase carga automáticamente al terminar (sin esperar invocación manual del usuario).
 ---
 
 # HD — Fase 1: Discovery
@@ -45,8 +45,8 @@ Enriquecé tu contexto **antes** de preguntar. Las preguntas buenas nacen de hab
 ## Paso 4 — Cierre del discovery
 
 1. Escribí el **resumen del entendimiento**: qué quiere, por qué, constraints, decisiones de la Q&A, riesgos detectados.
-2. Confirmá con el usuario que refleja lo que quiere.
-3. Handoff: **siguiente fase: `hd-spec`** (donde se confirma chico vs mega).
+2. Confirmá con el usuario que refleja lo que quiere. **Esta confirmación es la única pausa.**
+3. Confirmado el resumen → **cargá la skill `hd-spec` VOS MISMO** (con la herramienta de skills del agente; si no hay, leé su SKILL.md desde el directorio de skills) y **empezá a ejecutarla de inmediato, en el mismo flujo**. Nunca te quedes esperando a que el usuario la invoque manualmente: el handoff es una transición automática, no un anuncio decorativo. Solo te detenés si el usuario pide pausa o corrige el resumen.
 
 ## La regla del ratchet (unidireccional)
 

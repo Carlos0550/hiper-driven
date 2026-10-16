@@ -23,14 +23,14 @@ Casi todo trabajo entra por una de estas tres puertas. El usuario normalmente de
 | Spec | `spec.md` completo | `spec.md` breve |
 | Planes | Varios, ordenados en **olas** | Uno solo |
 | Implementación | Implementadores en paralelo, **cada uno en su worktree** | Un solo implementador, directo en la rama |
-| Revisión | Auditoría por worktree, secuencial | Revisión simple |
+| Revisión | Auditoría por parche de ola, secuencial | Revisión simple |
 | Datos en producción | Preguntar siempre; ola de datos al final, nunca en paralelo, con respaldo y prueba en seco | Preguntar si aplica |
 
 > El umbral no es una checklist rígida. La pregunta real es: **¿puede este trabajo dejar el sistema inconsistente a mitad de camino?** Si la respuesta es sí, es mega cambio.
 
 ## Las 5 fases
 
-Todas las fases van **atadas en cadena**: no se salta ninguna, en ninguno de los dos modos.
+Todas las fases van **atadas en cadena**: no se salta ninguna, en ninguno de los dos modos. Los handoffs son **automáticos**: al cerrar cada fase, el agente **carga la siguiente skill y continúa en el mismo flujo** — nunca espera a que el usuario la invoque a mano. Las únicas pausas reales son los gates humanos: la confirmación del resumen (discovery), la aprobación del spec y planes (spec), la prueba manual de la fase 4, y el OK final (close).
 
 ~~~
 hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> hd-close
@@ -38,10 +38,10 @@ hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> 
 ~~~
 
 1. **Discovery** — Destilar la idea primitiva de lo que pide el usuario, investigar el codebase y el contexto (qué está cableado con qué, riesgos, alternativas mejores), y resolver dudas con preguntas **de a una por turno**.
-2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos**.
-3. **Revisión y corrección** — Un agente revisor audita el trabajo contra spec y plan (seguridad, bugs, trampas del lenguaje, desviaciones). Veredictos registrados en `review-progress.md`. Correcciones hasta que todo esté en verde.
-4. **Aprobación humana** — Todo el trabajo queda **sin stage y sin commits** para que el humano pruebe el comportamiento y revise a mano. Los bugs que aparezcan se corrigen.
-5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, commitear todo, y rendir cuenta de los **rulings** tomados. **Nunca push sin autorización.**
+2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos**. Al terminar **cada ola** se consolidan sus cambios en la rama (parches + migraciones si hay), se re-corren sus tests sobre la rama, se borran sus worktrees y **se commitea la ola como checkpoint** — la ola siguiente parte del estado consolidado y sus worktrees nacen de ese commit.
+3. **Revisión y corrección** — Un agente revisor audita el trabajo contra spec y plan, ola por ola usando los parches guardados en `.hd/<trabajo>/waves/` (seguridad, bugs, trampas del lenguaje, desviaciones). Veredictos en `review-progress.md`. Correcciones con breaker de 5 rondas + adjudicación registrada en el ledger, hasta que todo esté en verde.
+4. **Aprobación humana** — Al cerrar la revisión, los checkpoints por ola **se colapsan** (`git reset --mixed` a la base, con el hash del árbol comparado antes y después): todo el trabajo queda **sin stage y sin commits**, como un único diff, para que el humano pruebe el comportamiento y revise a mano. Los bugs que aparezcan se corrigen — sin commitear, porque ese diff es la interfaz de revisión.
+5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, commitear todo en **un único commit**, y rendir cuenta de los **rulings** tomados. **Nunca push sin autorización.**
 
 Transversal a todas: **`hd-debug`** (causa raíz antes que fix), obligatoria para cualquier corrección de las fases 3 y 4 y para pedidos directos de bug.
 
@@ -56,9 +56,9 @@ hiper-driven/
     ├── hd-spec/               # Fase 2: spec, modo, planes, olas
     │   ├── SKILL.md
     │   └── templates/         # spec-template.md + plan-template.md (empaquetados)
-    ├── hd-implement/          # Fase 2 cont.: implementadores, worktrees, gates, ledger
+    ├── hd-implement/          # Fase 2 cont.: implementadores, worktrees, gates, ledger, checkpoints por ola
     ├── hd-debug/              # Transversal: debugging sistemático (obligatoria en correcciones)
-    ├── hd-review/             # Fases 3 y 4: auditoría, breaker, merge por parches, correcciones
+    ├── hd-review/             # Fases 3 y 4: auditoría, breaker, correcciones y colapso de commits
     │   ├── SKILL.md
     │   └── templates/         # review-progress-template.md (empaquetado)
     └── hd-close/              # Fase 5: limpieza y commit
@@ -80,11 +80,14 @@ Cada trabajo HD crea un directorio `.hd/<nombre-del-trabajo>/` **en el repo dond
 
 ~~~
 .hd/migrar-pagos-a-stripe/
-├── spec.md                  # qué, por qué, criterios, Q&A
+├── spec.md                  # qué, por qué, criterios, Q&A (+ commit base)
+├── ledger.md                # memoria del trabajo: estados, evidencias, rulings y SHAs
 ├── plans/
 │   ├── plan-00-contratos.md # Ola 0
 │   ├── plan-01-....md       # Ola 1
 │   └── ...
+├── waves/
+│   └── ola1-<plan>.patch    # parche por plan: la evidencia que audita la fase 3
 └── review-progress.md       # veredictos de la fase 3
 ~~~
 
@@ -98,9 +101,9 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 4. **Ola 0 (contratos) va sola y se revisa antes de seguir.** Si el contrato está mal, todo lo que venga después también va a estar mal.
 5. **El paralelismo se calcula, no se intuye**: dos planes comparten ola solo si sus archivos son disjuntos, ninguno produce lo que el otro consume, no comparten estado mutable y ninguno depende del otro. Es más barato encontrar un error en la ola 1 que en la ola 4.
 6. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
-7. **Los implementadores no commitean ni ejecutan nada** (ni tests, ni builds, ni migraciones). Solo el orquestador corre tests — en serie por worktree — y su salida es la única evidencia válida.
+7. **Los implementadores no commitean ni ejecutan nada** (ni tests, ni builds, ni migraciones). Solo el orquestador corre tests — en serie por worktree — y su salida es la única evidencia válida; y solo el orquestador commitea (los checkpoints por ola).
 8. **Si una ola falla, no se lanza la siguiente.**
-9. **El merge local se hace por parches, sin commits**: todo queda sin stage para la aprobación humana.
+9. **La consolidación es por ola y por parches, y cada ola cerrada se commitea como checkpoint**: al terminar cada ola sus cambios se traen a la rama (migraciones incluidas si hay) y el orquestador la commitea — así el trabajo no se acumula sin commitear y la ola siguiente crea sus worktrees desde un commit que ya contiene lo anterior. Esos commits son andamiaje: al cerrar la fase 3 **se colapsan** (`reset --mixed` a la base) y queda un único diff sin stage para la aprobación humana.
 10. **Nunca, jamás, push sin autorización explícita del humano.**
 11. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería pasar" está prohibido; una corrida verde solo prueba el árbol donde corrió.
 12. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por plan, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto; el recuerdo del modelo, no.

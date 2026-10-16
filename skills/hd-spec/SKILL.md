@@ -1,6 +1,6 @@
 ---
 name: hd-spec
-description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (mega cambio o cambio chico, con ratchet unidireccional), crea las ramas, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con firmas de archivo e interfaces exactas que hacen el paralelismo computable. Nunca lógica ni implementaciones en los artefactos.
+description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (mega cambio o cambio chico, con ratchet unidireccional), crea las ramas, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con firmas de archivo e interfaces exactas que hacen el paralelismo computable. Nunca lógica ni implementaciones en los artefactos. Con el spec aprobado, carga automáticamente hd-implement sin esperar invocación manual.
 ---
 
 # HD — Fase 2: Spec y plan
@@ -27,6 +27,7 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: spec a
 
 - Para **cada repo involucrado**: proponé rama nueva basada en la actual; avisá sugiriendo **nombre** y **desde dónde** se crea. Si aprueba: creala. Si no: se trabaja desde donde está.
 - En cambio chico la regla es la misma: se propone, el usuario decide.
+- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es el punto exacto al que `hd-review` colapsa los commits del trabajo al final. Sin ese SHA, el colapso no se puede hacer con precisión.
 
 ## Paso 3 — Escribir el spec
 
@@ -62,8 +63,8 @@ Si dudás: no va en paralelo. Una ola extra es barata; dos implementadores pisá
 ## Paso 5 — Aprobación y handoff
 
 - Mostrá: modo, spec, y la división en planes/olas.
-- **Esperá aprobación explícita** antes de implementar nada.
-- Aprobado → handoff: **siguiente fase: `hd-implement`** (el orquestador creará ahí el `ledger.md` del trabajo).
+- **Esperá aprobación explícita** antes de implementar nada. **Esta aprobación es la única pausa del paso.**
+- Aprobado → **cargá la skill `hd-implement` VOS MISMO** (herramienta de skills, o leé su SKILL.md) y **empezá a ejecutarla de inmediato**: crear el `ledger.md`, los worktrees de la primera ola, y el dispatch de implementadores. El handoff es una transición automática: no anuncies "siguiente fase: hd-implement" y te quedes quieto.
 
 ## Racionalizaciones comunes (y su realidad)
 
