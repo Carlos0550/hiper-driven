@@ -93,6 +93,8 @@ Cada trabajo HD crea un directorio `.hd/<nombre-del-trabajo>/` **en el repo dond
 
 Esto deja historial auditable en el propio repo: cualquiera (humano o agente) puede reconstruir *por qué* se hizo lo que se hizo.
 
+**Los artefactos van al commit**: en el cierre, `.hd/<nombre-del-trabajo>/` se commitea junto con el código, sin preguntar. Solo quedan fuera si el humano lo pidió explícitamente o si el repo los ignora (`.gitignore`) — y en ese caso no se fuerzan con `git add -f`.
+
 ## Reglas de oro (no negociables)
 
 1. **Ningún spec ni plan contiene lógica ni implementaciones.** Única excepción: firmas exactas, tipos, constantes y formatos cuando son **contrato** (Ola 0). El código lo escribe el implementador; para eso es implementador.
@@ -109,6 +111,7 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 12. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por plan, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto; el recuerdo del modelo, no.
 13. **El loop de correcciones tiene breaker**: 5 rondas máximo, después se adjudica con razón escrita en el ledger — y todos los rulings se le presentan al humano en el cierre. Descartar un hallazgo en silencio está prohibido.
 14. **Todo bug pasa por causa raíz** (`hd-debug`): 3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.
+15. **Los artefactos `.hd/<trabajo>/` van al commit.** Son el registro auditable del trabajo: se commitean con el código y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora. Una decisión ya tomada no se vuelve a consultar.
 
 ## Contribuir
 
