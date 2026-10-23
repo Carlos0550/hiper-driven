@@ -50,6 +50,7 @@ Escribí `.hd/<nombre-del-trabajo>/audit-guia.md` (es un artefacto del trabajo: 
 
 - Pasale la ruta de la guía y decile qué contiene (cuántos commits, qué cubre). **No lo apures**: el humano marca el ritmo.
 - Mientras audita: no toques la rama, no commitees, no corras nada que mueva el árbol. Solo respondé lo que pregunte.
+- **No pushees nada durante la auditoría**: la rama está puesta atrás a propósito y el remoto ya tiene la cadena completa de commits; un push (forzado o no) puede desalinear el respaldo. El push de seguridad se reanuda cuando la rama vuelve a su lugar.
 
 ## Paso 4 — Restaurar los commits (cuando el humano termina)
 
@@ -57,6 +58,7 @@ Escribí `.hd/<nombre-del-trabajo>/audit-guia.md` (es un artefacto del trabajo: 
 - **Si el humano dejó cambios sin commitear: no los borres.** `git stash push -m "hd(<trabajo>): cambios del humano post-auditoría"` y avisale dónde quedó (o commitealos, si te lo pide).
 - **Si la rama quedó atrás** (el humano hizo `reset` o `checkout` para inspeccionar): `git reset --hard <sha-final>` → vuelven todos los commits, cada uno en su lugar.
 - **Verificá** que el árbol quedó igual al del snapshot: `git rev-parse HEAD^{tree}` contra el hash anotado en el Paso 1. Mismo hash = no se perdió nada. Si difiere, **paralo y avisá**: no sigas como si nada.
+- **El remoto quedó con la cadena completa**: no hagas push para "igualar" la rama. Si el trabajo sigue con correcciones (hd-review), cada commit nuevo se sube con el push de seguridad.
 - Ledger: `Auditoría manual: restaurados <N> commits (HEAD <sha>, árbol <hash>)`.
 
 ## Salida

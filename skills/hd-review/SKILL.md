@@ -16,6 +16,12 @@ NINGÚN VEREDICTO NI AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - Todo veredicto cita la evidencia: la salida de tests que VOS corriste recién y el diff leído por el revisor. "Los tests pasaron en la ola" no es evidencia de la corrección de ahora.
 - El revisor **lee** código y diffs; no ejecuta tests. Las corridas las hacés vos y viajan como archivo.
 
+## Push de seguridad (respaldo remoto de cada commit)
+
+Misma regla que en hd-implement: **cada commit verificado se sube al remoto si el trabajo corre en una rama dedicada creada para la implementación** (doble guarda: flag `push de seguridad: habilitado` en el spec + la rama actual no es la rama por defecto). Es un **respaldo, no una aprobación**: se sube aunque el test siga rojo. Nunca `--force`; si el push falla, anotá `Push: FALLIDO (<motivo>)` en el ledger, **seguí** con la revisión y reportalo en el cierre (hd-close).
+
+**Durante la auditoría manual (hd-audit) no se pushea**: la rama se pone atrás a propósito para que el humano revise commit por commit, y el remoto ya tiene la cadena completa — un push forzado borraría el respaldo. Cuando hd-audit restaura la rama, el push sigue como antes.
+
 ## Qué se le habla al humano (y qué no)
 
 **La revisión es un trabajo interno: no se narra.** El revisor es tu colega de trabajo, no su audiencia: veredictos, hallazgos y adjudicaciones van a `review-progress.md` y al ledger.
@@ -50,7 +56,7 @@ El revisor busca, contra spec y plan:
 ## Paso 3 — Correcciones (loop con breaker)
 
 - Unidad denegada → **subagente corrector directo en la rama de trabajo** (los cambios ya están consolidados ahí; no hay worktree que sobreviva), con los hallazgos concretos, **obligado a seguir `hd-debug`** (causa raíz primero, un cambio por hipótesis). Corrige; no rediseña ni agrega alcance. Como todo implementador: no ejecuta nada, no commitea — vos re-corres los tests de esa unidad y anexás la salida como evidencia.
-- **Verde → commité el checkpoint de la ronda** (`hd(<trabajo>): plan NN — corrección ronda R`, o el plan en cambio chico) y anotá el SHA en el ledger. El loop dura hasta 5 rondas: ningún tramo se queda sin red, y todos estos commits **se quedan en la rama**: son parte de la traza que el humano audita.
+- **Verde → commité el checkpoint de la ronda** (`hd(<trabajo>): plan NN — corrección ronda R`, o el plan en cambio chico) y anotá el SHA en el ledger. El loop dura hasta 5 rondas: ningún tramo se queda sin red, y todos estos commits **se quedan en la rama**: son parte de la traza que el humano audita. Cada checkpoint de ronda verificada también se sube con el **push de seguridad**, si corresponde.
 - Re-revisá esa unidad y actualizá su bloque.
 
 **Breaker — máximo 5 rondas de corrección por unidad:**
@@ -74,7 +80,7 @@ Con todo en verde (o adjudicado), verificá el **estado final consolidado**:
    a. Anotá en el ledger la lista completa: `Commits: <N> (base <sha> → HEAD <sha>)`, con el SHA y el plan de cada uno. Esa lista es el punto de partida de la auditoría manual (hd-audit).
    b. **Sacá la foto del contenido**: `git add -A && git write-tree` → anotá el hash; `git reset` para dejarlo sin stage otra vez. Ese hash es el que tiene que coincidir al final del trabajo.
    c. Verificá que `git status` está limpio: no queda nada sin commitear.
-   d. Si el árbol tiene cambios sin commitear, no los aplanes ni los descartes: commitealos (`hd(<trabajo>): ajustes de revisión`) y sumá ese SHA a la lista.
+   d. Si el árbol tiene cambios sin commitear, no los aplanes ni los descartes: commitealos (`hd(<trabajo>): ajustes de revisión`), sumá ese SHA a la lista y subilo con el **push de seguridad**, si corresponde.
 
 Resultado obligatorio: **todo presente, commiteado, con un commit por plan y la lista de SHAs en el ledger.** Nada se colapsa ni se aplana: la rama es la interfaz de revisión del humano, y el diff completo se lee igual (`git diff <base>..HEAD`) si lo prefiere.
 
@@ -91,7 +97,7 @@ Avisá **breve**: qué se implementó (dos renglones), dónde están los artefac
 
 ### Si el humano encuentra algo
 
-**Subagente corrector NUEVO, directo en la rama, SIN worktree nuevo, obligado a seguir `hd-debug`.** Corregido → vos corré los tests involucrados (evidencia fresca) → **commiteá el arreglo** (`hd(<trabajo>): plan NN — corrección fase 4`) → devolvéselo al humano. Los arreglos de la fase 4 **se commitean**: la traza por plan se mantiene y el humano puede auditar también la corrección. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.**
+**Subagente corrector NUEVO, directo en la rama, SIN worktree nuevo, obligado a seguir `hd-debug`.** Corregido → vos corré los tests involucrados (evidencia fresca) → **commiteá el arreglo** (`hd(<trabajo>): plan NN — corrección fase 4`) → **subilo** con el push de seguridad (si corresponde) → devolvéselo al humano. Los arreglos de la fase 4 **se commitean**: la traza por plan se mantiene y el humano puede auditar también la corrección. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.**
 
 ## Salida
 
@@ -113,4 +119,5 @@ Avisá **breve**: qué se implementó (dos renglones), dónde están los artefac
 | "Dejo los commits por ola, total el diff se ve igual" | Cada commit es un plan: el humano puede revisarlo por partes, y si quiere el todo, `git diff <base>..HEAD`. La traza por plan es justo lo que hace auditable el trabajo. |
 | "El humano no pidió guía, no se la ofrezco" | La pregunta es UNA y es parte del handoff: la guía de `hd-audit` le ahorra reconstruir a mano qué commit hizo qué, y le da el mapa para devolver los commits a su lugar. |
 | "Le paso el veredicto de cada plan, así va enterado" | Va enterado por el resumen final. El detalle por plan no requiere ninguna decisión suya: se escribe y no se dice. |
+| "Durante la auditoría la rama quedó atrás, la pusheo para igualarla" | Durante la auditoría no se pushea: el remoto ya tiene la cadena completa y la rama está atrás a propósito. hd-audit la restaura y el push de seguridad sigue después. |
 | "Un hallazgo importante hay que reportarlo ya" | Si no frena el trabajo, al ledger. Si frena el trabajo, ese es el freno real: ahí sí se habla, con qué falla, dónde y qué recomendás. |

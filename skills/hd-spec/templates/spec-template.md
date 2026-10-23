@@ -9,6 +9,8 @@
 
 - **Modo**: mega cambio | cambio chico
 - **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — por repo involucrado
+- **Push de seguridad**: habilitado (rama dedicada: cada commit verificado se sube a <rama-de-trabajo>) | deshabilitado (<motivo>: rama por defecto / rama ajena al trabajo / el repo no tiene remote) — por repo involucrado
+- **Remote**: <origin> — por repo involucrado
 - **Fecha**: <fecha>
 - **Estado**: borrador | aprobado por el usuario
 

@@ -1,6 +1,6 @@
 ---
 name: hd-implement
-description: Fase 2 (continuación) del framework Hiper-driven (HD). Usar después de hd-spec, con spec y planes aprobados. El orquestador ejecuta los planes ola por ola lanzando implementadores (cada uno en su propio worktree en mega cambio) que escriben tests primero e implementan pero NUNCA ejecutan nada ni commitean; el orquestador corre los tests en serie como única evidencia válida, registra todo en el ledger, commitea cada plan consolidado como checkpoint propio —siempre, aunque después haya correcciones— (los implementadores nunca commitean) y frena entre olas. Al terminar todas las olas, carga automáticamente hd-review sin esperar invocación manual.
+description: Fase 2 (continuación) del framework Hiper-driven (HD). Usar después de hd-spec, con spec y planes aprobados. El orquestador ejecuta los planes ola por ola lanzando implementadores (cada uno en su propio worktree en mega cambio) que escriben tests primero e implementan pero NUNCA ejecutan nada ni commitean; el orquestador corre los tests en serie como única evidencia válida, registra todo en el ledger, commitea cada plan consolidado como checkpoint propio —siempre, aunque después haya correcciones— (los implementadores nunca commitean), sube cada commit al remoto como respaldo (push de seguridad) si el trabajo corre en una rama dedicada creada para la implementación, y frena entre olas. Al terminar todas las olas, carga automáticamente hd-review sin esperar invocación manual.
 ---
 
 # HD — Implementación (olas, implementadores y TDD)
@@ -27,6 +27,30 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - Prohibido "debería pasar", "seguro funciona", "pasaron antes en la sesión". Una corrida verde solo prueba el árbol donde corrió, en el momento en que corrió.
 - La salida del implementador ("está listo") no es evidencia. La evidencia es tu corrida.
 
+## Push de seguridad (respaldo remoto de cada commit)
+
+Los commits del trabajo viven en la rama hasta el cierre: una decena de commits locales es una decena de checkpoints que un corte de luz puede romper. Para blindarlos, **cada commit verificado se sube al remoto**, con una sola condición:
+
+> **Se pushea si y solo si la rama actual es una rama creada por y para esta implementación** (la rama dedicada que hd-spec propuso y el humano aprobó).
+
+Si el trabajo corre sobre la rama por defecto (`main`/`master`) o sobre una rama que no es de este trabajo, el comportamiento es el de siempre: el commit queda local y nada sale del repo hasta el cierre.
+
+**Doble guarda (las dos, siempre):**
+
+1. El `spec.md` (o el ledger) dice `push de seguridad: habilitado` para ese repo — lo decidió hd-spec junto con la rama.
+2. La rama actual **no** es la rama por defecto del repo (`git symbolic-ref --short refs/remotes/origin/HEAD`; si no resuelve, `main`/`master`).
+
+Si falta cualquiera de las dos → **no hay push**: seguí con el comportamiento actual y anotá `push: no aplica` en el ledger.
+
+**Reglas del push:**
+
+- **Es un respaldo, no una aprobación**: se sube el commit tal cual, aunque los tests estén rojos. El rojo se reporta en el ledger y en el cierre.
+- **Nunca `--force`**: solo push normal (fast-forward). Si el remoto está adelantado o divergido, el push se rechaza: no lo fuerces, anotá el fallo y seguí.
+- **Primer push**: `git push --set-upstream <remote> <rama-de-trabajo>` (crea la rama remota y deja el upstream; `<remote>` es el que anotó el spec — `origin` por defecto). Después: `git push`.
+- **Solo si hay algo que subir**: si `git log <remote>/<rama>..HEAD` está vacío, no hay push (ni comando, ni entrada en el ledger).
+- **Un push fallido NO frena el trabajo**: credenciales, red, hook del repo, remoto caído. Anotá `Push: FALLIDO (<motivo>)` en el ledger, seguí con el plan siguiente y reportá los fallos en el cierre (hd-close). El humano decide ahí si recupera el respaldo.
+- **Nunca a la rama por defecto**: el push va a la rama de trabajo del repo, punto.
+
 ## Contrato del implementador (subagente)
 
 1. **Escribe los tests unitarios PRIMERO** — en ese orden en su trabajo — y deben tener criterio: reflejan el comportamiento deseado del plan y **llaman al código real** (que aún no existe o falla). Prohibido escribirlos después: eso es testear el happy path.
@@ -37,12 +61,13 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 
 ## El ledger (memoria que sobrevive a la compactación)
 
-Al arrancar, creá `.hd/<nombre-del-trabajo>/ledger.md` con primera línea `# HD ledger — trabajo: <nombre>` y el **commit base** anotado en el spec (`Base: <sha>` — es el punto desde el que se acumulan los commits del trabajo, uno por plan), y registrá ahí, a medida que pasa:
+Al arrancar, creá `.hd/<nombre-del-trabajo>/ledger.md` con primera línea `# HD ledger — trabajo: <nombre>` y el **commit base** anotado en el spec (`Base: <sha>` — es el punto desde el que se acumulan los commits del trabajo, uno por plan), la **rama de trabajo** con su flag de push de seguridad (`Rama: <nombre> (push de seguridad: habilitado | deshabilitado)`) y registrá ahí, a medida que pasa:
 
 - `Plan NN: completo (ola N — evidencia: <comando> → <resultado>)`
 - `Plan NN: corrección, ronda R/5 (<hallazgos resueltos/pendientes>)`
 - `Plan NN: commit <sha> (ola N — <qué entró>)`
 - `Ola N: verde (<N> planes, <N> commits, HEAD <sha>)`
+- `Push: <rama> ← <sha> (ok | FALLIDO: <motivo> | no aplica)`
 - `Ruling: <qué decidiste> — <por qué> — <qué cuesta si te equivocaste>`
 
 El ledger sobrevive a la compactación de contexto; tu memoria no. **Después de una compactación, creéle al ledger y a git, no a tu recuerdo** — re-lanzar trabajo ya hecho es el fallo más caro de este proceso.
@@ -63,9 +88,10 @@ El ledger sobrevive a la compactación de contexto; tu memoria no. **Después de
    c. **Si el plan incluye migraciones, aplicalas vos** (el orquestador). Un implementador jamás corre migraciones. En la ola de datos: respaldo confirmado + prueba en seco ANTES de aplicar nada.
    d. **Corré los tests de ese plan sobre la rama** (ya con lo commiteado de los planes anteriores): así detectás los choques entre planes de la misma ola que los worktrees aislados no ven.
    e. **Commité EL PLAN (checkpoint) — SIEMPRE**: `git add -A` + commit con mensaje derivado del spec (`hd(<trabajo>): plan NN — <qué entró>`), respetando las convenciones del repo. Lo hace el **orquestador** — el contrato del implementador no cambia. **Se commitea aunque los tests estén rojos o el plan haya quedado con correcciones pendientes**: el commit certifica "este plan ya está en la rama y es trazable", NO "este plan está aprobado". Así cada plan queda trackeable por un commit, en lugar de un volcado único donde no se sabe qué tocó cada cosa. (El `git add -A` se lleva también los artefactos de `.hd/<trabajo>/` (spec, ledger, planes, parches): son el registro auditable y van al repo por defecto — solo quedan fuera si el humano lo pidió explícitamente o si git los ignora (no los fuerces con `git add -f`).)
-   f. **Borrá el worktree de ese plan** (`git worktree remove` + `git worktree prune`), ya con su commit hecho. Ningún worktree sobrevive a su plan.
-   g. Ledger: `Plan NN: commit <sha> (ola N — parche aplicado, migraciones: sí | no, tests en rama: verde | rojo, <qué entró>)`.
-8. **Cierre de ola:** con todos los planes de la ola ya commiteados, re-corré **los tests de TODA la ola sobre la rama** (integración de la ola). Si fallan, es porque dos planes de la misma ola se pisan: se corrige (con `hd-debug` si es bug) y la corrección se commitea **por encima** (`hd(<trabajo>): plan NN — corrección de integración`), sin aplanar los commits ya hechos. Con la ola verde: ledger `Ola N: verde (<N> planes, <N> commits, HEAD <sha>)`.
+   f. **Subí el commit al remoto (push de seguridad)**: apenas commiteaste y verificaste, subilo si la rama actual es la rama dedicada de la implementación (ver "Push de seguridad": doble guarda, flag del spec + no ser la rama por defecto). Primer push: `git push --set-upstream <remote> <rama-de-trabajo>` (`origin` por defecto); después: `git push`. Es un **respaldo, no una aprobación**: se sube aunque los tests estén rojos. Si el push falla, anotá el motivo en el ledger y **seguí** — el trabajo no frena por un respaldo que no se pudo hacer.
+   g. **Borrá el worktree de ese plan** (`git worktree remove` + `git worktree prune`), ya con su commit hecho. Ningún worktree sobrevive a su plan.
+   h. Ledger: `Plan NN: commit <sha> (ola N — parche aplicado, migraciones: sí | no, tests en rama: verde | rojo, <qué entró>) — push: ok | fallido (<motivo>) | no aplica`.
+8. **Cierre de ola:** con todos los planes de la ola ya commiteados, re-corré **los tests de TODA la ola sobre la rama** (integración de la ola). Si fallan, es porque dos planes de la misma ola se pisan: se corrige (con `hd-debug` si es bug) y la corrección se commitea **por encima** (`hd(<trabajo>): plan NN — corrección de integración`), sin aplanar los commits ya hechos — y esa corrección también se sube con el **push de seguridad** (si corresponde). Con la ola verde: ledger `Ola N: verde (<N> planes, <N> commits, HEAD <sha>)`.
 
    La rama puede quedar roja entre commit y commit: es lo esperable (el commit marca *estado*, no *aprobación*). Lo que sigue prohibido es afirmar que algo está verde sin correr los tests en ese turno.
 9. **Ola 0 va SOLA** y sus contratos se revisan antes de lanzar la Ola 1. **Ola de datos: última, sola, nunca en paralelo**; sin respaldo confirmado + prueba en seco revisada, no arranca.
@@ -73,7 +99,7 @@ El ledger sobrevive a la compactación de contexto; tu memoria no. **Después de
 
 ## Modo cambio chico
 
-Un solo implementador (subagente, o el propio modelo de turno si es muy acotado) **directo en la rama** — sin worktree. Mismo contrato: tests primero, no ejecuta nada, no commitea; el orquestador corre los tests como evidencia y, con todo verde, commitea el **checkpoint único** del cambio chico (misma regla: commitea el orquestador; ese commit queda en la rama y hd-review lo audita como cualquier otro).
+Un solo implementador (subagente, o el propio modelo de turno si es muy acotado) **directo en la rama** — sin worktree. Mismo contrato: tests primero, no ejecuta nada, no commitea; el orquestador corre los tests como evidencia y, con todo verde, commitea el **checkpoint único** del cambio chico (misma regla: commitea el orquestador; ese commit queda en la rama y hd-review lo audita como cualquier otro) y lo sube con el **push de seguridad**, si el flag está habilitado (misma doble guarda: rama dedicada + no ser la rama por defecto).
 
 ## Salida
 
@@ -96,3 +122,7 @@ Todas las olas verdes con evidencia en el ledger → **cargá la skill `hd-revie
 | "El humano tiene que saber que la ola 3 terminó" | Las olas son internas: el ledger las registra y el cierre las cuenta. Durante la ejecución no se reporta nada al humano. |
 | "El implementador encontró algo importante, se lo cuento ya" | Si no frena el trabajo, va al ledger y se reporta al cierre. Si frena el trabajo, es el único caso de conversación durante la ejecución: contá qué falla, dónde y qué recomendás. |
 | "Mejor le mando el detalle de cada plan, así está informado" | Informe es lo que el humano pidió: el resumen final con las desviaciones que requieren su decisión. El detalle de cada plan le devuelve el ruido que vino a evitar. |
+| "El push falló, freno el trabajo y le pregunto al humano" | Un push fallido no frena el trabajo: es un respaldo, no una precondición. Anotá `Push: FALLIDO (<motivo>)` en el ledger, seguí con el plan siguiente y reportalo en el cierre. |
+| "Los tests están rojos, no subo ese commit" | El push de seguridad no aprueba nada: sube el estado tal cual. Un commit rojo versionado vale más que un commit rojo que se pierde en un corte de luz. |
+| "Para asegurar los commits, pusheo a main" | El push de seguridad va **solo** a la rama de trabajo del repo. A `main` se llega en el cierre, con autorización explícita. |
+| "El remoto ya tiene el commit, no hay que pushear" | El check es por commit, no por trabajo: si `git log <remote>/<rama>..HEAD` devuelve algo, eso va al remoto. Recién ahí el push se saltea. |

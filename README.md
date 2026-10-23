@@ -41,10 +41,10 @@ hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> 
 ~~~
 
 1. **Discovery** — Destilar la idea primitiva de lo que pide el usuario, investigar el codebase y el contexto (qué está cableado con qué, riesgos, alternativas mejores), y resolver dudas con preguntas **de a una por turno**.
-2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos** y **paralelismo por default** (cada ola arranca 2 o más planes en paralelo; una ola de un plan solo se justifica con una dependencia dura). Al terminar **cada plan** se consolida en la rama (parche + migraciones si hay), se corren sus tests sobre la rama y **se commitea ese plan como checkpoint propio** — aunque después haya correcciones. El worktree se borra recién con su commit hecho, y la ola siguiente nace de esos commits.
+2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos** y **paralelismo por default** (cada ola arranca 2 o más planes en paralelo; una ola de un plan solo se justifica con una dependencia dura). Al terminar **cada plan** se consolida en la rama (parche + migraciones si hay), se corren sus tests sobre la rama y **se commitea ese plan como checkpoint propio** — aunque después haya correcciones. El worktree se borra recién con su commit hecho, y la ola siguiente nace de esos commits. Si el trabajo corre en una rama dedicada, ese commit **se sube al remoto** como respaldo (ver *Respaldo remoto*).
 3. **Revisión y corrección** — Un agente revisor audita el trabajo contra spec y plan, ola por ola usando los parches guardados en `.hd/<trabajo>/waves/` (seguridad, bugs, trampas del lenguaje, desviaciones). Veredictos en `review-progress.md`. Correcciones con breaker de 5 rondas + adjudicación registrada en el ledger, hasta que todo esté en verde.
 4. **Aprobación humana** — Al cerrar la revisión, el trabajo queda **commiteado plan por plan** (un commit por plan, más los de corrección): **no se colapsa ni se aplana**. El humano prueba el comportamiento y, si quiere, revisa commit por commit con la **guía de auditoría manual** (`hd-audit`), que vuelca los commits y las guías de restauración en `.hd/<trabajo>/audit-guia.md`. Los bugs que aparezcan se corrigen con un commit nuevo encima.
-5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, verificar que todo quedó commiteado (sin aplanar los commits por plan) y rendir cuenta de los **rulings** tomados. **Nunca push sin autorización.**
+5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, verificar que todo quedó commiteado (sin aplanar los commits por plan) y rendir cuenta de los **rulings** tomados. **Nunca push a la rama por defecto o a un PR sin autorización.**
 
 Transversal a todas: **`hd-debug`** (causa raíz antes que fix), obligatoria para cualquier corrección de las fases 3 y 4 y para pedidos directos de bug.
 
@@ -110,7 +110,7 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 7. **Los implementadores no commitean ni ejecutan nada** (ni tests, ni builds, ni migraciones). Solo el orquestador corre tests — en serie por worktree — y su salida es la única evidencia válida; y solo el orquestador commitea (los checkpoints por ola).
 8. **Si una ola falla, no se lanza la siguiente.**
 9. **La consolidación es por plan y por parches, y cada plan se commitea como checkpoint propio**: al terminar cada plan sus cambios se traen a la rama (migraciones incluidas si hay), se corren sus tests sobre la rama y el orquestador commitea — **siempre, aunque falten correcciones**: el commit marca *estado*, no *aprobación*. Así el trabajo no se acumula sin commitear, la ola siguiente crea sus worktrees desde commits que ya contienen lo anterior, y **cada plan queda trackeable por un commit** en vez de un volcado único e indistinguible.
-10. **Nunca, jamás, push sin autorización explícita del humano.**
+10. **Nunca, jamás, push a la rama por defecto (`main`), a un PR o a otra rama sin autorización explícita del humano.** El único push automático es el **respaldo por commit** a la rama de trabajo dedicada (ver *Respaldo remoto*).
 11. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería pasar" está prohibido; una corrida verde solo prueba el árbol donde corrió.
 12. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por plan, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto; el recuerdo del modelo, no.
 13. **El loop de correcciones tiene breaker**: 5 rondas máximo, después se adjudica con razón escrita en el ledger — y todos los rulings se le presentan al humano en el cierre. Descartar un hallazgo en silencio está prohibido.
@@ -118,6 +118,23 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 15. **Los artefactos `.hd/<trabajo>/` van al commit.** Son el registro auditable del trabajo: se commitean con el código y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora. Una decisión ya tomada no se vuelve a consultar.
 16. **La historia del trabajo no se reescribe.** Los commits por plan se conservan hasta el push: no se colapsan, no se aplanan y no se resucitan checkpoints. Si el humano quiere un único commit, se lo pide — y se avisa de que eso reescribe la historia.
 17. **Durante la ejecución, el orquestador no reporta al humano.** Lo que los implementadores y el revisor encuentran va al ledger y a los artefactos. Al humano se le habla en dos momentos: el **freno real** (un error de planificación que para el trabajo y necesita su decisión — con qué falla, dónde y qué se recomienda) y el **cierre** (resumen corto con la sección de **desviaciones que requieren tu decisión**). Nada de informes por plan, por ola ni por worktree.
+18. **Cada commit verificado se versiona en el remoto cuando el trabajo corre en una rama dedicada.** Un corte de luz no puede romper una decena de checkpoints. Es un respaldo, no una aprobación: el commit se sube tal cual, aunque los tests estén rojos.
+
+## Respaldo remoto: el push de seguridad
+
+Un trabajo HD deja en la rama un commit por plan, más los de corrección. Son checkpoints valiosos — y frágiles: un corte de luz a mitad de camino puede romper un commit y con él el trabajo de horas.
+
+Por eso, **si el trabajo corre en una rama creada por y para la implementación** (la rama dedicada que `hd-spec` propone y el humano aprueba), **cada commit verificado se sube al remoto** apenas se hace: uno por plan, uno por ronda de corrección. Es un **respaldo, no una aprobación**: el commit se sube tal cual, aunque los tests estén rojos.
+
+| Pregunta | Respuesta |
+|---|---|
+| **Dónde** | Solo a la rama de trabajo del repo. **Nunca** a la rama por defecto. |
+| **Cuándo** | Después del commit y de sus verificaciones (hd-implement, hd-review). |
+| **Cómo** | `git push --set-upstream <remote> <rama>` la primera vez; después, `git push`. **Nunca `--force`.** |
+| **Si falla** | No frena el trabajo: queda anotado en el ledger y se reporta en el cierre. El humano decide. |
+| **Si el trabajo NO tiene rama dedicada** | Comportamiento actual: nada sale del repo hasta el cierre, con autorización. |
+
+La decisión se toma una sola vez, en `hd-spec`, junto con la rama: queda anotada en el `spec.md` (`push de seguridad: habilitado | deshabilitado`) y es la que leen las fases siguientes.
 
 ## Contribuir
 

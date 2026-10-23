@@ -28,6 +28,10 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: spec a
 - Para **cada repo involucrado**: proponé rama nueva basada en la actual; avisá sugiriendo **nombre** y **desde dónde** se crea. Si aprueba: creala. Si no: se trabaja desde donde está.
 - En cambio chico la regla es la misma: se propone, el usuario decide.
 - **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es el punto exacto desde el que se acumulan los commits del trabajo (uno por plan) y a donde se vuelve si hay que deshacer todo. Sin ese SHA, el trabajo no se puede medir ni restaurar.
+- **Push de seguridad — decidilo acá, junto con la rama.** Cuando proponés la rama, decí también que los commits del trabajo se van a subir a **esa** rama como respaldo (uno por commit verificado): una decena de commits locales es una decena de checkpoints que un corte de luz puede romper. Si el humano aprueba la rama dedicada → **`push de seguridad: habilitado`** para ese repo. Si se trabaja sobre la rama por defecto (`main`/`master`) o sobre una rama que no es de este trabajo → **`push de seguridad: deshabilitado`**: comportamiento actual, nada sale del repo hasta el cierre.
+  - Anotá el flag en el `spec.md` y en el ledger, **por repo**: `Rama de trabajo: <nombre> (push de seguridad: habilitado | deshabilitado — <motivo>)`.
+  - El push de seguridad va **solo a la rama de trabajo** del repo. Nunca a la rama por defecto: a `main` se llega en el cierre, con autorización (hd-close).
+  - Verificá que el repo tiene remote (`git remote -v`) y anotá cuál (`Remote: origin`). Si **no hay remote**, el push de seguridad no se puede hacer: anotá `deshabilitado — el repo no tiene remote` y seguí igual (no es motivo para frenar el trabajo).
 
 ## Paso 3 — Escribir el spec
 
@@ -81,3 +85,5 @@ Si dudás de un par: ese par no va en la misma ola. La duda es sobre **la pareja
 | "Pongo el código en el plan así el implementador no se equivoca" | Plan con lógica = implementador redundante y plan envejecido. Firmas exactas sí; lógica nunca. |
 | "Ya tenemos plan, empecemos mientras el usuario lo lee" | El gate es la aprobación, no la longitud del spec. Presentar y arrancar en la misma respuesta es saltear el gate. |
 | "Creció, pero re-clasificar es perder el trabajo hecho" | El trabajo hecho se conserva; lo que cambia es la maquinaria. El ratchet no tiene reversa. |
+| "El humano quiere no perder los commits, entonces pusheo a main" | El push de seguridad va a la **rama dedicada** del trabajo, nunca a la rama por defecto. A `main` se llega en el cierre, con autorización explícita. |
+| "Mejor trabajo sobre main directo y me ahorro el paso de la rama" | La rama dedicada es la que habilita el respaldo por commit: es lo que blinda el trabajo si se corta la luz. Push a `main` es otra decisión y tiene su propia autorización. |
