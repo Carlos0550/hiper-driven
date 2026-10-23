@@ -1,6 +1,6 @@
 ---
 name: hd-review
-description: Fases 3 y 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron (mega cambio) o la implementación está lista (cambio chico). Un revisor distinto del que implementó audita cada ola por su parche guardado (secuencial, contra spec y plan), registra veredictos con evidencia en review-progress.md, corre un loop de correcciones en la rama con breaker de 5 rondas (checkpoint por ronda verificada) y adjudicación en el ledger, colapsa todos los commits del trabajo a un único diff sin stage (reset --mixed a la base, con el hash del árbol verificado antes y después) para la aprobación humana, y atiende los bugs que el humano reporte (correctores obligados a usar hd-debug).
+description: Fases 3 y 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron (mega cambio) o la implementación está lista (cambio chico). Un revisor distinto del que implementó audita cada ola por su parche guardado (secuencial, contra spec y plan), registra veredictos con evidencia en review-progress.md, corre un loop de correcciones en la rama con breaker de 5 rondas (checkpoint por ronda verificada) y adjudicación en el ledger, congela los commits del trabajo (uno por plan, sin colapsarlos) con el hash del árbol verificado, abre el gate humano de la fase 4 (con auditoría manual opcional vía hd-audit) y atiende los bugs que el humano reporte (correctores obligados a usar hd-debug).
 ---
 
 # HD — Fase 3: Revisión y corrección + soporte a Fase 4
@@ -40,7 +40,7 @@ El revisor busca, contra spec y plan:
 ## Paso 3 — Correcciones (loop con breaker)
 
 - Unidad denegada → **subagente corrector directo en la rama de trabajo** (los cambios ya están consolidados ahí; no hay worktree que sobreviva), con los hallazgos concretos, **obligado a seguir `hd-debug`** (causa raíz primero, un cambio por hipótesis). Corrige; no rediseña ni agrega alcance. Como todo implementador: no ejecuta nada, no commitea — vos re-corres los tests de esa unidad y anexás la salida como evidencia.
-- **Verde → commité el checkpoint de la ronda** (`hd(<trabajo>): ola N — corrección ronda R`, o el plan en cambio chico) y anotá el SHA en el ledger. El loop dura hasta 5 rondas: ningún tramo se queda sin red, y todos estos commits se colapsan igual al final.
+- **Verde → commité el checkpoint de la ronda** (`hd(<trabajo>): plan NN — corrección ronda R`, o el plan en cambio chico) y anotá el SHA en el ledger. El loop dura hasta 5 rondas: ningún tramo se queda sin red, y todos estos commits **se quedan en la rama**: son parte de la traza que el humano audita.
 - Re-revisá esa unidad y actualizá su bloque.
 
 **Breaker — máximo 5 rondas de corrección por unidad:**
@@ -52,28 +52,35 @@ El revisor busca, contra spec y plan:
   - **Real y estructural** → definí el cambio mínimo que desbloquea, lanzá la corrección final, y registrá el ruling.
 - **Toda adjudicación entra al ledger. Un descarte silencioso está prohibido** — esas decisiones las tomaste en nombre del humano y van a la lista final de hd-close.
 
-## Paso 4 — Verificación final y colapso de los commits
+## Paso 4 — Verificación final y congelación de los commits
 
 Con todo en verde (o adjudicado), verificá el **estado final consolidado**:
 
-1. Los cambios ya están en la rama (consolidados y commiteados ola por ola en hd-implement) — acá no se mergea nada nuevo.
+1. Los cambios ya están en la rama (consolidados y commiteados plan por plan en hd-implement) — acá no se mergea nada nuevo.
 2. Corré **el set de tests unitarios de todas las olas, en la rama**, como evidencia final fresca del estado completo (sigue prohibida la suite entera ajena al trabajo).
 3. Revisá que el diff total (base → árbol de trabajo) no tenga archivos sueltos, restos de debug, ni nada fuera del spec.
-4. **Colapsá los commits del trabajo** (un colapso por repo, cada uno a su `commit base` del spec). Los checkpoints por ola fueron andamiaje: el humano revisa un diff, no un historial.
-   a. **Anotá `git rev-parse HEAD` en el ledger ANTES de tocar nada** (`Colapso: HEAD previo <sha>`): es la única puerta de vuelta a los checkpoints por ola. Un `reset` sin ese SHA anotado es trabajo que se va con el reflog.
-   b. **Sacá la foto del contenido**: `git add -A && git write-tree` → anotá el hash; `git reset` para dejarlo sin stage otra vez.
-   c. `git reset --mixed <commit base>` → los commits del trabajo desaparecen de la rama y **todos los cambios quedan en el árbol de trabajo, sin stage** (el reset mueve HEAD y el índice; no toca un solo archivo).
-   d. **Repetí la foto y comprobá que es idéntica** (`git add -A && git write-tree` → `git reset`): mismo hash antes y después = el colapso no cambió ni un byte. Sin esa comparación, "no se perdió nada" es una afirmación sin respaldo. Los dos hashes van al ledger.
-   e. Ledger: `Colapso: N commits → diff único sin stage (HEAD previo <sha>: recuperable con git reset --hard <sha>, descarta lo no commiteado)`.
-Resultado obligatorio: **todo presente, SIN STAGE y SIN COMMITS del trabajo por encima de la base.** El diff único sin stage ES la interfaz de revisión del humano.
+4. **Congelá los commits del trabajo: NO se colapsan.** Los commits por plan (y los de corrección) **se quedan en la rama**, uno por plan: esa es la traza que el humano audita.
+   a. Anotá en el ledger la lista completa: `Commits: <N> (base <sha> → HEAD <sha>)`, con el SHA y el plan de cada uno. Esa lista es el punto de partida de la auditoría manual (hd-audit).
+   b. **Sacá la foto del contenido**: `git add -A && git write-tree` → anotá el hash; `git reset` para dejarlo sin stage otra vez. Ese hash es el que tiene que coincidir al final del trabajo.
+   c. Verificá que `git status` está limpio: no queda nada sin commitear.
+   d. Si el árbol tiene cambios sin commitear, no los aplanes ni los descartes: commitealos (`hd(<trabajo>): ajustes de revisión`) y sumá ese SHA a la lista.
+
+Resultado obligatorio: **todo presente, commiteado, con un commit por plan y la lista de SHAs en el ledger.** Nada se colapsa ni se aplana: la rama es la interfaz de revisión del humano, y el diff completo se lee igual (`git diff <base>..HEAD`) si lo prefiere.
+
 
 ## Paso 5 — Handoff al humano (Fase 4)
 
-Avisá: qué se implementó (resumen por plan/ola), dónde están los artefactos (`.hd/<nombre-del-trabajo>/`), que **los checkpoints por ola ya fueron colapsados** y que todo quedó **sin stage, como un diff único, para probar comportamiento y revisar a mano** (el SHA previo al colapso queda en el ledger por si querés volver a esa historia).
+Avisá: qué se implementó (resumen por plan/ola), dónde están los artefactos (`.hd/<nombre-del-trabajo>/`), que el trabajo quedó **commiteado plan por plan** (un commit por plan, más los de corrección) y que ya está todo en la rama para probar el comportamiento y revisar a mano.
+
+**Preguntá UNA vez, acá:** *"¿Querés que te arme una guía para auditar el código commit por commit?"* (skill `hd-audit`).
+
+- **Sí** → cargá la skill `hd-audit` vos mismo: arma `.hd/<nombre-del-trabajo>/audit-guia.md` con todos los commits del trabajo y las guías de restauración, y el humano audita a su ritmo. Cuando termine (apruebe o pida cambios), los commits vuelven a su lugar y seguís desde ahí.
+- **No** → el humano prueba el comportamiento y aprueba (o deniega con el detalle) como siempre.
+
 
 ### Si el humano encuentra algo
 
-**Subagente corrector NUEVO, directo en la rama, SIN worktree nuevo, obligado a seguir `hd-debug`.** Corregido → vos corré los tests involucrados (evidencia fresca) → devolvéselo al humano, otra vez todo sin stage. Los arreglos de la fase 4 **no se commitean**: el humano está revisando ese mismo diff y quien commitea es hd-close, al final. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.**
+**Subagente corrector NUEVO, directo en la rama, SIN worktree nuevo, obligado a seguir `hd-debug`.** Corregido → vos corré los tests involucrados (evidencia fresca) → **commiteá el arreglo** (`hd(<trabajo>): plan NN — corrección fase 4`) → devolvéselo al humano. Los arreglos de la fase 4 **se commitean**: la traza por plan se mantiene y el humano puede auditar también la corrección. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.**
 
 ## Salida
 
@@ -91,5 +98,6 @@ Avisá: qué se implementó (resumen por plan/ola), dónde están los artefactos
 | "La corrección fue chica, salteo la re-revisión" | Las correcciones no revisadas son como entran las regresiones. |
 | "Las revisiones enlentecen" | El loop sin revisiones es churn no verificado. Las revisiones son los frenos y la dirección. |
 | "Reviso las olas en paralelo, es más rápido" | Secuencial. El hallazgo de la ola 1 muchas veces ES la explicación de la ola 2. |
-| "El colapso es un detalle mecánico" | Colapsar sin comparar el hash del árbol antes y después es la única forma de perder trabajo en silencio; y sin el HEAD previo anotado, los checkpoints por ola se van con el reflog. |
-| "Dejo los commits por ola, total el diff se ve igual" | La interfaz de revisión es un diff, no un historial: commits sin colapsar hacen que el humano revise por partes lo que se pensó como un todo. |
+| "El colapso es un detalle mecánico" | Ya no hay colapso: el trabajo queda commiteado plan por plan. Lo que sí importa es dejar anotados en el ledger el HEAD y la foto del árbol (`git write-tree`): sin eso, no se puede probar que no se perdió nada. |
+| "Dejo los commits por ola, total el diff se ve igual" | Cada commit es un plan: el humano puede revisarlo por partes, y si quiere el todo, `git diff <base>..HEAD`. La traza por plan es justo lo que hace auditable el trabajo. |
+| "El humano no pidió guía, no se la ofrezco" | La pregunta es UNA y es parte del handoff: la guía de `hd-audit` le ahorra reconstruir a mano qué commit hizo qué, y le da el mapa para devolver los commits a su lugar. |

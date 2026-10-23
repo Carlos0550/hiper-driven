@@ -8,12 +8,17 @@
   dos planes comparten ola SOLO si sus archivos son disjuntos, ninguno produce
   lo que el otro consume, no comparten estado mutable, ninguno depende del
   otro, y ninguno corre tests que toquen una base compartida.
+
+  El paralelismo es el DISEÑO POR DEFAULT: cada ola debe poder correr 2 o más
+  planes en paralelo. Una ola de un solo plan solo vale con dependencia dura
+  (Ola 0 de contratos, ola de datos, o un output que otro plan consume).
 -->
 
 # Plan <NN>: <nombre-corto>
 
 - **Ola**: <N>
 - **Depende de**: Ola(s) <N-1, ...> — NUNCA de otro plan de su misma ola
+- **Paralelo con**: plan NN, plan NN — los demás planes de esta misma ola (se lanzan en paralelo)
 - **Toca datos existentes**: sí | no
 
 ## Archivos (exactos, sin globs)

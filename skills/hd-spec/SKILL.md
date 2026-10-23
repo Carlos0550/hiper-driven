@@ -27,7 +27,7 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: spec a
 
 - Para **cada repo involucrado**: proponé rama nueva basada en la actual; avisá sugiriendo **nombre** y **desde dónde** se crea. Si aprueba: creala. Si no: se trabaja desde donde está.
 - En cambio chico la regla es la misma: se propone, el usuario decide.
-- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es el punto exacto al que `hd-review` colapsa los commits del trabajo al final. Sin ese SHA, el colapso no se puede hacer con precisión.
+- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es el punto exacto desde el que se acumulan los commits del trabajo (uno por plan) y a donde se vuelve si hay que deshacer todo. Sin ese SHA, el trabajo no se puede medir ni restaurar.
 
 ## Paso 3 — Escribir el spec
 
@@ -44,6 +44,8 @@ Un archivo por plan en `.hd/<nombre-del-trabajo>/plans/plan-NN-<nombre>.md` con 
 - **Interfaces**: qué **consume** de planes anteriores y qué **produce** para los posteriores (firmas exactas).
 - **Depende de**: qué olas anteriores. Nunca de otro plan de su misma ola.
 
+**Paralelismo por default:** el objetivo de la partición es que **cada ola ejecute 2 o más planes en paralelo**. No es una excepción a justificar: es el diseño normal. Una partición secuencial "porque no me dio la gana" es un defecto de planificación, no una decisión.
+
 **Dos planes son seguros en la misma ola SOLO si TODO se cumple (se calcula, no se intuye):**
 1. Sus conjuntos de archivos son **disjuntos**.
 2. Lo que uno **produce** no es lo que el otro **consume**.
@@ -51,11 +53,13 @@ Un archivo por plan en `.hd/<nombre-del-trabajo>/plans/plan-NN-<nombre>.md` con 
 4. Ninguno **depende** del otro.
 5. Ninguno tiene tests que toquen una base de datos compartida.
 
-Si dudás: no va en paralelo. Una ola extra es barata; dos implementadores pisándose, no. Si al mergear aparece un conflicto entre planes de la misma ola, la planificación de la ola estuvo mal: serializá y reaprendé el criterio.
+Si dudás de un par: ese par no va en la misma ola. La duda es sobre **la pareja**, no sobre la ola entera: poné el plan dudoso en otra ola y seguí buscando paralelismo para el resto. Una ola extra es barata; dos implementadores pisándose, no. Si al mergear aparece un conflicto entre planes de la misma ola, la planificación de la ola estuvo mal: serializá y reaprendé el criterio.
+
+**Re-partición antes de presentar (obligatoria):** con los planes ya escritos, hacé una pasada de re-batching: por cada ola que quedó con **un solo plan**, revisá qué plan de otra ola podría entrar (mirando Archivos / Interfaces / Depende de) y mové lo que se pueda. Repetí hasta que no quede ninguna ola de un solo plan sin dependencia dura. **Una ola de un solo plan solo es válida con dependencia dura**, y queda anotada en el plan (`Depende de: Ola N — <motivo>`): la Ola 0 de contratos, la ola de datos, o un plan cuyo output consume otro.
 
 **Estructura de olas (mega cambio):**
 1. **Ola 0 — Contratos**: tipos, esquemas, firmas, esqueleto inicial, migraciones. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal.
-2. **Olas siguientes**: planes independientes entre sí, en paralelo; dependencias solo a olas anteriores.
+2. **Olas siguientes**: **2 o más planes en paralelo por default**, independientes entre sí; dependencias solo a olas anteriores. Una ola de un plan solo se justifica con una dependencia dura anotada en el plan.
 3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes de correrla: preguntar si hay datos en producción, pedir confirmación, **exigir respaldo y prueba en seco**.
 
 **Modo cambio chico:** un único `plans/plan-01-<nombre>.md`, breve, mismo esqueleto. Sin olas, sin worktrees.
@@ -72,6 +76,8 @@ Si dudás: no va en paralelo. Una ola extra es barata; dos implementadores pisá
 |--------|----------|
 | "Es chico, salteamos el spec" | Chico significa spec breve, no ausente. |
 | "Estos dos planes seguro no se pisan" | El paralelismo se calcula con Files/Interfaces, no se adivina. |
+| "Los separo en olas de un plan para no complicarla" | El paralelismo es el diseño por default. Una ola de un plan sin dependencia dura es una partición mal hecha: re-partí hasta que cada ola pueda correr 2 o más planes. |
+| "Esta ola tiene que ir sola, es más simple" | Ir sola se justifica con una dependencia dura (contratos, datos, output consumido), no con comodidad. La comodidad de un plan no cancela el tiempo de los demás. |
 | "Pongo el código en el plan así el implementador no se equivoca" | Plan con lógica = implementador redundante y plan envejecido. Firmas exactas sí; lógica nunca. |
 | "Ya tenemos plan, empecemos mientras el usuario lo lee" | El gate es la aprobación, no la longitud del spec. Presentar y arrancar en la misma respuesta es saltear el gate. |
 | "Creció, pero re-clasificar es perder el trabajo hecho" | El trabajo hecho se conserva; lo que cambia es la maquinaria. El ratchet no tiene reversa. |

@@ -35,13 +35,14 @@ Todas las fases van **atadas en cadena**: no se salta ninguna, en ninguno de los
 ~~~
 hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> hd-close
    Fase 1        Fase 2      Fase 2 cont.      Fase 3         Fase 4             Fase 5
+                                                 (hd-audit: auditoría manual del humano, opcional)
 ~~~
 
 1. **Discovery** — Destilar la idea primitiva de lo que pide el usuario, investigar el codebase y el contexto (qué está cableado con qué, riesgos, alternativas mejores), y resolver dudas con preguntas **de a una por turno**.
-2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos**. Al terminar **cada ola** se consolidan sus cambios en la rama (parches + migraciones si hay), se re-corren sus tests sobre la rama, se borran sus worktrees y **se commitea la ola como checkpoint** — la ola siguiente parte del estado consolidado y sus worktrees nacen de ese commit.
+2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos** y **paralelismo por default** (cada ola arranca 2 o más planes en paralelo; una ola de un plan solo se justifica con una dependencia dura). Al terminar **cada plan** se consolida en la rama (parche + migraciones si hay), se corren sus tests sobre la rama y **se commitea ese plan como checkpoint propio** — aunque después haya correcciones. El worktree se borra recién con su commit hecho, y la ola siguiente nace de esos commits.
 3. **Revisión y corrección** — Un agente revisor audita el trabajo contra spec y plan, ola por ola usando los parches guardados en `.hd/<trabajo>/waves/` (seguridad, bugs, trampas del lenguaje, desviaciones). Veredictos en `review-progress.md`. Correcciones con breaker de 5 rondas + adjudicación registrada en el ledger, hasta que todo esté en verde.
-4. **Aprobación humana** — Al cerrar la revisión, los checkpoints por ola **se colapsan** (`git reset --mixed` a la base, con el hash del árbol comparado antes y después): todo el trabajo queda **sin stage y sin commits**, como un único diff, para que el humano pruebe el comportamiento y revise a mano. Los bugs que aparezcan se corrigen — sin commitear, porque ese diff es la interfaz de revisión.
-5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, commitear todo en **un único commit**, y rendir cuenta de los **rulings** tomados. **Nunca push sin autorización.**
+4. **Aprobación humana** — Al cerrar la revisión, el trabajo queda **commiteado plan por plan** (un commit por plan, más los de corrección): **no se colapsa ni se aplana**. El humano prueba el comportamiento y, si quiere, revisa commit por commit con la **guía de auditoría manual** (`hd-audit`), que vuelca los commits y las guías de restauración en `.hd/<trabajo>/audit-guia.md`. Los bugs que aparezcan se corrigen con un commit nuevo encima.
+5. **Cierre** — Con el OK explícito del humano: limpiar worktrees, verificar que todo quedó commiteado (sin aplanar los commits por plan) y rendir cuenta de los **rulings** tomados. **Nunca push sin autorización.**
 
 Transversal a todas: **`hd-debug`** (causa raíz antes que fix), obligatoria para cualquier corrección de las fases 3 y 4 y para pedidos directos de bug.
 
@@ -56,12 +57,13 @@ hiper-driven/
     ├── hd-spec/               # Fase 2: spec, modo, planes, olas
     │   ├── SKILL.md
     │   └── templates/         # spec-template.md + plan-template.md (empaquetados)
-    ├── hd-implement/          # Fase 2 cont.: implementadores, worktrees, gates, ledger, checkpoints por ola
+    ├── hd-implement/          # Fase 2 cont.: implementadores, worktrees, gates, ledger, commit por plan
     ├── hd-debug/              # Transversal: debugging sistemático (obligatoria en correcciones)
-    ├── hd-review/             # Fases 3 y 4: auditoría, breaker, correcciones y colapso de commits
+    ├── hd-review/             # Fases 3 y 4: auditoría, breaker, correcciones y gate humano
     │   ├── SKILL.md
     │   └── templates/         # review-progress-template.md (empaquetado)
-    └── hd-close/              # Fase 5: limpieza y commit
+    ├── hd-audit/              # Fase 4 (opcional): guía de auditoría manual commit por commit
+    └── hd-close/              # Fase 5: limpieza, verificación y push con autorización
 ~~~
 
 ## Instalación
@@ -101,17 +103,18 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 2. **Las preguntas se hacen de a UNA por turno**, siempre con la opción *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*.
 3. **Tests primero, siempre.** El test refleja el comportamiento deseado y llama al código real antes de que exista.
 4. **Ola 0 (contratos) va sola y se revisa antes de seguir.** Si el contrato está mal, todo lo que venga después también va a estar mal.
-5. **El paralelismo se calcula, no se intuye**: dos planes comparten ola solo si sus archivos son disjuntos, ninguno produce lo que el otro consume, no comparten estado mutable y ninguno depende del otro. Es más barato encontrar un error en la ola 1 que en la ola 4.
+5. **El paralelismo se calcula, no se intuye — y es el diseño por default**: dos planes comparten ola solo si sus archivos son disjuntos, ninguno produce lo que el otro consume, no comparten estado mutable y ninguno depende del otro. Cada ola arranca **2 o más planes en paralelo**; una ola de un plan solo se justifica con una dependencia dura (contratos, datos, output consumido). Es más barato encontrar un error en la ola 1 que en la ola 4.
 6. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
 7. **Los implementadores no commitean ni ejecutan nada** (ni tests, ni builds, ni migraciones). Solo el orquestador corre tests — en serie por worktree — y su salida es la única evidencia válida; y solo el orquestador commitea (los checkpoints por ola).
 8. **Si una ola falla, no se lanza la siguiente.**
-9. **La consolidación es por ola y por parches, y cada ola cerrada se commitea como checkpoint**: al terminar cada ola sus cambios se traen a la rama (migraciones incluidas si hay) y el orquestador la commitea — así el trabajo no se acumula sin commitear y la ola siguiente crea sus worktrees desde un commit que ya contiene lo anterior. Esos commits son andamiaje: al cerrar la fase 3 **se colapsan** (`reset --mixed` a la base) y queda un único diff sin stage para la aprobación humana.
+9. **La consolidación es por plan y por parches, y cada plan se commitea como checkpoint propio**: al terminar cada plan sus cambios se traen a la rama (migraciones incluidas si hay), se corren sus tests sobre la rama y el orquestador commitea — **siempre, aunque falten correcciones**: el commit marca *estado*, no *aprobación*. Así el trabajo no se acumula sin commitear, la ola siguiente crea sus worktrees desde commits que ya contienen lo anterior, y **cada plan queda trackeable por un commit** en vez de un volcado único e indistinguible.
 10. **Nunca, jamás, push sin autorización explícita del humano.**
 11. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería pasar" está prohibido; una corrida verde solo prueba el árbol donde corrió.
 12. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por plan, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto; el recuerdo del modelo, no.
 13. **El loop de correcciones tiene breaker**: 5 rondas máximo, después se adjudica con razón escrita en el ledger — y todos los rulings se le presentan al humano en el cierre. Descartar un hallazgo en silencio está prohibido.
 14. **Todo bug pasa por causa raíz** (`hd-debug`): 3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.
 15. **Los artefactos `.hd/<trabajo>/` van al commit.** Son el registro auditable del trabajo: se commitean con el código y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora. Una decisión ya tomada no se vuelve a consultar.
+16. **La historia del trabajo no se reescribe.** Los commits por plan se conservan hasta el push: no se colapsan, no se aplanan y no se resucitan checkpoints. Si el humano quiere un único commit, se lo pide — y se avisa de que eso reescribe la historia.
 
 ## Contribuir
 

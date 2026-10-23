@@ -38,7 +38,8 @@
 ## Veredicto global
 
 <!-- Todo en verde (o adjudicado con rulings en el ledger): correr los tests
-     de todas las olas en la rama, colapsar los commits del trabajo
-     (reset --mixed a la base, con el hash del árbol verificado antes y
-     después) y avisar al humano (Fase 4).
+     de todas las olas en la rama y congelar los commits del trabajo —NO se
+     colapsan: quedan uno por plan, con la lista de SHAs y el hash del árbol
+     (git write-tree) anotados en el ledger— y avisar al humano (Fase 4),
+     preguntándole si quiere la guía de auditoría manual (hd-audit).
      Algo en rojo: lanzar corrección y re-revisar antes de avanzar. -->
