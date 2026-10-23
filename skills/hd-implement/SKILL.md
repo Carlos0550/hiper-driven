@@ -7,6 +7,16 @@ description: Fase 2 (continuación) del framework Hiper-driven (HD). Usar despu�
 
 Entrada: `spec.md` + planes aprobados. Vos (el modelo de turno) sos el **orquestador**: no implementás planes de un mega cambio con tus propias manos; coordinás implementadores y sos dueño de TODA la verificación.
 
+## Qué se le habla al humano (y qué no)
+
+**Durante la ejecución no le escribís al humano.** Tus implementadores son colegas de trabajo, no su audiencia: lo que ellos encuentran va al ledger, no al chat.
+
+- Cada hallazgo, veredicto, corrección, "esto no era así" o test rojo: **al ledger** (y a `review-progress.md` cuando corresponda). Nada de informes por plan, por ola ni por worktree.
+- **El humano se entera en dos momentos, y solo en esos dos:**
+  1. **Freno real**: un error de planificación o de contrato que te obliga a **parar todo el trabajo y esperar su decisión**. Ahí sí, y con detalle: qué pasó, qué falla, dónde y qué recomendás hacer (una explicación sencilla, no un volcado de evidencia cruda).
+  2. **Cierre**: el resumen final, con la sección de desviaciones que requieren su decisión.
+- Todo lo demás se resuelve entre vos y tus implementadores, y queda escrito. Un problema que no frena el trabajo **no se consulta**: se anota y se reporta al cierre.
+
 ## Ley de hierro de la evidencia
 
 ```
@@ -23,7 +33,7 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 2. Implementa según **su plan + el spec** (+ contratos de Ola 0). Nada de rediseñar, "mejorar" cosas fuera del plan, ni tocar archivos fuera de su alcance.
 3. **NO ejecuta NADA.** Ni tests, ni builds, ni migraciones, ni scripts, ni servidores. La verificación es del orquestador — por eso un implementador **nunca necesita `.env`, bases de datos ni servicios** (los worktrees no copian archivos untracked, y eso está bien).
 4. **NO commitea. Nunca.**
-5. Reporta por **archivo de reporte**, no en el aire: estado (LISTO / LISTO_CON_DUDAS / NECESITA_CONTEXTO / TRABADO), archivos tocados, y qué tests escribió para qué comportamiento.
+5. Reporta por **archivo de reporte**, no en el aire: estado (LISTO / LISTO_CON_DUDAS / NECESITA_CONTEXTO / TRABADO), archivos tocados, y qué tests escribió para qué comportamiento. Ese reporte lo consumís vos: **el humano no lo lee hasta el resumen final**.
 
 ## El ledger (memoria que sobrevive a la compactación)
 
@@ -39,13 +49,14 @@ El ledger sobrevive a la compactación de contexto; tu memoria no. **Después de
 
 ## Modo mega cambio — Ciclo de una ola
 
-1. **La ola corre en paralelo por default**: todos los planes de la ola se lanzan **en el mismo mensaje** (paralelo real). Solo la Ola 0 y la ola de datos van solas, y es por diseño. Si la ola quedó con un solo plan, no la ejecutes "en serie" como si fuera normal: avisá y re-planificá (hd-spec).
+1. **La ola corre en paralelo por default**: todos los planes de la ola se lanzan **en el mismo mensaje** (paralelo real). Solo la Ola 0 y la ola de datos van solas, y es por diseño. Si la ola quedó con un solo plan, no la ejecutes "en serie" como si fuera normal: **re-planificá internamente** (hd-spec). Solo si ese re-plan **cambia el alcance** (un plan nuevo, un plan descartado) o **sube el modo por ratchet**, es un freno real: frená y contale al humano qué pasó y qué proponés.
 2. **Planificá la ola con los footprints de los planes** (Archivos / Interfaces / Depende de): comparten ola solo si sus archivos son disjuntos, nadie produce lo que otro consume, no comparten estado mutable, ninguno depende del otro, y ninguno tiene tests que toquen una base compartida. Ante la duda, serializá **esa pareja** (a otra ola), no la ola entera.
 3. **Un worktree por plan**, creado **desde la rama principal de trabajo ya consolidada** (que incluye los commits de los planes anteriores — la ola N+1 necesita ver el trabajo de la ola N), con nombre que empieza por el número de ola (`ola1-<plan>`). Nada de trabajo directo en la rama por parte de implementadores.
 4. **Lanzá todos los implementadores de la ola en UN solo mensaje** (paralelo real). Higiene de contexto: cada dispatch lleva SOLO su tarea, las interfaces que consume, las constraints globales, y **rutas a archivos** (spec, plan, reporte) — jamás historia de la sesión pegada en el prompt.
-5. Cuando reportan, **informá claramente que la ola terminó** y sus entregables.
+5. Cuando reportan, **registrá los entregables en el ledger**. No le cuentes al humano lo que encontró cada implementador: eso es conversación entre vos y tu equipo.
 6. **Gate por plan (solo vos):** corré **únicamente los tests unitarios escritos para ese plan**, **en su worktree**, **en serie, plan por plan** (evita choques de puertos, fixtures y bases). Nunca la suite entera. Anexá comando + salida al ledger: esa es LA evidencia.
    - **Si un plan falla, NO se avanza a la ola siguiente.** Reanudá al implementador con la salida exacta del fallo (nunca edites vos el código); el orquestador que arregla código contamina su contexto y su criterio.
+   - Mientras lo resuelvas, **no le cuentes nada al humano**: es entre vos y el implementador. Si el fallo no se puede resolver (se agotó el breaker de `hd-debug` o el error es de contrato y frena las olas siguientes), entonces sí: es un **freno real** — frená todo y explicá qué falla, dónde y qué recomendás.
 7. **Consolidación POR PLAN (obligatoria, en este orden, por cada plan de la ola, uno por uno):**
    a. **Guardá el parche del worktree** en `.hd/<nombre-del-trabajo>/waves/ola<N>-<plan>.patch` — es la evidencia que audita hd-review (los worktrees se borran; los parches quedan).
    b. **Traé los cambios a la rama principal de trabajo**: aplicá el parche, resolviendo conflictos. Todo entra **sin stage**: el commit del plan es el paso e.
@@ -82,3 +93,6 @@ Todas las olas verdes con evidencia en el ledger → **cargá la skill `hd-revie
 | "Commiteé la ola, ya está listo" | El commit por plan certifica que el plan está en la rama, no que esté aprobado: la aprobación es del humano, en el gate de la fase 4. |
 | "Mejor un commit por ola que un commit por plan" | Un commit por plan deja claro qué tocó cada uno, y es lo que el humano audita commit por commit (hd-audit). El commit por ola borra esa traza. |
 | "Esta ola tiene un solo plan, la hago yo" | Una ola de un plan sin dependencia dura es una partición mal hecha: re-planificá para correr 2 o más en paralelo. Si es la Ola 0 o la de datos, entonces va sola y listo. |
+| "El humano tiene que saber que la ola 3 terminó" | Las olas son internas: el ledger las registra y el cierre las cuenta. Durante la ejecución no se reporta nada al humano. |
+| "El implementador encontró algo importante, se lo cuento ya" | Si no frena el trabajo, va al ledger y se reporta al cierre. Si frena el trabajo, es el único caso de conversación durante la ejecución: contá qué falla, dónde y qué recomendás. |
+| "Mejor le mando el detalle de cada plan, así está informado" | Informe es lo que el humano pidió: el resumen final con las desviaciones que requieren su decisión. El detalle de cada plan le devuelve el ruido que vino a evitar. |

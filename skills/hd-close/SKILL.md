@@ -16,6 +16,7 @@ description: Fase 5 (final) del framework Hiper-driven (HD). Usar SOLO cuando el
 | Commits por plan | Ya están en la rama (hd-implement y hd-review): no se aplanan ni se re-crean, salvo pedido explícito del humano. |
 | Historia reescrita | **No**: no se reescribe la historia del trabajo (ni `reset --soft` ni squash) sin que el humano lo pida. |
 | Worktrees residuales | Se borran, verificando antes que no tengan trabajo sin consolidar. |
+| Chatter durante la ejecución | **No**: al humano se le habla solo en el freno real (algo que frena el trabajo y necesita su decisión) y en el cierre. |
 
 Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framework ya resolvió solo le agrega ruido al humano.
 
@@ -49,16 +50,28 @@ Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framew
 
 ## Paso 5 — Resumen de cierre
 
-Cerrá con un resumen corto que incluya:
+Sos un empleado que terminó el proyecto y le reporta a su jefe: **corto, con lo que importa**. Nada de informe por plan, nada de biblia.
 
-- Qué se hizo (uno o dos renglones, desde el spec).
-- Modo en que se trabajó (mega cambio / cambio chico) y cuántas olas/planes.
-- Rama donde quedó el commit y hash del commit.
-- El historial del trabajo quedó en la rama: `git log --oneline <commit base>..HEAD` lo muestra entero (un commit por plan, más los de corrección), y cada commit se audita con `git show <sha>`.
-- Estado: worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo/>` (commiteados con el trabajo; fuera del commit solo si el humano los excluyó o si git los ignora — decilo si es el caso), commits del trabajo: N (uno por plan, más los de corrección), push pendiente de autorización (o realizado si se autorizó).
+El resumen tiene estas secciones, en este orden:
+
+1. **Qué se hizo** — dos renglones, desde el spec.
+2. **Desviaciones que requieren tu decisión** — la sección que importa. Solo cosas que el humano tiene que saber o decidir:
+   - problemas graves, o algo que quedó sin resolver;
+   - algo que **no estaba contemplado en el spec o en los planes** y que afecta el comportamiento final;
+   - decisiones que tomaste en su lugar y que cambian lo que va a ver;
+   - lo que quedó fuera de alcance a propósito, y por qué.
+
+   Cada punto, en tres líneas: qué pasó, por qué importa, qué se hizo (o qué necesitás de él). Si no hay nada que decidir, decilo en una línea: *"Sin desviaciones que requieran tu decisión"*.
+3. **Estado del trabajo** — modo (mega cambio / cambio chico), cuántas olas y planes, rama, commits del trabajo (N: uno por plan, más los de corrección), worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo>/` (commiteados; fuera del commit solo si el humano los excluyó o si git los ignora), push pendiente de autorización (o realizado si se autorizó).
+4. **Rulings tomados en tu lugar** — la lista exhaustiva, una línea cada uno (ver la sección de abajo).
+
+El detalle por plan, los conteos de tests, los veredictos y las salidas de comandos están en `.hd/<nombre-del-trabajo>/` (ledger, review-progress, audit-guia): **decís dónde están, no los pegás**.
+
 
 ### Rulings que tomaste en nombre del humano (obligatorio)
 
-Antes de borrar nada, recolectá **TODAS** las líneas `Ruling:` del `ledger.md` (decisiones de adjudicación, hallazgos parkeados, conflictos resueltos) y listalas acá, en el orden en que las tomaste, cada una con **qué cuesta si te equivocaste**. La lista es exhaustiva: si está en el ledger, está en tu mensaje. Es el único lugar donde esas decisiones llegan al humano — él las lee y re-trabaja lo que hayas resuelto mal. Un ruling que muere con la sesión fue una decisión tomada en secreto.
+Recolectá **TODAS** las líneas `Ruling:` del `ledger.md` (decisiones de adjudicación, hallazgos parkeados, conflictos resueltos) y listalas en la sección 4 del resumen, en el orden en que las tomaste, cada una con **qué cuesta si te equivocaste**. La lista es exhaustiva: si está en el ledger, está en tu mensaje, pero **una línea por ruling**: es un inventario, no un informe. Los rulings que **afectan el comportamiento final** van además en la sección 2, porque esos sí requieren una decisión del humano.
+
+Es el único lugar donde esas decisiones llegan al humano — él las lee y re-trabaja lo que hayas resuelto mal. Un ruling que muere con la sesión fue una decisión tomada en secreto.
 
 Acá, y solo acá, el trabajo HD se da por terminado.

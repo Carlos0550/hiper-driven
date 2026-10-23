@@ -16,6 +16,15 @@ NINGÚN VEREDICTO NI AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - Todo veredicto cita la evidencia: la salida de tests que VOS corriste recién y el diff leído por el revisor. "Los tests pasaron en la ola" no es evidencia de la corrección de ahora.
 - El revisor **lee** código y diffs; no ejecuta tests. Las corridas las hacés vos y viajan como archivo.
 
+## Qué se le habla al humano (y qué no)
+
+**La revisión es un trabajo interno: no se narra.** El revisor es tu colega de trabajo, no su audiencia: veredictos, hallazgos y adjudicaciones van a `review-progress.md` y al ledger.
+
+- El humano se entera en dos momentos, y solo en esos dos:
+  1. **Freno real**: algo que **obliga a parar el trabajo y esperar su decisión** (un contrato roto que invalida las olas siguientes, una decisión arquitectónica con dos caminos válidos, un hallazgo que cambia el alcance). Ahí sí, y con detalle: qué pasó, qué falla, dónde y qué recomendás hacer.
+  2. **Cierre**: el resumen final, con la sección de desviaciones que requieren su decisión.
+- Todo lo demás —veredictos APROBADO/DENEGADO, conteos de tests, hallazgos ya corregidos, rulings ya adjudicados— **se escribe y no se dice**. Si no requiere una decisión del humano, no interrumpe.
+
 ## Paso 1 — Auditoría secuencial
 
 Lanzá el revisor con contexto completo por **rutas de archivo** (spec, plan, y el parche de cada unidad), nunca historia pegada en el prompt. Analizá las unidades **de a una, en orden, nunca en paralelo** (los hallazgos de una iluminan a la siguiente).
@@ -36,6 +45,7 @@ El revisor busca, contra spec y plan:
 
 - Un bloque por unidad (ola/plan), en orden de revisión, con veredicto **APROBADO** o **DENEGADO** y **el porqué** concreto — no un "LGTM".
 - Denegado incluye: qué debe corregirse para pasar a verde, punto por punto.
+- Este archivo **es** el informe de la revisión: **no se lo leas al humano durante la revisión**. Se entrega en el cierre.
 
 ## Paso 3 — Correcciones (loop con breaker)
 
@@ -51,6 +61,7 @@ El revisor busca, contra spec y plan:
   - **Real pero sin peso estructural** (nada downstream depende de eso) → parkeado como diferido, con razón escrita.
   - **Real y estructural** → definí el cambio mínimo que desbloquea, lanzá la corrección final, y registrá el ruling.
 - **Toda adjudicación entra al ledger. Un descarte silencioso está prohibido** — esas decisiones las tomaste en nombre del humano y van a la lista final de hd-close.
+- **Una adjudicación que frena el trabajo o cambia el alcance sí se le cuenta al humano en el momento** (freno real): contale qué se decidió, por qué y qué alternativas había. Las demás, al ledger.
 
 ## Paso 4 — Verificación final y congelación de los commits
 
@@ -70,7 +81,7 @@ Resultado obligatorio: **todo presente, commiteado, con un commit por plan y la 
 
 ## Paso 5 — Handoff al humano (Fase 4)
 
-Avisá: qué se implementó (resumen por plan/ola), dónde están los artefactos (`.hd/<nombre-del-trabajo>/`), que el trabajo quedó **commiteado plan por plan** (un commit por plan, más los de corrección) y que ya está todo en la rama para probar el comportamiento y revisar a mano.
+Avisá **breve**: qué se implementó (dos renglones), dónde están los artefactos (`.hd/<nombre-del-trabajo>/`), que el trabajo quedó **commiteado plan por plan** (un commit por plan, más los de corrección) y que ya está todo en la rama para probar el comportamiento y revisar a mano. **Sin el detalle plan por plan**: ese detalle existe, pero va al archivo y al resumen final.
 
 **Preguntá UNA vez, acá:** *"¿Querés que te arme una guía para auditar el código commit por commit?"* (skill `hd-audit`).
 
@@ -101,3 +112,5 @@ Avisá: qué se implementó (resumen por plan/ola), dónde están los artefactos
 | "El colapso es un detalle mecánico" | Ya no hay colapso: el trabajo queda commiteado plan por plan. Lo que sí importa es dejar anotados en el ledger el HEAD y la foto del árbol (`git write-tree`): sin eso, no se puede probar que no se perdió nada. |
 | "Dejo los commits por ola, total el diff se ve igual" | Cada commit es un plan: el humano puede revisarlo por partes, y si quiere el todo, `git diff <base>..HEAD`. La traza por plan es justo lo que hace auditable el trabajo. |
 | "El humano no pidió guía, no se la ofrezco" | La pregunta es UNA y es parte del handoff: la guía de `hd-audit` le ahorra reconstruir a mano qué commit hizo qué, y le da el mapa para devolver los commits a su lugar. |
+| "Le paso el veredicto de cada plan, así va enterado" | Va enterado por el resumen final. El detalle por plan no requiere ninguna decisión suya: se escribe y no se dice. |
+| "Un hallazgo importante hay que reportarlo ya" | Si no frena el trabajo, al ledger. Si frena el trabajo, ese es el freno real: ahí sí se habla, con qué falla, dónde y qué recomendás. |

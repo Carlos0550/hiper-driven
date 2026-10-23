@@ -32,6 +32,8 @@ Casi todo trabajo entra por una de estas tres puertas. El usuario normalmente de
 
 Todas las fases van **atadas en cadena**: no se salta ninguna, en ninguno de los dos modos. Los handoffs son **automáticos**: al cerrar cada fase, el agente **carga la siguiente skill y continúa en el mismo flujo** — nunca espera a que el usuario la invoque a mano. Las únicas pausas reales son los gates humanos: la confirmación del resumen (discovery), la aprobación del spec y planes (spec), la prueba manual de la fase 4, y el OK final (close).
 
+**Durante la implementación y la revisión, el orquestador no le habla al humano.** Los implementadores y el revisor son colegas de trabajo del orquestador, no su audiencia: lo que encuentran va al ledger y a los artefactos del trabajo. El humano se entera en dos momentos —el **freno real** (un error que obliga a parar todo y esperar su decisión) y el **cierre** (resumen corto con la sección de desviaciones que requieren su decisión).
+
 ~~~
 hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> hd-close
    Fase 1        Fase 2      Fase 2 cont.      Fase 3         Fase 4             Fase 5
@@ -115,6 +117,7 @@ Esto deja historial auditable en el propio repo: cualquiera (humano o agente) pu
 14. **Todo bug pasa por causa raíz** (`hd-debug`): 3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.
 15. **Los artefactos `.hd/<trabajo>/` van al commit.** Son el registro auditable del trabajo: se commitean con el código y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora. Una decisión ya tomada no se vuelve a consultar.
 16. **La historia del trabajo no se reescribe.** Los commits por plan se conservan hasta el push: no se colapsan, no se aplanan y no se resucitan checkpoints. Si el humano quiere un único commit, se lo pide — y se avisa de que eso reescribe la historia.
+17. **Durante la ejecución, el orquestador no reporta al humano.** Lo que los implementadores y el revisor encuentran va al ledger y a los artefactos. Al humano se le habla en dos momentos: el **freno real** (un error de planificación que para el trabajo y necesita su decisión — con qué falla, dónde y qué se recomienda) y el **cierre** (resumen corto con la sección de **desviaciones que requieren tu decisión**). Nada de informes por plan, por ola ni por worktree.
 
 ## Contribuir
 
