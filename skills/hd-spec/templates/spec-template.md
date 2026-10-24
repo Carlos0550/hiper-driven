@@ -9,8 +9,13 @@
 
 - **Modo**: mega cambio | cambio chico
 - **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — por repo involucrado
-- **Push de seguridad**: habilitado (rama dedicada: cada commit verificado se sube a <rama-de-trabajo>) | deshabilitado (<motivo>: rama por defecto / rama ajena al trabajo / el repo no tiene remote) — por repo involucrado
 - **Remote**: <origin> — por repo involucrado
+- **Push de seguridad**: habilitado (rama de respaldo: hd-backup/<trabajo>) | deshabilitado (<motivo>) — por repo involucrado
+- **Build**: <comando de build o typecheck> | no aplica
+- **Suite**: <comando de suite completa> | no aplica
+- **Tests**: <comando dirigido a los tests de una ola>
+- **Baseline**: pendiente (se corre antes de la ola 1) | <sha> — <n> fallos conocidos
+- **Prompt**: spec-prompt.md
 - **Fecha**: <fecha>
 - **Estado**: borrador | aprobado por el usuario
 

@@ -4,27 +4,27 @@
   EXCEPCIÓN (contratos): firmas exactas, nombres de tipos, constantes,
   valores literales y formatos SÍ se fijan acá cuando otras olas los consumen.
 
-  El paralelismo se CALCULA con los campos Archivos/Interfaces/Depende de:
-  dos planes comparten ola SOLO si sus archivos son disjuntos, ninguno produce
-  lo que el otro consume, no comparten estado mutable, ninguno depende del
-  otro, y ninguno corre tests que toquen una base compartida.
+  FLUJO B: el implementador escribe SOLO código; el autor de tests escribe
+  SOLO los archivos de "Crea (tests)". Los dos footprints son disjuntos.
+  El autor de tests trabaja en el commit PADRE del plan, sin ver la
+  implementación.
 
-  El paralelismo es el DISEÑO POR DEFAULT: cada ola debe poder correr 2 o más
-  planes en paralelo. Una ola de un solo plan solo vale con dependencia dura
-  (Ola 0 de contratos, ola de datos, o un output que otro plan consume).
+  El paralelismo se CALCULA con Archivos/Interfaces/Depende de.
+  Una ola puede tener un solo plan: no inventes planes de relleno.
 -->
 
 # Plan <NN>: <nombre-corto>
 
 - **Ola**: <N>
 - **Depende de**: Ola(s) <N-1, ...> — NUNCA de otro plan de su misma ola
-- **Paralelo con**: plan NN, plan NN — los demás planes de esta misma ola (se lanzan en paralelo)
 - **Toca datos existentes**: sí | no
 
 ## Archivos (exactos, sin globs)
 
-- Crea: <ruta/exacta/archivo.ext>
-- Modifica: <ruta/exacta/existente.ext>
+- **Crea (código)**: <ruta/exacta/archivo.ext>
+- **Modifica (código)**: <ruta/exacta/existente.ext>
+- **Crea (tests)**: <ruta/exacta/test_archivo.ext> | no aplica
+- **Base de tests**: el commit padre del plan (lo fija el orquestador; el autor de tests no ve la implementación)
 
 ## Interfaces
 
@@ -38,22 +38,33 @@
 ## Alcance
 
 <!-- Qué se toca y qué NO se toca (límites explícitos para que
-     implementadores paralelos no se pisen). -->
+     implementadores y autores de tests paralelos no se pisen). -->
 
-## Comportamiento esperado (base de los tests — TDD)
+## Contrato de comportamiento (fuente de los tests)
 
-<!-- Comportamiento observable que los tests unitarios van a fijar ANTES de
-     implementar: entradas, salidas, casos borde, errores. En prosa.
-     Este apartado es el contrato entre el plan y los tests. -->
+<!-- FLUJO B: este apartado es la ÚNICA fuente del autor de tests.
+     Tiene que incluir, en prosa:
+     - entradas y salidas exactas;
+     - casos borde;
+     - errores y códigos;
+     - qué NO se testea (para que el autor no invente).
+     Si falta algo, el plan no está listo. -->
 
 ## Criterios de aceptación
 
 - [ ] <criterio 1>
 - [ ] <criterio 2>
 
-## Notas para el implementador
+## Notas para el implementador y el autor de tests
 
 <!-- Contexto del spec y del codebase: restricciones, convenciones, trampas
-     conocidas del lenguaje/librerías. Recordar el contrato HD:
-     escribe tests primero (en ese orden), implementa, NO ejecuta nada,
-     NO commitea, no toca archivos fuera de este alcance. -->
+     conocidas del lenguaje/librerías.
+
+     FLUJO B:
+     - Implementador: SOLO código de producción, NO tests, NO ejecuta,
+       NO commitea, no toca archivos de "Crea (tests)".
+     - Autor de tests: SOLO los tests de "Crea (tests)", desde este plan y
+       las interfaces, en el commit padre del plan. NO lee la implementación,
+       NO ejecuta, NO commitea.
+
+     FLUJO A (legacy): el implementador escribe tests primero. -->
