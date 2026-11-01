@@ -7,13 +7,14 @@
 
 # Spec: <nombre-del-trabajo>
 
-- **Modo**: mega cambio | cambio chico
+- **Modo**: directo | cambio chico | mega cambio
 - **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — por repo involucrado
 - **Remote**: <origin> — por repo involucrado
 - **Push de seguridad**: habilitado (rama de respaldo: hd-backup/<trabajo>) | deshabilitado (<motivo>) — por repo involucrado
 - **Build**: <comando de build o typecheck> | no aplica
 - **Suite**: <comando de suite completa> | no aplica
 - **Tests**: <comando dirigido a los tests de una ola>
+- **Worktrees**: `.git/hd-wt/<trabajo>/` — symlinks de dependencias: <node_modules | .venv | target | no aplica>
 - **Baseline**: pendiente (se corre antes de la ola 1) | <sha> — <n> fallos conocidos
 - **Prompt**: spec-prompt.md
 - **Fecha**: <fecha>

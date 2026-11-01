@@ -28,9 +28,11 @@ Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framew
 
 ## Paso 2 — Limpiar worktrees
 
-- Eliminá cualquier worktree residual del trabajo y confirmá con `git worktree list` que no queda ninguno (`git worktree prune` para limpiar registros obsoletos). Normalmente no debería haber ninguno: cada ola borra los suyos al consolidarse.
-- Limpiá artefactos temporales de la orquestación si los hubiera (parches aplicados, archivos de staging intermedios).
-- Los artefactos `.hd/<nombre-del-trabajo>/` (spec, prompt, planes, ledger, parches, review-progress) **se conservan y se commitean junto con el código**: son el registro auditable del trabajo. **No preguntes si van incluidos: la decisión ya está tomada.** Hay solo dos exclusiones, y ambas son objetivas:
+- Eliminá cualquier worktree residual del trabajo (`git worktree list`, luego `git worktree remove` y `git worktree prune`) y confirmá que no queda ninguno. Esto incluye los worktrees del corrector de la fase 4. Normalmente no debería haber ninguno: cada ola borra los suyos al consolidarse y el corrector borra el suyo al terminar.
+- **Borrá `.git/hd-wt/<trabajo>/`** si quedó: los worktrees viven ahí, fuera del árbol de trabajo. Al borrar, **no sigas los symlinks de dependencias** (`node_modules`, `.venv`): `rm -rf` sobre un symlink no toca el original, pero verificá antes de disparar.
+- Limpiá artefactos temporales de la orquestación si los hubiera (`logs/` se conserva solo si el humano lo pidió; por defecto va fuera del commit).
+- Los artefactos `.hd/<nombre-del-trabajo>/` (spec, prompt, planes, ledger, reportes, review-progress) **se conservan y se commitean junto con el código**: son el registro auditable del trabajo. **No preguntes si van incluidos: la decisión ya está tomada.** Hay solo dos exclusiones, y ambas son objetivas:
+  - `logs/` **no va**: es salida de proceso, no documento. Asegurate de que `.gitignore` lo cubra (`.hd/*/logs/`).
   - **El humano lo pidió explícitamente** ("no commitees los artefactos", "dejá los `.hd` afuera"): quedan fuera del commit. Asentalo en el ledger y mencioná el motivo en el resumen final.
   - **Git los ignora**: verificá con `git check-ignore -q .hd/<nombre-del-trabajo>/spec.md`. Si están ignorados (típico: `.hd/` en el `.gitignore`), quedan sin trackear y fuera del commit. **No los fuerces** con `git add -f`: el `.gitignore` del repo es una decisión del humano.
   - En cualquier otro caso: se commitean, sin preguntar y sin avisar antes.
@@ -55,8 +57,7 @@ Sos un empleado que terminó el proyecto y le reporta a su jefe: **corto, con lo
 
 1. **Qué se hizo** — dos renglones, desde el spec.
 2. **Desviaciones que requieren tu decisión** — problemas graves, algo no contemplado que afecta el comportamiento final, fallos conocidos que se ignoraron, residuales aceptados, decisiones que tomaste en su lugar, y lo que quedó fuera de alcance. Cada punto en tres líneas: qué pasó, por qué importa, qué se hizo o qué necesitás. Si no hay nada: *"Sin desviaciones que requieran tu decisión"*.
-3. **Estado del trabajo** — modo, cantidad de olas y planes, rama, hash del commit único, worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo>/`, **respaldo**: `hd-backup/<trabajo>` con los commits por ola (local | remoto | no aplica), y push de la rama de trabajo / PR pendiente de autorización (o realizado si se autorizó). Si querés el historial por olas, está en la rama de respaldo.
-4. **Rulings tomados en tu lugar** — la lista exhaustiva, una línea cada uno.
+3. **Estado del trabajo** — modo, cantidad de olas y planes, rama, hash del commit único, worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo>/`, **respaldo**: `hd-backup/<trabajo>` con los commits por ola (local | remoto | no aplica), y push de la rama de trabajo / PR pendiente de autorización (o realizado si se autorizó). Si querés el historial por olas, está en la rama de respaldo.4. **Rulings tomados en tu lugar** — la lista exhaustiva, una línea cada uno.
 
 ### Rulings que tomaste en nombre del humano (obligatorio)
 

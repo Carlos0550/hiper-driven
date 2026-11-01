@@ -40,7 +40,7 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 
 ## Fase 4 — Implementación del fix
 
-1. **Test que reproduce la falla ANTES del fix** (red-green: el orquestador verifica que el test falla sin el fix y pasa con él — en HD los implementadores/correctores no ejecutan nada; las corridas y sus salidas las hace el orquestador).
+1. **Test que reproduce la falla ANTES del fix** (red-green: el orquestador verifica que el test falla sin el fix y pasa con él — en HD los implementadores/correctores **se autoverifican en su worktree**, pero esa salida no es evidencia; las corridas que cuentan y sus salidas las hace el orquestador **sobre la rama consolidada**).
 2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados.
 3. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y discutilo con el humano. El cuarto fix sin esa conversación está prohibido.
 

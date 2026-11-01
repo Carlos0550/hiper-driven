@@ -1,6 +1,6 @@
 ---
 name: hd-spec
-description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (mega cambio o cambio chico, con ratchet unidireccional), crea las ramas, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con contrato de comportamiento y archivos de tests separados. Al aprobar, escribe spec-prompt.md y se detiene; la implementación arranca en una conversación nueva, no en la misma sesión. Nunca lógica ni implementaciones en los artefactos.
+description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (directo, cambio chico o mega cambio, con ratchet unidireccional), crea las ramas, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con contrato de comportamiento y archivos de tests separados. Al aprobar, escribe spec-prompt.md y se detiene; la implementación arranca en una conversación nueva, no en la misma sesión. Nunca lógica ni implementaciones en los artefactos.
 ---
 
 # HD — Fase 2: Spec y plan
@@ -17,9 +17,19 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 ## Paso 1 — Confirmar el modo
 
 - Si el usuario declaró el modo explícitamente, **respetalo**. Si tu análisis lo contradice fuerte, decilo una vez; si insiste, se hace como dice.
-- Si no dijo nada, **decidí vos y anuncialo con el porqué**. Señales de MEGA CAMBIO: refactor de grandes superficies; del orden de 20+ archivos sustanciales; crear o borrar módulos o microservicios enteros; operaciones sobre datos sensibles o en masa; y la señal decisiva: **puede dejar el sistema inconsistente a mitad de camino**.
-- Lo demás: **CAMBIO CHICO**.
-- **Ratchet (unidireccional):** si en cualquier momento aparece complejidad oculta, el trabajo SUBE de modo: chico → mega. Frená, anuncialo, re-planificá. Nada baja de modo a mitad de camino.
+- Si no dijo nada, **decidí vos y anuncialo con el porqué**, con esta escalera:
+
+| | Directo | Cambio chico | Mega cambio |
+|---|---|---|---|
+| **Cuándo** | 1-2 archivos, sin contratos nuevos que otros consuman, sin datos | Unas pocas piezas acotadas, un plan | 20+ archivos, módulos enteros, contratos compartidos, datos sensibles |
+| **Olas** | ninguna | ninguna | varias |
+| **Worktrees** | uno | dos (B) o uno (A) | dos por ola |
+| **Tests** | A + auditor | B, o A + auditor | B, salvo Ola 0 y datos |
+| **Revisor** | solo si toca contratos | auditoría simple | por ola |
+
+- **El default es el más chico que no mienta.** Un trabajo que entra en 1-2 archivos y no cambia contratos va a **directo**: la maquinaria de olas no se amortiza con un plan, y el gate y la evidencia son los mismos.
+- Señales de **MEGA CAMBIO**: refactor de grandes superficies; del orden de 20+ archivos sustanciales; crear o borrar módulos o microservicios enteros; operaciones sobre datos sensibles o en masa; y la señal decisiva: **puede dejar el sistema inconsistente a mitad de camino**.
+- **Ratchet (unidireccional):** si en cualquier momento aparece complejidad oculta, el trabajo SUBE de modo: directo → chico → mega. Frená, anuncialo, re-planificá. Nada baja de modo a mitad de camino.
 
 ### Si es mega cambio, avisá UNA sola vez:
 
@@ -39,7 +49,7 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 
 Creá `.hd/<nombre-del-trabajo>/` en el repo principal y escribí **`spec.md`** siguiendo el template empaquetado en esta skill (`templates/spec-template.md`, relativo a este SKILL.md): resumen del entendimiento, qué, por qué, criterios de aceptación verificables, riesgos y mitigaciones, **Q&A completo**, y el estado de datos en producción si aplica.
 
-En modo **cambio chico**: mismo esqueleto, contenido breve. El rigor no se negocia; la burocracia sí.
+En modo **directo**: mismo esqueleto, contenido mínimo. En **cambio chico**: mismo esqueleto, contenido breve. El rigor no se negocia; la burocracia sí.
 
 ## Paso 4 — Partir el trabajo en planes
 
@@ -57,14 +67,18 @@ Un archivo por plan en `.hd/<nombre-del-trabajo>/plans/plan-NN-<nombre>.md` con 
 4. Ninguno **depende** del otro.
 5. Ninguno tiene tests que toquen una base de datos compartida.
 
-Ante la duda, serializá **esa pareja**; no la ola entera. Una ola extra es barata; dos implementadores pisándose, no. **No fuerces parallelism**: una ola puede tener un solo plan si el trabajo lo pide. Lo que no se permite es que dos planes de la misma ola se pisen o que un plan exista solo para llenar la ola.
+**El default es un plan por ola.** Agrupá dos o más planes en una ola solo cuando **todos** los criterios de arriba se cumplan sin dudas. Ante la duda, serializá. Una ola serial extra es barata; un paralelismo mal calculado cuesta una corrección y contamina el resultado. **No fuerces parallelism**: lo que no se permite es que dos planes de la misma ola se pisen, ni un plan de relleno.
 
 **Estructura de olas (mega cambio):**
-1. **Ola 0 — Contratos**: tipos, esquemas, firmas, esqueleto inicial, migraciones. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal. Usa **tests primero** (no autor de tests separado).
-2. **Olas siguientes**: planes independientes entre sí, en paralelo cuando se puede. Una ola de un plan es válida.
-3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes: confirmar datos en producción, **respaldo y prueba en seco**. Usa **tests primero**.
+1. **Ola 0 — Contratos** (solo si hay contratos nuevos que otras olas consumen): tipos, esquemas, firmas, esqueleto inicial, migraciones. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal. Usa **tests primero** (no autor de tests separado) **y auditor de tests**.
+2. **Olas siguientes**: planes independientes entre sí. **Default: un plan por ola.** Agrupá en paralelo solo cuando la matriz de footprints sea inequívoca; la ola serial es más barata que la ola mal planificada.
+3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes: confirmar datos en producción, **respaldo y prueba en seco**. Usa **tests primero** y auditor.
+
+Si no hay contratos nuevos que consuman otras olas, **no inventes una Ola 0**.
 
 **Modo cambio chico:** un único `plans/plan-01-<nombre>.md`, breve, mismo esqueleto. Sin olas.
+
+**Modo directo:** un único `plans/plan-01-<nombre>.md`, mínimo. Sin olas, sin Ola 0 (si el trabajo no define contratos nuevos). Si al escribirlo aparecen contratos compartidos o más de dos archivos, **subí de modo** — el ratchet es unidireccional.
 
 ## Paso 5 — Aprobación y prompt
 
@@ -85,8 +99,10 @@ La fuente es `.hd/<trabajo>/`: el prompt, el `spec.md`, los planes y el ledger. 
 | Excusa | Realidad |
 |--------|----------|
 | "Es chico, salteamos el spec" | Chico significa spec breve, no ausente. |
+| "Es chico, pero lo mando a mega por las dudas" | La maquinaria de olas no se amortiza con un plan: mandalo a directo o a chico. El gate y la evidencia no cambian. |
 | "Estos dos planes seguro no se pisan" | El paralelismo se calcula con Archivos/Interfaces, no se adivina. |
-| "Una ola de un plan es un defecto" | No: una ola de un plan es válida si el trabajo lo pide. El defecto es forzar un plan de relleno o dejar que dos planes se pisen. |
+| "Una ola de un plan es un defecto" | No: es el default. Una ola de un plan es válida siempre; el defecto es forzar paralelismo. |
+| "Todo trabajo real es mega, por las dudas" | El criterio es "¿puede dejar el sistema inconsistente a mitad de camino?", no el tamaño percibido. Si no puede, es chico o directo. |
 | "Pongo el código en el plan así el implementador no se equivoca" | Plan con lógica = implementador redundante y plan envejecido. Firmas exactas sí; lógica nunca. |
 | "Ya tenemos plan, empecemos mientras el usuario lo lee" | El gate es la aprobación, no la longitud del spec. |
 | "Puedo implementar acá mismo, el spec está fresco" | La sesión de spec y la de implementación son distintas: el prompt es el handoff. Mezclar contextos es lo que el prompt evita. |

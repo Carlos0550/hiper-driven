@@ -24,6 +24,7 @@ Antes de tocar un solo archivo, procesá lo que el usuario dijo y extraé **la i
 - Reformulá la solicitud en 1-3 frases, en lenguaje simple, sin adornos.
 - Identificá el **tipo de solicitud**, porque cambia cómo investigás: **construir** algo nuevo, **optimizar** algo existente, **corregir** algo que falla (bugs: el trabajo se hace con `hd-debug` adentro del flujo), **validar una idea** (→ spike, paso 0), **migrar/reestructurar**.
 - Separá lo que el usuario dijo explícito de lo que estás **asumiendo**. Toda suposición es candidata a pregunta.
+- Anotá el **tamaño aparente** (archivos, contratos, datos): es la entrada del modo en `hd-spec`, y la escalera empieza en directo. No lo resuelvas acá.
 
 ## Paso 2 — Reconocimiento
 
@@ -68,3 +69,4 @@ Si en discovery (o más adelante) aparece **complejidad oculta** — el "cambio 
 | "Le mando todas las preguntas juntas para ahorrar turnos" | Una por turno. La ráfaga obliga al usuario a responder a ciegas. |
 | "El spike funcionó, dejemos el código" | La salida de un spike es una respuesta. Conservar el código es un pedido nuevo: clasificalo. |
 | "Creció, pero ya casi está — no hace falta reclasificar" | Complejidad oculta = subir de camino. El ratchet no tiene reversa. |
+| "Es un pedido de una línea, seguro es mega" | La escalera arranca en directo. Se sube si el trabajo lo pide, no por precaución. |

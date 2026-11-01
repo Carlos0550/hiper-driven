@@ -1,6 +1,6 @@
 ---
 name: hd-review
-description: Fases 3 y 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron. Un revisor distinto audita cada ola por su parche guardado (código + tests, secuencial, contra spec y plan), registra veredictos con evidencia en review-progress.md, corre UNA sola corrección total con hd-debug obligatorio y verifica con tests frescos. Si no alcanza, reporta al humano con diagnóstico en vez de abrir otra ronda. Después colapsa todos los commits del trabajo a un único diff sin stage para la aprobación humana, y atiende los bugs que el humano reporte.
+description: Fases 3 y 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron. Un revisor distinto audita cada ola por el diff de su commit (código + tests, secuencial, contra spec y plan), registra veredictos con evidencia en review-progress.md, corre UNA sola corrección total con hd-debug obligatorio y verifica con tests frescos. En modo directo, el revisor entra solo si el diff toca contratos. Si no alcanza, reporta al humano con diagnóstico en vez de abrir otra ronda. Después colapsa todos los commits del trabajo a un único diff sin stage para la aprobación humana, y atiende los bugs que el humano reporte.
 ---
 
 # HD — Fase 3: Revisión, corrección única y colapso
@@ -26,6 +26,11 @@ NINGÚN VEREDICTO NI AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 
 - Todo veredicto cita la evidencia: la salida de tests que VOS corriste recién y el diff leído por el revisor. "Los tests pasaron en la ola" no es evidencia de la corrección de ahora.
 - El revisor **lee** código y diffs; no ejecuta tests. Las corridas las hacés vos y viajan como archivo.
+- **La autoverificación del agente no es evidencia.** Un worktree que compiló no prueba el árbol consolidado.
+
+## Presupuesto de contexto
+
+El revisor lee el diff completo y lo resume en hallazgos; **vos no leés el diff**. Si necesitás orientarte, `git diff --stat` y los hallazgos del revisor alcanzan. La salida de tests va al log y al contexto solo sus líneas de fallo. Cada byte que traés al chat se paga en todos los turnos siguientes.
 
 ## Push de seguridad (rama de respaldo)
 
@@ -35,9 +40,11 @@ El commit de la corrección única también se respalda ahí antes del colapso. 
 
 ## Paso 1 — Auditoría por ola
 
-Lanzá el revisor con contexto completo por **rutas de archivo** (spec, planes, y los parches de la ola: código y tests, más los reportes de implementación y de tests), nunca historia pegada en el prompt. Analizá las olas **de a una, en orden, nunca en paralelo** (los hallazgos de una iluminan a la siguiente).
+Lanzá el revisor con contexto completo por **rutas de archivo** (spec, planes y el **SHA del commit de la ola**), nunca historia pegada en el prompt. Analizá las olas **de a una, en orden, nunca en paralelo** (los hallazgos de una iluminan a la siguiente).
 
-**La unidad de revisión es la ola**, no el plan ni el worktree: los worktrees ya fueron borrados al consolidar cada ola, y sus parches quedaron en `.hd/<nombre-del-trabajo>/waves/ola<N>-<plan>.patch` y `...-tests.patch`. En cambio chico, la unidad es el plan único.
+**La unidad de revisión es la ola**, no el plan ni el worktree: los worktrees ya fueron borrados al consolidar cada ola. El parche de cada plan no se guarda: **se reconstruye** con `git show <sha-de-la-ola> -- <rutas del plan>` (código y tests), que es exactamente el diff que hay que auditar. En cambio chico y en directo, la unidad es el único commit.
+
+**En modo directo**, el revisor entra solo si el diff toca **contratos** (firmas públicas, esquemas, formatos compartidos, migraciones) o si el auditor de tests marcó un hallazgo alto. Si no, saltá al Paso 4 con el diff del único commit: el gate humano es suficiente para un cambio de uno o dos archivos sin contratos.
 
 El revisor busca, contra spec y plan:
 
@@ -45,7 +52,7 @@ El revisor busca, contra spec y plan:
 2. **Bugs lógicos**: condiciones borde, flujos incompletos, errores silenciados.
 3. **Trampas del lenguaje y librerías**: concurrencia mal manejada, recursos sin cerrar, errores típicos del stack.
 4. **Desviaciones**: todo lo implementado debe trazarse al spec y a un plan; todo lo prometido debe estar implementado. Lo que sobre y lo que falte se reporta.
-5. **Calidad de tests**: existen, llaman al código real, fijan el comportamiento del plan (no triviales, no solo happy path). En Flujo B, además: que el test se haya escrito desde el `Contrato de comportamiento` y no desde la implementación (sin importar internals ni replicar la estructura del código).
+5. **Calidad de tests**: existen, llaman al código real, fijan el comportamiento del plan (no triviales, no solo happy path). En Flujo B, además: que el test se haya escrito desde el `Contrato de comportamiento` y no desde la implementación (sin importar internals ni replicar la estructura del código). **En Flujo A, incorporá los hallazgos del auditor de tests** que quedaron en el ledger.
 
 ## Paso 2 — Veredictos con evidencia
 
@@ -57,9 +64,9 @@ El revisor busca, contra spec y plan:
 
 ## Paso 3 — Corrección única
 
-- **Un solo subagente corrector**, directo en la rama de trabajo, sin worktree nuevo, con **todos los hallazgos de todas las olas en un mismo prompt**: archivo, comportamiento esperado, qué falló y la clasificación (código / test / infra).
+- **Un solo subagente corrector**, en un worktree desde el HEAD de la rama, con **todos los hallazgos de todas las olas en un mismo prompt**: archivo, comportamiento esperado, qué falló y la clasificación (código / test / infra).
 - **Obligado a seguir `hd-debug`**: causa raíz primero, un cambio por hipótesis. Corrige; no rediseña ni agrega alcance.
-- Como todo implementador: **no ejecuta nada, no commitea** — vos corrés los tests y anexás la salida como evidencia.
+- Como todo implementador: **se autoverifica en su worktree, no commitea**. Vos consolidás (`cherry-pick -n` + commit), corrés los tests en la rama y anexás la salida como evidencia. El worktree del corrector se borra al terminar.
 - **Guarda de alcance por hallazgo**: si el hallazgo es de **código**, el corrector no toca los tests; si es de **test**, no toca el código de producción. Nunca los dos para el mismo hallazgo. Un test mal escrito se corrige contra el plan, no se debilita ni se borra.
 - **Una sola pasada**: no hay ronda 2 automática.
 
@@ -100,7 +107,7 @@ Avisá **breve**: qué se implementó (dos renglones), dónde están los artefac
 
 ### Si el humano encuentra algo
 
-**Subagente corrector NUEVO, directo en la rama, obligado a seguir `hd-debug`.** Corregido → vos corré los tests involucrados (evidencia fresca) → devolvéselo al humano, otra vez **sin stage**. Los arreglos de la fase 4 **no se commitean**: el humano está revisando ese mismo diff y quien commitea es `hd-close`, al final. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano**, no un cuarto fix.
+**Subagente corrector NUEVO, en un worktree desde la rama, obligado a seguir `hd-debug`.** Corregido → consolidás, corrés los tests involucrados (evidencia fresca) → devolvéselo al humano, otra vez **sin stage**. Los arreglos de la fase 4 **no se commitean**: el humano está revisando ese mismo diff y quien commitea es `hd-close`, al final. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano**, no un cuarto fix.
 
 ## Salida
 
@@ -114,7 +121,8 @@ Avisá **breve**: qué se implementó (dos renglones), dónde están los artefac
 |--------|----------|
 | "Una ronda más y converge" | No hay ronda 2: si no converge, el diagnóstico está mal o el problema es estructural. Se reporta. |
 | "Re-reviso la corrección para estar seguro" | La corrección se valida con tests frescos y el diff de la corrección. Re-revisar todo es el loop que hizo impredecible la fase. |
-| "Reviso plan por plan, es más fino" | La unidad es la ola. Los planes ya están agrupados por afinidad y sus parches se auditan juntos. |
+| "Reviso plan por plan, es más fino" | La unidad es la ola. Los planes ya están agrupados por afinidad y su diff se audita junto. |
+| "El revisor necesita el parche guardado" | `git show <sha> -- <rutas del plan>` reconstruye el mismo diff. El commit es el artefacto; el archivo de parche era un paso manual de más. |
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
 | "Este hallazgo es obviamente falso, lo descarto" | Se marca como falso positivo con razón en el ledger y se reporta. Descartar en silencio está prohibido. |
 | "Corrijo el test para que pase" | Si el hallazgo es de código, no se toca el test; si es de test, no se toca el código. Debilitar el test es hacer pasar el problema. |

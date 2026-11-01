@@ -1,20 +1,23 @@
 <!--
   Template de progreso de revisión — Framework Hiper-driven (HD)
-  Un bloque por OLA (los parches de código y de tests viven en
-  .hd/<trabajo>/waves/). Se analiza SECUENCIALMENTE.
+  Un bloque por OLA. El diff se reconstruye desde el commit de la ola
+  (git show <sha> -- <rutas del plan>); no se guardan archivos de parche.
+  Se analiza SECUENCIALMENTE.
   La corrección es UNA sola para todas las olas; no hay re-revisión.
+  En modo directo: un solo bloque, y solo si el diff toca contratos.
 -->
 
 # Progreso de revisión: <nombre-del-trabajo>
 
 - **Fecha de revisión**: <fecha>
 - **Spec de referencia**: .hd/<nombre-del-trabajo>/spec.md
+- **Modo**: directo | cambio chico | mega cambio
 - **Flujo**: A | B
 
 ## Ola <N> — APROBADO | DENEGADO
 
 **Plan(es) revisado(s)**: plan-NN, ...
-**Parches**: `ola<N>-<plan>.patch` (código) + `ola<N>-<plan>-tests.patch` (tests)
+**Commit de la ola**: `<sha>` — diff por plan: `git show <sha> -- <rutas del plan>`
 
 ### Hallazgos
 
