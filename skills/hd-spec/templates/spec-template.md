@@ -3,6 +3,9 @@
   REGLA DURA: este documento NO debe contener snippets de código,
   ni el código exacto que los implementadores deben escribir.
   Comportamiento esperado: sí. Código: nunca.
+
+  NO HAY TESTS: la verificación es build + lint + estándares, y el
+  comportamiento lo audita el revisor contra este spec y el plan.
 -->
 
 # Spec: <nombre-del-trabajo>
@@ -12,10 +15,10 @@
 - **Remote**: <origin> — por repo involucrado
 - **Push de seguridad**: habilitado (rama de respaldo: hd-backup/<trabajo>) | deshabilitado (<motivo>) — por repo involucrado
 - **Build**: <comando de build o typecheck> | no aplica
-- **Suite**: <comando de suite completa> | no aplica
-- **Tests**: <comando dirigido a los tests de una ola>
+- **Lint**: <comando de lint y formato> | no aplica
+- **Estándares**: <comando único de chequeo: make check | pnpm verify | npm run check> | no aplica
 - **Worktrees**: `.git/hd-wt/<trabajo>/` — symlinks de dependencias: <node_modules | .venv | target | no aplica>
-- **Baseline**: pendiente (se corre antes de la ola 1) | <sha> — <n> fallos conocidos
+- **Baseline**: pendiente (se corre antes de la ola 1) | <sha> — <n> hallazgos de build/lint preexistentes
 - **Prompt**: spec-prompt.md
 - **Fecha**: <fecha>
 - **Estado**: borrador | aprobado por el usuario
@@ -37,7 +40,10 @@
 
 ## Criterios de aceptación
 
-<!-- Lista verificable. Cada criterio debe poder responderse con sí/no: -->
+<!-- Lista verificable. Cada criterio debe poder responderse con sí/no
+     mirando el sistema (no leyendo el código). Sin tests, esta lista es
+     la checklist con la que el humano prueba el trabajo en la fase 4
+     y el último respaldo del revisor. -->
 - [ ] <criterio 1>
 - [ ] <criterio 2>
 

@@ -20,30 +20,28 @@ Fuente (no uses la memoria del harness ni la conversación anterior):
 - Ledger: <ruta>/ledger.md
 - Planes: <lista de rutas de los planes>
 
-Flujo: <B — código y tests en paralelo, autor de tests independiente | A — tests primero, con auditor>.
 Modo: <directo | cambio chico | mega cambio>.
 Repos y ramas (push de seguridad: <rama de respaldo hd-backup/<trabajo> | deshabilitado>):
 - <repo>: `<rama>`, base `<sha>`, remote `<remote>`
 - <repo>: `<rama>`, base `<sha>`, remote `<remote>`
 
-Worktrees: `.git/hd-wt/<trabajo>/`, uno por ola de código y uno por ola de
-tests (fuera del árbol de trabajo, invisible a `git status`); symlinks de
-dependencias (<node_modules | .venv | target | no aplica>).
+Worktrees: `.git/hd-wt/<trabajo>/`, uno por ola (fuera del árbol de trabajo,
+invisible a `git status`); symlinks de dependencias (<node_modules | .venv | target | no aplica>).
 No reinstales dependencias en cada worktree.
 
-Verificación: los agentes se autoverifican en su worktree (build + sus tests),
-pero solo tu corrida en la rama consolidada es evidencia. En Flujo A, lanzá
-un auditor de tests con contexto limpio (plan + spec + diff de tests; nunca
-el diff de código) antes del gate.
+Verificación: los agentes se autoverifican en su worktree (compilan y pasan el
+lint), pero solo tu corrida en la rama consolidada es evidencia. El gate de
+cada ola es build + lint + estándares. No hay tests: no los escribas ni los
+pidas, ni siquiera como red de seguridad.
 
 Orden:
-- Baseline: `<comando>` en <repo(s)>.
+- Baseline: `<comando de build>` y `<comando de lint>` en <repo(s)>.
 - Ola 0 (solo si hay contratos nuevos que consumen otras olas): <planes> (sola).
 - Ola 1: <planes> — default un plan por ola; paralelo solo si la
   disjunción de footprints es inequívoca.
 - Ola N: ...
-- Al cerrar: <en mega, cargar `hd-review`; en directo, solo si el diff
-  toca contratos>.
+- Al cerrar: cargá siempre `hd-review`. El revisor es obligatorio en todos
+  los modos, también en directo.
 
 No implementes en la sesión donde se creó el spec. No pushees a la rama de trabajo
 ni a `main`; el respaldo va a la rama de respaldo. El push final se autoriza en el cierre.

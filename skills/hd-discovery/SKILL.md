@@ -31,7 +31,7 @@ Antes de tocar un solo archivo, procesá lo que el usuario dijo y extraé **la i
 Enriquecé tu contexto **antes** de preguntar. Las preguntas buenas nacen de haber mirado:
 
 1. **Si el usuario dio una ubicación**: andá ahí primero. Inspeccioná ese módulo o servicio en serio, no por encima.
-2. **Mapeá el terreno**: qué está cableado con qué (dependencias, consumidores, contratos), capa de datos (ORM, esquemas, migraciones, dónde vive la lógica de negocio), convenciones del proyecto y cómo se testea hoy.
+2. **Mapeá el terreno**: qué está cableado con qué (dependencias, consumidores, contratos), capa de datos (ORM, esquemas, migraciones, dónde vive la lógica de negocio), convenciones del proyecto y **cómo compila y se verifica hoy** (build, lint, comando de chequeo). Si hay una suite de tests, se respeta y no se toca, pero HD no agrega tests.
 3. **Si el tema lo amerita, buscá información externa**: documentación, alternativas conocidas, trampas típicas del stack.
 4. **Evaluá el pedido con honestidad**: riesgos y beneficios reales. ¿Realmente necesita eso, o hay **algo mejor** que podés ofrecerle? Si lo hay, proponelo con argumentos, no con autoridad.
 

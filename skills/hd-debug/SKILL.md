@@ -1,6 +1,6 @@
 ---
 name: hd-debug
-description: Skill transversal del framework Hiper-driven (HD). Usar ante CUALQUIER bug, test que falla o comportamiento inesperado, y de forma OBLIGATORIA para los correctores de las fases 3 y 4 y para pedidos directos de arreglo. Nunca proponer fixes sin investigar la causa raíz primero; 3 fixes fallidos significan cuestionar la arquitectura, no intentar un cuarto.
+description: Skill transversal del framework Hiper-driven (HD). Usar ante CUALQUIER bug, build o lint roto, o comportamiento inesperado, y de forma OBLIGATORIA para los correctores de las fases 3 y 4 y para pedidos directos de arreglo. No hay tests (la prueba de un fix es la reproducción original que deja de fallar, más build y lint limpios). Nunca proponer fixes sin investigar la causa raíz primero; 3 fixes fallidos significan cuestionar la arquitectura, no intentar un cuarto.
 ---
 
 # HD — Debugging sistemático
@@ -15,7 +15,7 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 
 ## Cuándo se usa
 
-- Cualquier bug, test que falla, comportamiento inesperado, problema de performance o build roto.
+- Cualquier bug, build o lint roto, comportamiento inesperado o problema de performance.
 - **Obligatoria** para los subagentes correctores de hd-review (fases 3 y 4): no se arregla lo que no se entendió.
 - **Especialmente** cuando hay presión ("es un fix rápido", "ya probé dos cosas"): apurarse acá es la forma más lenta de avanzar.
 
@@ -40,14 +40,15 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 
 ## Fase 4 — Implementación del fix
 
-1. **Test que reproduce la falla ANTES del fix** (red-green: el orquestador verifica que el test falla sin el fix y pasa con él — en HD los implementadores/correctores **se autoverifican en su worktree**, pero esa salida no es evidencia; las corridas que cuentan y sus salidas las hace el orquestador **sobre la rama consolidada**).
+1. **Reproducción ANTES del fix, y la misma reproducción después.** HD no escribe tests: la prueba es un caso concreto y repetible —un comando, un input, unos pasos— que falla hoy y deja de fallar con el fix. Si no podés reproducirlo, o no entendiste la causa (volvé a la Fase 1) o es intermitente y necesitás más instrumentación, no un fix a ciegas. La reproducción queda escrita en el reporte y en el ledger.
 2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados.
-3. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y discutilo con el humano. El cuarto fix sin esa conversación está prohibido.
+3. **El fix no está listo hasta que build y lint pasan limpios en la rama.** En HD los implementadores/correctores **se autoverifican en su worktree**, pero esa salida no es evidencia: las corridas que cuentan las hace el orquestador **sobre la rama consolidada**.
+4. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y discutilo con el humano. El cuarto fix sin esa conversación está prohibido.
 
 ## Red flags — si te escuchás pensando esto, volvé a Fase 1
 
 - "Un fix rápido ahora, investigo después" / "probemos cambiar X a ver"
-- "Varios cambios a la vez y corremos los tests" / "salteo el test, lo verifico a mano"
+- "Varios cambios a la vez y vemos qué pasa" / "lo verifico a ojo y listo"
 - "Debe ser X, lo arreglo" / "un intento más" (con 2+ fallos ya hechos)
 - Cada fix revela un problema nuevo en otro lugar → **eso es arquitectura, no un bug**
 
@@ -61,7 +62,8 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 |--------|----------|
 | "Es simple, no necesita proceso" | Los bugs simples también tienen causa raíz. El proceso es rápido en bugs simples. |
 | "Es una emergencia, no hay tiempo" | Sistemático es MÁS RÁPIDO que prueba y error a ciegas. |
-| "Escribo el test después de confirmar que anda" | Los fixes sin test no se quedan. El test primero es la prueba. |
+| "Escribo un test después de confirmar que anda" | HD no escribe tests. La prueba es la reproducción que fallaba y ya no falla: sin ella escrita, el fix no se puede re-verificar mañana. |
+| "Sin tests no puedo probar el fix" | Sí podés: reproducís la falla con un comando o unos pasos, aplicás el fix y repetís la misma reproducción. Es más lento que un test y es lo que hay — por eso el revisor es obligatorio. |
 
 ## Cierre
 

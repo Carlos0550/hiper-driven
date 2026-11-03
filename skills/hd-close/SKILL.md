@@ -5,7 +5,7 @@ description: Fase 5 (final) del framework Hiper-driven (HD). Usar SOLO cuando el
 
 # HD — Fase 5: Cierre
 
-**Precondición absoluta**: el humano dijo explícitamente que está todo bien. Ni los tests en verde, ni la revisión aprobada, ni el paso del tiempo reemplazan esa aprobación.
+**Precondición absoluta**: el humano dijo explícitamente que está todo bien. Ni el build en verde, ni la revisión aprobada, ni el paso del tiempo reemplazan esa aprobación.
 
 ## Decisiones fijas (no se preguntan)
 
