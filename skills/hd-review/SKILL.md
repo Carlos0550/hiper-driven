@@ -1,9 +1,9 @@
 ---
 name: hd-review
-description: Fases 3 y 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron. Un revisor distinto audita cada ola por el diff de su commit (código, secuencial, contra spec y plan, incluido el comportamiento esperado), registra veredictos con evidencia en review-progress.md, corre UNA sola corrección total con hd-debug obligatorio y verifica con build + lint frescos. El revisor es obligatorio en TODOS los modos, también en directo y en cambio chico. Si no alcanza, reporta al humano con diagnóstico en vez de abrir otra ronda. Después colapsa todos los commits del trabajo a un único diff sin stage para la aprobación humana, y atiende los bugs que el humano reporte.
+description: Fase 4 del framework Hiper-driven (HD). Usar cuando todas las olas terminaron. Un revisor distinto audita cada ola por el diff de su commit (código, secuencial, contra spec y plan, incluido el comportamiento esperado), registra veredictos con evidencia en review-progress.md, corre UNA sola corrección total con hd-debug obligatorio y verifica con build + lint frescos. El revisor es obligatorio en TODOS los modos, también en directo y en cambio chico. Si no alcanza, reporta al humano con diagnóstico en vez de abrir otra ronda. Al final entrega el trabajo al humano para que pruebe el comportamiento contra los criterios de aceptación; los commits por ola se conservan. Atiende también los bugs que el humano reporte.
 ---
 
-# HD — Fase 3: Revisión, corrección única y colapso
+# HD — Fase 4: Revisión y corrección única
 
 Esta fase es la que hace que el trabajo de un LLM sea **confiable**. No arranca hasta que TODAS las olas terminaron. Vos orquestás; un **subagente revisor distinto del que implementó** audita. La corrección es **una sola** para todo el trabajo.
 
@@ -17,7 +17,7 @@ Esta fase es la que hace que el trabajo de un LLM sea **confiable**. No arranca 
 
 - El humano se entera en dos momentos, y solo en esos dos:
   1. **Freno real**: un contrato roto, una decisión arquitectónica con dos caminos válidos, o **el trabajo que quedó rojo después de la corrección única**.
-  2. **Cierre**: el resumen final, con la sección de desviaciones que requieren su decisión.
+  2. **Final**: el handoff para que pruebe el comportamiento y, después del OK, el resumen de cierre con las desviaciones que requieren su decisión.
 - Todo lo demás —veredicto APROBADO/DENEGADO, hallazgos ya corregidos, conteos de lint— **se escribe y no se dice**.
 
 ## Ley de hierro de la evidencia
@@ -38,7 +38,7 @@ El revisor lee el diff completo y lo resume en hallazgos; **vos no leés el diff
 
 Misma regla que en hd-implement: **cada commit verificado se sube a `hd-backup/<trabajo>`** si el spec dice `push de seguridad: habilitado` y la rama actual no es la default. Es un **respaldo, no una aprobación**. Nunca `--force`; si el push falla, anotá `Push: FALLIDO (<motivo>)`, seguí y reportalo en el cierre.
 
-El commit de la corrección única también se respalda ahí antes del colapso. La rama de trabajo **no** se pushea: se colapsa y se commitea recién en el cierre, con autorización.
+El commit de la corrección única también se respalda ahí. La rama de trabajo **no** se pushea automáticamente: solo en el cierre, con autorización.
 
 ## Paso 1 — Auditoría por ola
 
@@ -87,39 +87,32 @@ El revisor busca, contra spec y plan:
    
    Esto es un **freno real**: el trabajo se detiene y espera su decisión.
 
-## Paso 4 — Verificación final y colapso
+## Paso 4 — Verificación final
 
 Con todo en verde (o adjudicado), verificá el **estado final consolidado**:
 
-1. Los cambios ya están en la rama, consolidados y commiteados ola por ola.
+1. Los cambios ya están en la rama, consolidados y commiteados ola por ola. **No los colapses ni los squashees**: son el historial del trabajo y el respaldo en `hd-backup/<trabajo>`.
 2. Corré **build + lint en la rama**, como evidencia final fresca del estado completo. Nada de "ya corrió en cada ola": la última corrida es la que se reporta.
-3. Revisá que el diff total (base → árbol de trabajo) no tenga archivos sueltos, restos de debug, ni nada fuera del spec.
-4. **Colapsá los commits del trabajo** (un colapso por repo, cada uno a su `commit base` del spec). Los checkpoints por ola fueron andamiaje: el humano revisa un diff, no un historial.
-   a. **Anotá `git rev-parse HEAD` en el ledger ANTES de tocar nada** (`Colapso: HEAD previo <sha>`). También está en `hd-backup/<trabajo>`: esa rama es la red de seguridad.
-   b. **Sacá la foto del contenido**: `git add -A && git write-tree` → anotá el hash; `git reset` para dejarlo sin stage otra vez.
-   c. `git reset --mixed <commit base>` → los commits del trabajo desaparecen de la rama y **todos los cambios quedan en el árbol de trabajo, sin stage**.
-   d. **Repetí la foto y comprobá que es idéntica** (`git add -A && git write-tree` → `git reset`): mismo hash antes y después = el colapso no cambió ni un byte. Los dos hashes van al ledger.
-   e. Ledger: `Colapso: N commits → diff único sin stage (HEAD previo <sha>; respaldo en hd-backup/<trabajo>)`.
-   
-   Resultado obligatorio: **todo presente, SIN STAGE y SIN COMMITS del trabajo por encima de la base.** El diff único sin stage ES la interfaz de revisión del humano.
+3. Revisá que el diff total (`git diff <commit base>..HEAD`) no tenga archivos sueltos, restos de debug, ni nada fuera del spec.
+4. Ledger: `Review: <N> olas verdes; evidencia final: build <resultado>, lint <resultado>`.
 
-## Paso 5 — Handoff al humano (Fase 4)
+## Paso 5 — Handoff al humano (prueba de comportamiento)
 
-Avisá **breve**: qué se implementó (dos renglones), dónde están los artefactos, que los checkpoints por ola ya fueron colapsados y que todo quedó **sin stage, como un diff único**, para probar el comportamiento y revisar a mano. **Sin el detalle plan por plan.**
+Avisá **breve**: qué se implementó (dos renglones), dónde están los artefactos, y que el historial quedó **como commits por ola** (no se colapsa). **Sin el detalle plan por plan.**
 
 Pasale **los criterios de aceptación del spec como checklist**: sin tests, la prueba del humano es la verificación final de comportamiento, y la checklist es lo que la vuelve verificable en vez de "mirá si anda".
 
-**No ofrezcas una guía de auditoría commit por commit**: no hay commits por plan; la interfaz es el diff.
+La prueba es **de comportamiento, no de código**: el humano no revisa el diff (eso ya lo hizo el revisor); valida que el sistema haga lo que el spec promete. No le pidas que audite el código ni commit por commit.
 
 ### Si el humano encuentra algo
 
-**Subagente corrector NUEVO, en un worktree desde la rama, obligado a seguir `hd-debug`.** Corregido → consolidás, corrés build + lint (evidencia fresca) y reproducís el caso reportado → devolvéselo al humano, otra vez **sin stage**. Los arreglos de la fase 4 **no se commitean**: el humano está revisando ese mismo diff y quien commitea es `hd-close`, al final. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano**, no un cuarto fix.
+**Subagente corrector NUEVO, en un worktree desde la rama, obligado a seguir `hd-debug`.** Corregido → consolidás, corrés build + lint (evidencia fresca), reproducís el caso reportado y **commiteás el fix** (`hd(<trabajo>): corrección fase 4`), con su respaldo en `hd-backup/<trabajo>` → devolvéselo al humano. La rama que prueba el humano es la que se cierra: nada queda sin commitear. Recordá la regla de hd-debug: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano**, no un cuarto fix.
 
 ## Salida
 
 - El humano dice explícitamente que está todo bien → **cargá la skill `hd-close` VOS MISMO y ejecutá la fase 5** (sin esperar a que la invoquen).
-- La fase 4 SÍ es una pausa: entre tu handoff y el veredicto del humano no avanzás. Una vez que dice "todo bien", el pase a hd-close es automático.
-- Nunca avances por inercia ni porque "compila": la aprobación es del humano.
+- La prueba humana SÍ es una pausa: entre tu handoff y el veredicto del humano no avanzás. Una vez que dice "todo bien", el pase a hd-close es automático.
+- Nunca avances por inercia ni porque "compila": la aprobación es del humano, después de probar.
 
 ## Racionalizaciones comunes (y su realidad)
 
@@ -134,7 +127,8 @@ Pasale **los criterios de aceptación del spec como checklist**: sin tests, la p
 | "El revisor necesita el parche guardado" | `git show <sha> -- <rutas del plan>` reconstruye el mismo diff. El commit es el artefacto; el archivo de parche era un paso manual de más. |
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
 | "Este hallazgo es obviamente falso, lo descarto" | Se marca como falso positivo con razón en el ledger y se reporta. Descartar en silencio está prohibido. |
-| "El colapso es un detalle mecánico" | Colapsar sin comparar el hash del árbol antes y después es la única forma de perder trabajo en silencio; sin el HEAD previo anotado, los commits se van con el reflog. |
-| "Dejo los commits por ola, total el diff se ve igual" | La interfaz de revisión es un diff, no un historial: commits sin colapsar hacen que el humano revise por partes lo que se pensó como un todo. |
+| "El humano igual no mira el diff, no hace falta que la rama esté limpia" | El humano no revisa código, sí prueba comportamiento: la rama que prueba tiene que ser la que se cierra, con todo commiteado y respaldado. |
+| "Los commits por ola son ruido: los squasheo al cerrar" | No: son el historial del trabajo y la red de respaldo. Squashearlos reescribe lo que el humano ya probó y lo que está en `hd-backup/<trabajo>`. |
 | "Pusheo la rama de trabajo para asegurarla" | El respaldo ya está en `hd-backup/<trabajo>`. La rama de trabajo se pushea en el cierre, con autorización. |
+| "El fix de la prueba humana lo commitea el cierre" | El fix se commitea en el momento: sin commit no hay respaldo ni evidencia de qué se probó, y la rama que se cierra tiene que ser la misma que se probó. |
 | "El corrector ya arregló, no hace falta build" | El corrector es un agente: su verde no es evidencia. El build de la rama es barato y es el único que vale. |

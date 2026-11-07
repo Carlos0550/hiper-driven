@@ -42,7 +42,7 @@
 
 <!-- Lista verificable. Cada criterio debe poder responderse con sí/no
      mirando el sistema (no leyendo el código). Sin tests, esta lista es
-     la checklist con la que el humano prueba el trabajo en la fase 4
+     la checklist con la que el humano prueba el trabajo al final de la fase 4
      y el último respaldo del revisor. -->
 - [ ] <criterio 1>
 - [ ] <criterio 2>

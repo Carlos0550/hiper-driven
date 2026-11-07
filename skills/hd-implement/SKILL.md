@@ -1,9 +1,9 @@
 ---
 name: hd-implement
-description: Fase 2 (continuación) del framework Hiper-driven (HD). Usar desde el prompt de implementación de un spec aprobado. El orquestador ejecuta los planes ola por ola; lanza por ola los implementadores (solo código) en un worktree compartido. Los agentes se autoverifican en su worktree (compilan y pasan el lint), pero solo la corrida del orquestador en la rama consolidada es evidencia, y solo él commitea. El orquestador consolida la ola, la commitea, corre su gate (build + lint + estándares) y hace una sola corrección si hace falta. No hay tests (el framework no los escribe).
+description: Fase 3 del framework Hiper-driven (HD). Usar desde el prompt de implementación de un spec aprobado. El orquestador ejecuta los planes ola por ola; lanza por ola los implementadores (solo código) en un worktree compartido. Los agentes se autoverifican en su worktree (compilan y pasan el lint), pero solo la corrida del orquestador en la rama consolidada es evidencia, y solo él commitea. El orquestador consolida la ola, la commitea, corre su gate (build + lint + estándares) y hace una sola corrección si hace falta. No hay tests (el framework no los escribe).
 ---
 
-# HD — Implementación (olas, worktrees y evidencia estática)
+# HD — Fase 3: Implementación (olas, worktrees y evidencia estática)
 
 Entrada: `spec.md` + `spec-prompt.md` + planes aprobados. Vos (el modelo de turno) sos el **orquestador**: no implementás con tus propias manos; coordinás agentes y sos dueño de TODA la evidencia. Si el prompt no existe, generá uno mínimo desde el spec antes de arrancar y anotalo; no improvises el alcance.
 
@@ -25,7 +25,7 @@ Este framework **no escribe tests**: ni unitarios, ni de integración, ni "aunqu
 - Cada hallazgo, build roto, error de lint o "esto no era así": **al ledger**. Nada de informes por plan, por ola ni por worktree.
 - **El humano se entera en dos momentos, y solo en esos dos:**
   1. **Freno real**: algo que te obliga a **parar todo el trabajo y esperar su decisión** (build o lint que no se arreglan en una corrección, error de contrato, baseline imposible de correr, datos en riesgo, spec sin aprobar). Ahí sí, y con detalle: qué pasó, qué falla, dónde y qué recomendás hacer.
-  2. **Cierre**: el resumen final, con la sección de desviaciones que requieren su decisión.
+  2. **Final**: el handoff para que pruebe el comportamiento y, después del OK, el resumen de cierre con las desviaciones que requieren su decisión.
 - Todo lo demás se resuelve entre vos y tus agentes, y queda escrito. Un problema que no frena el trabajo **no se consulta**: se anota y se reporta al cierre.
 
 ## Ley de hierro de la evidencia
@@ -53,7 +53,7 @@ Los commits por ola viven en la rama de trabajo hasta el cierre: un corte de luz
 
 > **Se pushea si y solo si** el spec dice `push de seguridad: habilitado` para ese repo **y** la rama actual no es la rama por defecto.
 
-**Rama de respaldo:** `hd-backup/<trabajo>`. El push es `git push <remote> HEAD:refs/heads/hd-backup/<trabajo>`. Así la rama de trabajo queda libre para el colapso de review y el commit único de close; los commits por ola quedan recuperables en la rama de respaldo.
+**Rama de respaldo:** `hd-backup/<trabajo>`. El push es `git push <remote> HEAD:refs/heads/hd-backup/<trabajo>`. Así los commits por ola quedan recuperables aunque la rama de trabajo se pierda: la rama de trabajo no se pushea automáticamente.
 
 - **Es un respaldo, no una aprobación**: se sube el commit tal cual, aunque el gate de la ola todavía no haya pasado.
 - **Nunca `--force`**: si el remoto está adelantado o divergido, el push se rechaza; anotá el fallo y seguí.
@@ -86,13 +86,13 @@ El gate de una ola son tres corridas **en la rama consolidada**, en este orden, 
 
 1. **Build / typecheck** — el comando `Build:` del spec. Si no compila, la ola no existe.
 2. **Lint / formato** — el comando `Lint:` del spec. **Sin errores nuevos**: los que ya estaban en el baseline con la misma firma se ignoran.
-3. **Estándares** — si el repo tiene un comando único de chequeo (`make check`, `pnpm verify`, `npm run check`), ese es el gate. Si no, lo que el linter no puede decidir (convenciones de la casa, manejo de errores, duplicación evidente) lo audita el **revisor** en la fase 3: vos no leés el diff.
+3. **Estándares** — si el repo tiene un comando único de chequeo (`make check`, `pnpm verify`, `npm run check`), ese es el gate. Si no, lo que el linter no puede decidir (convenciones de la casa, manejo de errores, duplicación evidente) lo audita el **revisor** en la fase 4: vos no leés el diff.
 
 Una ola está **verde** cuando las tres corridas pasan (o sus fallos están en el baseline) y el revisor no encontró nada que la deniegue.
 
 ## El ledger (memoria que sobrevive a la compactación)
 
-Al arrancar, creá `.hd/<nombre-del-trabajo>/ledger.md` con primera línea `# HD ledger — trabajo: <nombre>` y el **commit base** anotado en el spec (`Base: <sha>` — es el destino del colapso final de hd-review), la **rama de trabajo**, el **modo**, la **rama de respaldo** y los **fallos conocidos** del baseline. Registrá ahí, a medida que pasa:
+Al arrancar, creá `.hd/<nombre-del-trabajo>/ledger.md` con primera línea `# HD ledger — trabajo: <nombre>` y el **commit base** anotado en el spec (`Base: <sha>` — referencia del trabajo y de su historial), la **rama de trabajo**, el **modo**, la **rama de respaldo** y los **fallos conocidos** del baseline. Registrá ahí, a medida que pasa:
 
 - `Baseline: <sha> — <N> hallazgos de build/lint preexistentes (<firmas>)`
 - `Ola N: base <sha> (padre de la ola)`
@@ -158,7 +158,7 @@ git worktree add --detach .git/hd-wt/<trabajo>/ola<N> <Base-de-la-ola>
 
 - Un solo plan, un solo worktree (`cambio`), un implementador.
 - Consolidación con `cherry-pick -n`, commit, gate (build + lint + estándares) y respaldo.
-- El orquestador hace una corrección si hace falta, commitea el checkpoint único, lo respalda en `hd-backup/<trabajo>` y sigue con `hd-review` (**el revisor entra siempre**).
+- El orquestador hace una corrección si hace falta, commitea el trabajo, lo respalda en `hd-backup/<trabajo>` y sigue con `hd-review` (**el revisor entra siempre**).
 
 ## Modo directo
 
@@ -170,7 +170,7 @@ Un trabajo de uno o dos archivos, sin contratos nuevos que otros consuman y sin 
 
 ## Salida
 
-Todas las olas verdes con evidencia en el ledger → **cargá la skill `hd-review` VOS MISMO y arrancá la fase 3 en el mismo flujo** — acá NO hay gate humano. Los cambios están en la rama **como un commit por ola** (o uno solo en directo y chico), el worktree borrado y los commits respaldados en `hd-backup/<trabajo>`. Eso es lo que hd-review audita, por SHA.
+Todas las olas verdes con evidencia en el ledger → **cargá la skill `hd-review` VOS MISMO y arrancá la fase 4 en el mismo flujo** — acá NO hay gate humano. Los cambios están en la rama **como un commit por ola** (o uno solo en directo y chico), el worktree borrado y los commits respaldados en `hd-backup/<trabajo>`. Eso es lo que hd-review audita, por SHA.
 
 ## Racionalizaciones comunes (y su realidad)
 

@@ -5,7 +5,7 @@
 - **SDD — Spec Driven Development**: ningún código se escribe sin un spec que diga *qué*, *por qué* y *cómo se valida*.
 - **Verificación en dos capas**. **Estática**: un cambio no está listo si no **compila** limpio y no **cumple los estándares de buenas prácticas** del repo (lint, formato, convenciones, manejo de errores). **Semántica**: lo que el compilador y el linter no pueden ver lo audita un **revisor independiente y obligatorio** contra el spec. **No hay tests**: no se escriben, no se piden y no se aceptan.
 
-El objetivo de HD es simple: **poder confiar en un trabajo hecho 100% por un LLM**. Sin tests, esa confianza no viene de la fe, viene del proceso: specs versionados, planes chicos, diffs chicos que compilan y respetan las convenciones, revisión obligatoria por ola y aprobación humana antes de cerrar. Todo lo que se saca de la red automática de pruebas se compensa con barreras más firmes: **el revisor nunca es opcional** y el gate estático no se negocia.
+El objetivo de HD es simple: **poder confiar en un trabajo hecho 100% por un LLM**. Sin tests, esa confianza no viene de la fe, viene del proceso: specs versionados, planes chicos, diffs chicos que compilan y respetan las convenciones, revisión obligatoria por ola y prueba humana del comportamiento antes de cerrar. Todo lo que se saca de la red automática de pruebas se compensa con barreras más firmes: **el revisor nunca es opcional** y el gate estático no se negocia.
 
 ---
 
@@ -24,7 +24,7 @@ Casi todo trabajo entra por una de estas cuatro puertas. El usuario normalmente 
 | Planes | Uno, mínimo | Uno solo | Varios, **default un plan por ola** |
 | Implementación | Un worktree, un implementador | Un worktree, un implementador | Implementadores por ola en un worktree compartido |
 | Verificación | Build + lint + estándares | Build + lint + estándares | Build + lint + estándares por ola |
-| Revisión | **Revisor obligatorio** | **Revisor obligatorio** + una corrección simple | Auditoría por ola + **una corrección única** + colapso |
+| Revisión | **Revisor obligatorio** | **Revisor obligatorio** + una corrección simple | Auditoría por ola + **una corrección única** |
 | Datos en producción | No aplica: si toca datos, sube a mega | Preguntar si aplica | Preguntar siempre; ola de datos al final, nunca en paralelo, con respaldo y prueba en seco |
 
 > El umbral no es una checklist rígida. La pregunta real es: **¿puede este trabajo dejar el sistema inconsistente a mitad de camino?** Si la respuesta es sí, es mega cambio. Si no, es chico, o directo si no llega a dos archivos con contratos nuevos.
@@ -33,20 +33,20 @@ Casi todo trabajo entra por una de estas cuatro puertas. El usuario normalmente 
 
 ## Las 5 fases
 
-Todas las fases van **atadas en cadena**: no se salta ninguna. La única pausa que no es automática es la aprobación del spec; después, la implementación arranca en una **conversación nueva** con el prompt que deja el spec. Las demás pausas son los gates humanos: la prueba manual de la fase 4 y el OK final.
+Todas las fases van **atadas en cadena**: no se salta ninguna. Hay dos pausas: la **aprobación del spec** y la **prueba humana** al final de la fase 4, cuyo OK habilita el cierre. Aprobado el spec, la implementación arranca en una **conversación nueva** con el prompt que deja el spec.
 
-**Durante la implementación y la revisión, el orquestador no le habla al humano.** Los agentes son colegas de trabajo, no su audiencia: lo que encuentran va al ledger y a los artefactos. El humano se entera en dos momentos —el **freno real** (un error que obliga a parar todo y esperar su decisión) y el **cierre** (resumen corto con las desviaciones que requieren su decisión).
+**Durante la implementación y la revisión, el orquestador no le habla al humano.** Los agentes son colegas de trabajo, no su audiencia: lo que encuentran va al ledger y a los artefactos. El humano se entera en dos momentos —el **freno real** (un error que obliga a parar todo y esperar su decisión) y el **final** (el handoff para que pruebe el comportamiento y el resumen de cierre).
 
 ~~~
 hd-discovery --> hd-spec --prompt--> hd-implement --> hd-review --> (humano prueba) --> hd-close
-   Fase 1        Fase 2                Fase 2 cont.      Fase 3          Fase 4             Fase 5
+   Fase 1        Fase 2                Fase 3         Fase 4           pausa           Fase 5
 ~~~
 
 1. **Discovery** — Destilar la idea primitiva de lo que pide el usuario, investigar el codebase y el contexto (qué está cableado con qué, riesgos, alternativas mejores, **cómo compila y qué convenciones tiene el repo**), y resolver dudas con preguntas **de a una por turno**.
 2. **Spec y plan** — Decidir modo, escribir el `spec.md` (qué, por qué, criterios de aceptación, Q&A completo) y partir el trabajo en planes. En mega cambio: planes ordenados en **olas**, con **Ola 0 = contratos**. Cada plan declara sus archivos de código y fija el **comportamiento esperado** que el revisor va a auditar. Al aprobar, se escribe `spec-prompt.md` y se entrega: la implementación arranca en una conversación nueva, no en la sesión del spec.
 3. **Implementación** — Por ola: implementadores (solo código) trabajan en un worktree compartido; cada agente se **autoverifica en su worktree** (compila y pasa el lint), pero su salida no es evidencia. Se consolida la ola, se commitea, y el orquestador corre **el gate en la rama**: build + lint + estándares. Si hay fallos nuevos, se hace **una sola corrección**. Con la ola verde se respalda en `hd-backup/<trabajo>`.
-4. **Revisión y corrección** — Un agente revisor **siempre** audita cada ola por el diff de su commit (`git show <sha> -- <rutas del plan>`) contra spec y plan, incluido el comportamiento esperado. Veredictos en `review-progress.md`. **Una sola corrección total** para todos los hallazgos de todas las olas; si no alcanza, se reporta al humano. Al final, los commits por ola **se colapsan** a un único diff sin stage.
-5. **Aprobación y cierre** — El humano prueba el comportamiento y revisa el diff, con los **criterios de aceptación** del spec como checklist. Con el OK explícito: limpiar worktrees, commitear todo en **un único commit** y rendir cuenta de los **rulings**. **Nunca push de la rama de trabajo sin autorización.**
+4. **Revisión y corrección** — Un agente revisor **siempre** audita cada ola por el diff de su commit (`git show <sha> -- <rutas del plan>`) contra spec y plan, incluido el comportamiento esperado. Veredictos en `review-progress.md`. **Una sola corrección total** para todos los hallazgos de todas las olas; si no alcanza, se reporta al humano. Al final se corre build + lint frescos y se revisa el diff total; **los commits por ola se conservan** como historial.
+5. **Prueba humana y cierre** — El humano prueba el comportamiento con los **criterios de aceptación** del spec como checklist; no revisa el diff (la revisión de código ya la hizo el revisor). Con el OK explícito: limpiar worktrees, commitear lo que falte (los artefactos `.hd/`) y rendir cuenta de los **rulings**. Los commits por ola no se squashean. **Nunca push de la rama de trabajo sin autorización.**
 
 Transversal a todas: **`hd-debug`** (causa raíz antes que fix), obligatoria para cualquier corrección de las fases 3 y 4 y para pedidos directos de bug.
 
@@ -71,12 +71,12 @@ hiper-driven/
     ├── hd-spec/               # Fase 2: spec, modo, planes, prompt de implementación
     │   ├── SKILL.md
     │   └── templates/         # spec-template.md + plan-template.md + implement-prompt-template.md
-    ├── hd-implement/          # Fase 2 cont.: olas, implementadores, gate estático y commit por ola
+    ├── hd-implement/          # Fase 3: olas, implementadores, gate estático y commit por ola
     ├── hd-debug/              # Transversal: debugging sistemático
-    ├── hd-review/             # Fases 3 y 4: auditoría por ola, corrección única y colapso
+    ├── hd-review/             # Fase 4: auditoría por ola y corrección única
     │   ├── SKILL.md
     │   └── templates/         # review-progress-template.md
-    └── hd-close/              # Fase 5: commit único, respaldo y push con autorización
+    └── hd-close/              # Fase 5: cierre, artefactos y push con autorización
 ~~~
 
 ## Instalación
@@ -103,7 +103,7 @@ Cada trabajo HD crea un directorio `.hd/<nombre-del-trabajo>/` **en el repo dond
 │   ├── plan-01-....md       # Ola 1
 │   └── ...
 ├── reports/                 # reportes de los implementadores
-└── review-progress.md       # veredictos de la fase 3
+└── review-progress.md       # veredictos de la fase 4
 ~~~
 
 Los worktrees de la orquestación **no viven acá**: van en `.git/hd-wt/<trabajo>/`, fuera del árbol de trabajo, para que `git add -A` no se los lleve al commit. Los `logs/` tampoco se commitean.
@@ -112,13 +112,13 @@ El diff de cada plan **no se guarda como archivo**: se reconstruye desde el comm
 
 Esto deja historial auditable en el propio repo: cualquiera (humano o agente) puede reconstruir *por qué* se hizo lo que se hizo.
 
-**Los artefactos van al commit**: en el cierre, `.hd/<nombre-del-trabajo>/` se commitea junto con el código, sin preguntar. Solo quedan fuera si el humano lo pidió explícitamente o si el repo los ignora (`.gitignore`) — y en ese caso no se fuerzan con `git add -f`.
+**Los artefactos van al commit**: el cierre commitea lo que falte de `.hd/<nombre-del-trabajo>/` (el spec, los planes y el ledger ya viajan en los commits de planificación y de ola), sin preguntar. Solo quedan fuera si el humano lo pidió explícitamente o si el repo los ignora (`.gitignore`) — y en ese caso no se fuerzan con `git add -f`.
 
 ## Push de seguridad: respaldo en `hd-backup/<trabajo>`
 
 Un trabajo HD deja un commit por ola. Son checkpoints valiosos y frágiles. Si el trabajo corre en una rama dedicada, **cada commit de ola se sube a `hd-backup/<trabajo>`** apenas se crea: un corte de luz no puede romper el trabajo.
 
-El respaldo va a **otra rama** a propósito: la rama de trabajo se colapsa en review para que el humano revise un único diff, y si los commits por ola estuvieran pusheados ahí, el commit final no sería fast-forward. `hd-backup/<trabajo>` guarda el historial por ola; la rama de trabajo guarda el diff y el commit único.
+El respaldo va a **otra rama** a propósito: la rama de trabajo no se pushea automáticamente, así que `hd-backup/<trabajo>` es la copia remota que sobrevive a un corte de luz. La rama de trabajo conserva esos mismos commits y suma el commit de cierre.
 
 | Pregunta | Respuesta |
 |---|---|
@@ -146,9 +146,9 @@ El respaldo va a **otra rama** a propósito: la rama de trabajo se colapsa en re
 14. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por ola, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto.
 15. **La corrección es una sola.** Se audita una vez, se juntan los hallazgos y se corrige una vez. Si no alcanza, se reporta al humano con diagnóstico; no se abre otra ronda automática.
 16. **Todo bug pasa por causa raíz** (`hd-debug`): 3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.
-17. **Los artefactos `.hd/<trabajo>/` van al commit.** Se commitean con el código y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora.
-18. **El colapso es la interfaz de revisión**: al cerrar review, los commits por ola se colapsan a un único diff sin stage, con el hash del árbol comparado antes y después. El historial por ola queda en `hd-backup/<trabajo>`.
-19. **Durante la ejecución, el orquestador no reporta al humano.** Lo que los agentes encuentran va al ledger. Al humano se le habla en el **freno real** y en el **cierre**.
+17. **Los artefactos `.hd/<trabajo>/` van al commit.** Se commitean con el trabajo (spec y planes al aprobar, ledger por ola, el resto en el cierre) y solo quedan fuera si el humano lo pidió explícitamente o si git los ignora.
+18. **Los commits por ola se conservan**: el historial del trabajo es el historial por ola (`hd(<trabajo>): ola N — …`). Nadie los colapsa, los squashea ni los reescribe; el cierre agrega el commit de artefactos por encima.
+19. **Durante la ejecución, el orquestador no reporta al humano.** Lo que los agentes encuentran va al ledger. Al humano se le habla en el **freno real** y en el **final** (prueba y cierre).
 20. **La implementación arranca con `spec-prompt.md` en una conversación nueva.** El spec no ejecuta su propia implementación: escribe el prompt y se detiene. Copiar y pegar ese bloque es el handoff.
 21. **El contexto del orquestador es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo. Todo lo que entra al chat se paga en cada turno siguiente.
 

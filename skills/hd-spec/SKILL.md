@@ -41,9 +41,9 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 
 - Para **cada repo involucrado**: proponé rama nueva basada en la actual; avisá sugiriendo **nombre** y **desde dónde** se crea. Si aprueba: creala. Si no: se trabaja desde donde está.
 - En cambio chico la regla es la misma: se propone, el usuario decide.
-- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es el punto exacto al que `hd-review` colapsa los commits del trabajo al final. Sin ese SHA, el colapso no se puede hacer con precisión.
+- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es la referencia del trabajo —el punto contra el que se mide el diff total y el que ancla el historial por ola—.
 - **Anotá los comandos de verificación del repo**: `Build:` (build/typecheck), `Lint:` (lint + formato) y, si existe, `Estándares:` (el comando único de chequeo del repo: `make check`, `pnpm verify`, `npm run check`). Los usa `hd-implement` para el baseline y el gate por ola. Si el repo no tiene alguno, se anota `no aplica` — nunca se inventa.
-- **Push de seguridad — decidilo acá, junto con la rama.** El respaldo va a una **rama de respaldo** (`hd-backup/<trabajo>`), no a la rama de trabajo: los commits por ola se suben ahí apenas se crean, y la rama de trabajo se colapsa limpia al final. Si el humano aprueba la rama dedicada → **`push de seguridad: habilitado (rama de respaldo: hd-backup/<trabajo>)`**. Si se trabaja sobre la rama por defecto (`main`/`master`) o sobre una rama ajena → **`push de seguridad: deshabilitado`**: nada sale del repo hasta el cierre.
+- **Push de seguridad — decidilo acá, junto con la rama.** El respaldo va a una **rama de respaldo** (`hd-backup/<trabajo>`), no a la rama de trabajo: los commits por ola se suben ahí apenas se crean; la rama de trabajo conserva esos mismos commits y no se reescribe. Si el humano aprueba la rama dedicada → **`push de seguridad: habilitado (rama de respaldo: hd-backup/<trabajo>)`**. Si se trabaja sobre la rama por defecto (`main`/`master`) o sobre una rama ajena → **`push de seguridad: deshabilitado`**: nada sale del repo hasta el cierre.
   - Anotá el flag en el `spec.md` y en el ledger, **por repo**: `Rama de trabajo: <nombre> (push de seguridad: habilitado — respaldo en hd-backup/<trabajo> | deshabilitado — <motivo>)`.
   - Verificá que el repo tiene remote (`git remote -v`) y anotá cuál (`Remote: origin`). Si **no hay remote**, el push de seguridad no se puede hacer: anotá `deshabilitado — el repo no tiene remote` y seguí igual.
 
@@ -51,7 +51,7 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 
 Creá `.hd/<nombre-del-trabajo>/` en el repo principal y escribí **`spec.md`** siguiendo el template empaquetado en esta skill (`templates/spec-template.md`, relativo a este SKILL.md): resumen del entendimiento, qué, por qué, criterios de aceptación verificables, riesgos y mitigaciones, **Q&A completo**, y el estado de datos en producción si aplica.
 
-Los **criterios de aceptación** no son decoración: sin tests, son la checklist con la que el humano prueba el trabajo en la fase 4 y el respaldo del revisor cuando el plan se queda corto. Cada criterio tiene que poder responderse con **sí/no** y con evidencia mirando el sistema.
+Los **criterios de aceptación** no son decoración: sin tests, son la checklist con la que el humano prueba el trabajo al final de la fase 4 y el respaldo del revisor cuando el plan se queda corto. Cada criterio tiene que poder responderse con **sí/no** y con evidencia mirando el sistema.
 
 En modo **directo**: mismo esqueleto, contenido mínimo. En **cambio chico**: mismo esqueleto, contenido breve. El rigor no se negocia; la burocracia sí.
 
@@ -89,7 +89,7 @@ Si no hay contratos nuevos que consuman otras olas, **no inventes una Ola 0**.
 
 - Mostrá: modo, spec y la división en planes/olas.
 - **Esperá aprobación explícita** antes de implementar nada. **Esta aprobación es la única pausa del paso.**
-- Con la aprobación: actualizá `Estado: aprobado`, escribí **`spec-prompt.md`** con `templates/implement-prompt-template.md`, y commiteá `spec.md` + planes + prompt como checkpoint de planificación (`hd(<trabajo>): spec y planes aprobados`). Ese commit se colapsa en review.
+- Con la aprobación: actualizá `Estado: aprobado`, escribí **`spec-prompt.md`** con `templates/implement-prompt-template.md`, y commiteá `spec.md` + planes + prompt como checkpoint de planificación (`hd(<trabajo>): spec y planes aprobados`). Ese commit queda en el historial del trabajo.
 - **Entregá el prompt al humano**: "Pegá este bloque en una conversación nueva para implementar". **No cargues `hd-implement` en esta sesión**: la implementación no se ejecuta donde se planificó.
 - El prompt lleva: spec, planes, ledger, ramas/base, push de seguridad (rama de respaldo), comandos de verificación, baseline, orden de olas y la ruta de la evidencia. La ruta del spec la da el prompt: si un trabajo viejo usa `spec-2.md`, el prompt lo dice y el skill lo respeta.
 

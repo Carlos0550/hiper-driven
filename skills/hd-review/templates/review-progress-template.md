@@ -59,8 +59,8 @@
 
 ## Veredicto global
 
-<!-- Verde: correr build + lint en la rama (evidencia fresca final), colapsar
-     los commits (reset --mixed a la base, con el hash del árbol verificado
-     antes y después; anotar HEAD previo y hd-backup/<trabajo>), y avisar al
-     humano con los criterios de aceptación como checklist.
+<!-- Verde: correr build + lint en la rama (evidencia fresca final), revisar el
+     diff total (sin archivos sueltos ni restos de debug) y avisar al humano
+     para que pruebe el comportamiento con los criterios de aceptación como
+     checklist. Los commits por ola se conservan: no se colapsan.
      Rojo después de la corrección: freno real, reporte al humano; no se re-revisa. -->
