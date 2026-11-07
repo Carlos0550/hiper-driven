@@ -46,7 +46,7 @@ Enriquecé tu contexto **antes** de preguntar. Las preguntas buenas nacen de hab
 ## Paso 4 — Cierre del discovery
 
 1. Escribí el **resumen del entendimiento**: qué quiere, por qué, constraints, decisiones de la Q&A, riesgos detectados.
-2. Confirmá con el usuario que refleja lo que quiere. **Esta confirmación es la única pausa.**
+2. Confirmá con el usuario que refleja lo que quiere. **Esta confirmación es la única pausa de esta fase.**
 3. Confirmado el resumen → **cargá la skill `hd-spec` VOS MISMO** (con la herramienta de skills del agente; si no hay, leé su SKILL.md desde el directorio de skills) y **empezá a ejecutarla de inmediato, en el mismo flujo**. Nunca te quedes esperando a que el usuario la invoque manualmente: el handoff es una transición automática, no un anuncio decorativo. Solo te detenés si el usuario pide pausa o corrige el resumen.
 
 ## La regla del ratchet (unidireccional)

@@ -34,11 +34,11 @@ NINGÚN VEREDICTO NI AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 
 El revisor lee el diff completo y lo resume en hallazgos; **vos no leés el diff**. Si necesitás orientarte, `git diff --stat` y los hallazgos del revisor alcanzan. La salida del build y del lint va al log y al contexto solo sus líneas de fallo. Cada byte que traés al chat se paga en todos los turnos siguientes.
 
-## Push de seguridad (rama de respaldo)
+## Respaldo temporal (rama de respaldo)
 
-Misma regla que en hd-implement: **cada commit verificado se sube a `hd-backup/<trabajo>`** si el spec dice `push de seguridad: habilitado` y la rama actual no es la default. Es un **respaldo, no una aprobación**. Nunca `--force`; si el push falla, anotá `Push: FALLIDO (<motivo>)`, seguí y reportalo en el cierre.
+Misma regla que en hd-implement: **cada commit verificado se sube a `hd-backup/<trabajo>`** si el spec dice `Respaldo: habilitado` y la rama actual no es la default. Es un **respaldo temporal**: `hd-close` la borra al cerrar. Nunca `--force`; si el push falla, anotá `Push: FALLIDO (<motivo>)`, seguí y reportalo en el cierre.
 
-El commit de la corrección única también se respalda ahí. La rama de trabajo **no** se pushea automáticamente: solo en el cierre, con autorización.
+El commit de la corrección única también se respalda ahí. La rama de trabajo **no** se pushea automáticamente: solo en el cierre, y solo si es nueva.
 
 ## Paso 1 — Auditoría por ola
 
@@ -59,7 +59,7 @@ El revisor busca, contra spec y plan:
 
 ## Paso 2 — Veredictos con evidencia
 
-`.hd/<nombre-del-trabajo>/review-progress.md` (template empaquetado en esta skill, `templates/review-progress-template.md`):
+`.hd/<nombre-del-trabajo>/review-progress.md` (template empaquetado en esta skill, `templates/review-progress-template.md`). Si la fase 2 ya dejó el bloque `Spec y planes`, conservalo y agregá los bloques de ola después:
 
 - Un bloque por ola, con veredicto **APROBADO** o **DENEGADO** y el porqué concreto — no un "LGTM".
 - Denegado incluye: qué debe corregirse para pasar a verde, punto por punto.
@@ -129,6 +129,6 @@ La prueba es **de comportamiento, no de código**: el humano no revisa el diff (
 | "Este hallazgo es obviamente falso, lo descarto" | Se marca como falso positivo con razón en el ledger y se reporta. Descartar en silencio está prohibido. |
 | "El humano igual no mira el diff, no hace falta que la rama esté limpia" | El humano no revisa código, sí prueba comportamiento: la rama que prueba tiene que ser la que se cierra, con todo commiteado y respaldado. |
 | "Los commits por ola son ruido: los squasheo al cerrar" | No: son el historial del trabajo y la red de respaldo. Squashearlos reescribe lo que el humano ya probó y lo que está en `hd-backup/<trabajo>`. |
-| "Pusheo la rama de trabajo para asegurarla" | El respaldo ya está en `hd-backup/<trabajo>`. La rama de trabajo se pushea en el cierre, con autorización. |
+| "Pusheo la rama de trabajo para asegurarla" | El respaldo ya está en `hd-backup/<trabajo>`. La rama de trabajo la pushea `hd-close` automáticamente si es nueva; si no, espera autorización. |
 | "El fix de la prueba humana lo commitea el cierre" | El fix se commitea en el momento: sin commit no hay respaldo ni evidencia de qué se probó, y la rama que se cierra tiene que ser la misma que se probó. |
 | "El corrector ya arregló, no hace falta build" | El corrector es un agente: su verde no es evidencia. El build de la rama es barato y es el único que vale. |

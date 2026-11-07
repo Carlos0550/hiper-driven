@@ -1,22 +1,22 @@
 ---
 name: hd-spec
-description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (directo, cambio chico o mega cambio, con ratchet unidireccional), crea las ramas, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con comportamiento esperado, interfaces y footprints de código. No hay tests (la verificación es build + lint + estándares, y el comportamiento lo audita el revisor). Al aprobar, escribe spec-prompt.md y se detiene; la implementación arranca en una conversación nueva, no en la misma sesión. Nunca lógica ni implementaciones en los artefactos.
+description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (directo, cambio chico o mega cambio, con ratchet unidireccional), crea la rama, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con comportamiento esperado, interfaces y footprints de código. Un revisor independiente audita spec y planes; con una corrección y su confirmación, la implementación sigue en el mismo flujo. No hay tests (la verificación es build + lint + estándares, y el comportamiento lo audita el revisor). Nunca lógica ni implementaciones en los artefactos.
 ---
 
 # HD — Fase 2: Spec y plan
 
-Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.md` + planes + `spec-prompt.md` listos para implementar en una conversación nueva.
+Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.md` + planes + `review-progress.md` (con el veredicto de artefactos), listos para implementar en el mismo flujo.
 
 (Un **spike** nunca llega acá: su salida fue una recomendación en hd-discovery. Si el usuario quiere llevarlo a código, arrancá el flujo completo desde discovery.)
 
 **REGLA DURA: ni el spec ni los planes contienen LÓGICA ni implementaciones.** El código es del implementador; para eso es implementador.
 **Única excepción (contratos):** los planes SÍ pueden fijar **firmas exactas, nombres de tipos, constantes, valores literales y formatos** cuando son el contrato que otras olas consumen (eso es precisamente la Ola 0). Firmas: sí. Comportamiento: en prosa. Lógica: nunca.
 
-**Un solo spec.** No hay cadena de specs ni numeración `spec-1`, `spec-2`. Si el trabajo es grande, se parte en **olas y planes**; el spec sigue siendo uno. La implementación arranca en una conversación nueva con el prompt; no se ejecuta en la sesión donde se planificó.
+**Un solo spec.** No hay cadena de specs ni numeración `spec-1`, `spec-2`. Si el trabajo es grande, se parte en **olas y planes**; el spec sigue siendo uno. La implementación sigue en la misma sesión, en cadena: no hay prompt ni conversación nueva.
 
 **No hay tests.** HD no escribe tests: ni el spec los pide, ni los planes los declaran, ni el implementador los crea. Lo que el plan fija es el **comportamiento esperado en prosa** (entradas, salidas, casos borde, errores) y los **criterios de aceptación**; el revisor audita el código contra ese texto. Si en discovery apareció una suite existente, se respeta y no se toca, pero el trabajo no agrega tests.
 
-## Paso 1 — Confirmar el modo
+## Paso 1 — Decidir el modo
 
 - Si el usuario declaró el modo explícitamente, **respetalo**. Si tu análisis lo contradice fuerte, decilo una vez; si insiste, se hace como dice.
 - Si no dijo nada, **decidí vos y anuncialo con el porqué**, con esta escalera:
@@ -27,7 +27,9 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 | **Olas** | ninguna | ninguna | varias |
 | **Worktrees** | uno | uno | uno por ola |
 | **Verificación** | build + lint + estándares | build + lint + estándares | build + lint + estándares por ola |
-| **Revisor** | obligatorio | obligatorio | obligatorio, por ola |
+| **Revisor de código** | obligatorio | obligatorio | obligatorio, por ola |
+
+El **revisor de artefactos** entra siempre, en los tres modos, al terminar los planes.
 
 - **El default es el más chico que no mienta.** Un trabajo que entra en 1-2 archivos y no cambia contratos va a **directo**: la maquinaria de olas no se amortiza con un plan, y el gate y la evidencia son los mismos.
 - Señales de **MEGA CAMBIO**: refactor de grandes superficies; del orden de 20+ archivos sustanciales; crear o borrar módulos o microservicios enteros; operaciones sobre datos sensibles o en masa; y la señal decisiva: **puede dejar el sistema inconsistente a mitad de camino**.
@@ -39,13 +41,12 @@ Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.
 
 ## Paso 2 — Ramas (antes de escribir nada)
 
-- Para **cada repo involucrado**: proponé rama nueva basada en la actual; avisá sugiriendo **nombre** y **desde dónde** se crea. Si aprueba: creala. Si no: se trabaja desde donde está.
-- En cambio chico la regla es la misma: se propone, el usuario decide.
-- **Anotá el commit base de cada repo** (`git rev-parse HEAD` en cuanto la rama queda definida) en el `spec.md` (`commit base: <sha>`) y en el ledger: es la referencia del trabajo —el punto contra el que se mide el diff total y el que ancla el historial por ola—.
+- **Rama**: si el humano ya indicó una, usala. Si no, y estás en la rama default, **creá `hd/<trabajo>`** desde ahí; si ya estás en una rama no-default, usá esa. Anunciálo en una línea: la aprobación del trabajo ya ocurrió en el resumen de discovery, no hay una segunda pausa acá. Nunca trabajes sobre `main`/default salvo que el humano lo haya pedido. La regla es la misma en los tres modos.
+- **Anotá en el spec y en el ledger, por repo**: `Rama: <nombre> (nueva | existente | default)`, `base: <rama>`, `commit base: <sha>` (la referencia del diff total y del historial por ola) y `Remote: <origin> | sin remote`.
 - **Anotá los comandos de verificación del repo**: `Build:` (build/typecheck), `Lint:` (lint + formato) y, si existe, `Estándares:` (el comando único de chequeo del repo: `make check`, `pnpm verify`, `npm run check`). Los usa `hd-implement` para el baseline y el gate por ola. Si el repo no tiene alguno, se anota `no aplica` — nunca se inventa.
-- **Push de seguridad — decidilo acá, junto con la rama.** El respaldo va a una **rama de respaldo** (`hd-backup/<trabajo>`), no a la rama de trabajo: los commits por ola se suben ahí apenas se crean; la rama de trabajo conserva esos mismos commits y no se reescribe. Si el humano aprueba la rama dedicada → **`push de seguridad: habilitado (rama de respaldo: hd-backup/<trabajo>)`**. Si se trabaja sobre la rama por defecto (`main`/`master`) o sobre una rama ajena → **`push de seguridad: deshabilitado`**: nada sale del repo hasta el cierre.
-  - Anotá el flag en el `spec.md` y en el ledger, **por repo**: `Rama de trabajo: <nombre> (push de seguridad: habilitado — respaldo en hd-backup/<trabajo> | deshabilitado — <motivo>)`.
-  - Verificá que el repo tiene remote (`git remote -v`) y anotá cuál (`Remote: origin`). Si **no hay remote**, el push de seguridad no se puede hacer: anotá `deshabilitado — el repo no tiene remote` y seguí igual.
+- **Respaldo temporal — se deriva de la rama, no se pregunta aparte.** Si hay remote y la rama de trabajo no es la default, `hd-backup/<trabajo>` queda habilitado: los commits por ola se suben ahí apenas se crean. Es **temporal**: `hd-close` la borra al cerrar. Si se trabaja sobre la default o sobre una rama ajena → `Respaldo: no aplica (<motivo>)`.
+  - Anotá el flag en el `spec.md` y en el ledger, **por repo**: `Respaldo: habilitado (hd-backup/<trabajo>) | no aplica — <motivo>`.
+  - Verificá que el repo tiene remote (`git remote -v`) y anotá cuál (`Remote: origin`). Si **no hay remote**, no hay respaldo: anotá `no aplica — el repo no tiene remote` y seguí igual.
 
 ## Paso 3 — Escribir el spec
 
@@ -85,17 +86,30 @@ Si no hay contratos nuevos que consuman otras olas, **no inventes una Ola 0**.
 
 **Modo directo:** un único `plans/plan-01-<nombre>.md`, mínimo. Sin olas, sin Ola 0 (si el trabajo no define contratos nuevos). Si al escribirlo aparecen contratos compartidos o más de dos archivos, **subí de modo** — el ratchet es unidireccional.
 
-## Paso 5 — Aprobación y prompt
+## Paso 5 — Revisión de spec y planes
 
-- Mostrá: modo, spec y la división en planes/olas.
-- **Esperá aprobación explícita** antes de implementar nada. **Esta aprobación es la única pausa del paso.**
-- Con la aprobación: actualizá `Estado: aprobado`, escribí **`spec-prompt.md`** con `templates/implement-prompt-template.md`, y commiteá `spec.md` + planes + prompt como checkpoint de planificación (`hd(<trabajo>): spec y planes aprobados`). Ese commit queda en el historial del trabajo.
-- **Entregá el prompt al humano**: "Pegá este bloque en una conversación nueva para implementar". **No cargues `hd-implement` en esta sesión**: la implementación no se ejecuta donde se planificó.
-- El prompt lleva: spec, planes, ledger, ramas/base, push de seguridad (rama de respaldo), comandos de verificación, baseline, orden de olas y la ruta de la evidencia. La ruta del spec la da el prompt: si un trabajo viejo usa `spec-2.md`, el prompt lo dice y el skill lo respeta.
+Antes de implementar, un **revisor independiente de artefactos** audita el spec y los planes. Es un subagente distinto del orquestador (que es el autor) y **no ejecuta comandos**: lee los archivos.
 
-## Continuidad: cómo retoma la conversación de implementación
+Pasale **rutas**: `spec.md` y cada plan. El revisor busca, contra el resumen/Q&A de discovery:
 
-La fuente es `.hd/<trabajo>/`: el prompt, el `spec.md`, los planes y el ledger. El prompt es la entrada; no hace falta la conversación anterior ni la memoria del harness. Si el prompt no existe, se genera uno mínimo desde el spec antes de arrancar.
+1. **Coherencia con lo aprobado**: el spec no inventa alcance ni contradice el resumen/Q&A.
+2. **Criterios de aceptación verificables**: cada uno se responde sí/no mirando el sistema.
+3. **Planes completos**: archivos exactos y disjuntos, interfaces produce/consume consistentes, dependencias por ola correctas.
+4. **Comportamiento esperado**: entradas, salidas, casos borde, errores y qué no cambia; sin huecos que obliguen al implementador a adivinar.
+5. **Sin lógica ni implementaciones**: solo contratos (firmas, tipos, constantes, formatos) cuando son Ola 0.
+6. **Estructura**: Ola 0 sola si hay contratos, datos al final y en solitario, paralelismo justificado por footprints.
+7. **Modo correcto** (ratchet) y riesgos/datos cubiertos.
+8. **Implementable**: rutas, comandos Build/Lint/Estándares, rama y base anotados.
+
+Veredicto **APROBADO** o **DENEGADO** con evidencia en `.hd/<trabajo>/review-progress.md`, bloque `Spec y planes` (veredicto, hallazgos con archivo y qué falta para pasar a verde).
+
+**Corrección (una sola):** si hay hallazgos, corregí los artefactos —un hallazgo, un cambio; sin ampliar alcance— y pedile al revisor **una confirmación acotada a los hallazgos**, no una re-auditoría completa. Verde → seguí. Si sigue rojo → **freno real** con diagnóstico.
+
+Con el veredicto verde, commiteá `hd(<trabajo>): spec y planes` (spec, planes y `review-progress.md`) y **cargá la skill `hd-implement` VOS MISMO**, en el mismo flujo. Nada de entregar prompts ni abrir una conversación nueva.
+
+## Continuidad
+
+La fuente es `.hd/<trabajo>/`: `spec.md`, los planes, `review-progress.md` y el ledger. La implementación arranca en la misma sesión al terminar la revisión de artefactos; no hay prompt ni handoff. Si el trabajo se retoma tras una compactación, releé esos archivos y el ledger, no tu memoria.
 
 **No inventes archivos de memoria paralelos** (`memory/facts.md`, `INDEX.md`, etc.) para guardar el estado del trabajo. Si el harness tiene memoria, que apunte al ledger y al spec, no que los reemplace.
 
@@ -111,7 +125,8 @@ La fuente es `.hd/<trabajo>/`: el prompt, el `spec.md`, los planes y el ledger. 
 | "Pongo el código en el plan así el implementador no se equivoca" | Plan con lógica = implementador redundante y plan envejecido. Firmas exactas sí; lógica nunca. |
 | "Sin tests, el comportamiento esperado es opcional" | Es lo único que el revisor tiene para comparar. Sin él, la auditoría es a ciegas y la corrección, adivinanza. |
 | "Agrego unos tests al plan, total no molestan" | El framework no escribe tests. Un test sin suite, sin convención y sin dueño es deuda con forma de red de seguridad. |
-| "Ya tenemos plan, empecemos mientras el usuario lo lee" | El gate es la aprobación, no la longitud del spec. |
-| "Puedo implementar acá mismo, el spec está fresco" | La sesión de spec y la de implementación son distintas: el prompt es el handoff. Mezclar contextos es lo que el prompt evita. |
-| "Parto el trabajo en dos specs" | No: un spec, un prompt. Si es grande, se parte en olas y planes. |
+| "Ya tenemos plan, empecemos ya" | El gate es el revisor de artefactos: un spec denegado no se implementa. |
+| "El spec ya está aprobado en el resumen, no hace falta auditarlo" | La aprobación cubre el qué; el revisor cubre la coherencia, los huecos y la implementabilidad. |
+| "El spec lo escribí yo, lo reviso yo mismo" | El revisor de artefactos es distinto del autor: la autorevisión no es evidencia. |
+| "Parto el trabajo en dos specs" | No: un spec. Si es grande, se parte en olas y planes. |
 | "Creció, pero re-clasificar es perder el trabajo hecho" | El trabajo hecho se conserva; lo que cambia es la maquinaria. El ratchet no tiene reversa. |

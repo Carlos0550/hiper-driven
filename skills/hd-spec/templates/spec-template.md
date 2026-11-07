@@ -11,17 +11,17 @@
 # Spec: <nombre-del-trabajo>
 
 - **Modo**: directo | cambio chico | mega cambio
-- **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — por repo involucrado
-- **Remote**: <origin> — por repo involucrado
-- **Push de seguridad**: habilitado (rama de respaldo: hd-backup/<trabajo>) | deshabilitado (<motivo>) — por repo involucrado
+- **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — nueva | existente | default — por repo involucrado
+- **Remote**: <origin> | sin remote — por repo involucrado
+- **Respaldo**: habilitado (rama de respaldo: hd-backup/<trabajo>) | no aplica (<motivo>) — por repo involucrado
 - **Build**: <comando de build o typecheck> | no aplica
 - **Lint**: <comando de lint y formato> | no aplica
 - **Estándares**: <comando único de chequeo: make check | pnpm verify | npm run check> | no aplica
 - **Worktrees**: `.git/hd-wt/<trabajo>/` — symlinks de dependencias: <node_modules | .venv | target | no aplica>
 - **Baseline**: pendiente (se corre antes de la ola 1) | <sha> — <n> hallazgos de build/lint preexistentes
-- **Prompt**: spec-prompt.md
+- **Revisión de artefactos**: review-progress.md (bloque "Spec y planes")
 - **Fecha**: <fecha>
-- **Estado**: borrador | aprobado por el usuario
+- **Estado**: aprobado en el resumen de discovery
 
 ## Resumen del entendimiento
 

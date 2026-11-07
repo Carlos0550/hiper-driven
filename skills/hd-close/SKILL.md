@@ -1,6 +1,6 @@
 ---
 name: hd-close
-description: Fase 5 (final) del framework Hiper-driven (HD). Usar SOLO cuando el humano aprobó explícitamente el trabajo después de probarlo. Elimina los worktrees, verifica que el código quedó commiteado ola por ola y commitea en un commit de cierre lo que falte (artefactos .hd/<trabajo>/), con un mensaje derivado del spec. Los commits por ola se conservan: no se squashean ni se reescriben. El respaldo por ola ya está en la rama hd-backup/<trabajo>; el push de la rama de trabajo o de un PR jamás se hace sin autorización explícita del humano. Rinde cuenta de los rulings tomados.
+description: Fase 5 (final) del framework Hiper-driven (HD). Usar SOLO cuando el humano aprobó explícitamente el trabajo después de probarlo. Elimina automáticamente los worktrees y los stashes del trabajo, verifica que el código quedó commiteado ola por ola, commitea en un commit de cierre lo que falte (artefactos .hd/<trabajo>/) y pushea la rama de trabajo solo si es nueva; después borra la rama de respaldo hd-backup/<trabajo>. Nunca usa --force ni pushea main o ramas ajenas. Rinde cuenta de los rulings tomados.
 ---
 
 # HD — Fase 5: Cierre
@@ -12,53 +12,58 @@ description: Fase 5 (final) del framework Hiper-driven (HD). Usar SOLO cuando el
 | Decisión | Regla |
 |----------|-------|
 | Artefactos `.hd/<trabajo>/` en el commit | **Van**: se commitean en el commit de cierre (lo que no haya viajado ya en los commits de planificación y de ola). Solo quedan fuera si el humano lo pidió explícitamente o si git los ignora. **No preguntes.** |
-| Push de la rama de trabajo o de un PR | **Nunca** sin autorización explícita del humano (Paso 4). |
-| Push de seguridad | **Ya está hecho**: los commits por ola se subieron a `hd-backup/<trabajo>`. No se repite ni se expande a otros destinos. |
-| Checkpoints por ola | **Se conservan**: son el historial del trabajo; el cierre no los colapsa, no los squashea ni los reescribe. |
-| Worktrees residuales | Se borran, verificando antes que no tengan trabajo sin consolidar. |
+| Push de la rama de trabajo | **Automático solo si la rama es nueva** (creada para este trabajo) y no es la default. Si es existente, ajena o default, no se pushea: solo con autorización explícita. |
+| Rama de respaldo `hd-backup/<trabajo>` | **Se borra al cerrar** cuando el trabajo ya está en el remoto (local y remota). Si el push falló, no se borra nada; si el trabajo no está en el remoto, se borra la local y se conserva la remota. |
+| Worktrees | **Se eliminan todos**: no queda ninguno. |
+| Stashes | Si el trabajo usó stashes (con nombre `hd(<trabajo>)` o registrados en el ledger), se dropean. |
+| Checkpoints por ola | **Se conservan**: son el historial del trabajo; el cierre no los colapsa ni los squashea. |
+| `--force` | **Nunca.** |
 
 Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framework ya resolvió solo le agrega ruido al humano.
 
 ## Paso 1 — Confirmar el estado
 
-- Verificá que el **código** del trabajo está commiteado en la rama (los commits por ola) y que lo único pendiente, si hay algo, son artefactos `.hd/`. `git status` no debería mostrar cambios de código sin commitear.
-- Verificá que **no quedan worktrees del trabajo**: en mega cambio se borran al consolidar cada ola; si quedó alguno, verificá que no tenga trabajo sin consolidar antes de borrarlo.
-- Si encontrás cambios de código en algún worktree que no están en la rama: FRENÁ y avisá al usuario antes de tocar nada.
-- **Los commits `hd(<trabajo>): …` son el historial esperado**: no los colapses, no los squashees, no los reescribas. El cierre agrega un commit por encima.
-- El **respaldo** está en `hd-backup/<trabajo>` (local y/o remoto). Verificá que exista; si no existe y el push de seguridad estaba habilitado, anotalo y reportalo (no lo fuerces ahora).
+- El humano dijo que está todo bien (precondición).
+- Leé del `spec.md`, por repo: `Rama` (y si es nueva), `Remote` y `commit base`.
+- Verificá que el **código** está commiteado en la rama (los commits por ola) y que lo único pendiente, si hay algo, son artefactos `.hd/`. `git status` no debe mostrar cambios de código sin commitear.
+- Si encontrás cambios de código en un worktree que no están en la rama: FRENÁ y avisá al usuario antes de tocar nada.
+- Mirá `git worktree list` y `git stash list` para saber qué hay que limpiar.
 
-## Paso 2 — Limpiar worktrees
+## Paso 2 — Limpieza automática
 
-- Eliminá cualquier worktree residual del trabajo (`git worktree list`, luego `git worktree remove` y `git worktree prune`) y confirmá que no queda ninguno. Esto incluye los worktrees del corrector de la fase 4. Normalmente no debería haber ninguno: cada ola borra los suyos al consolidarse y el corrector borra el suyo al terminar.
-- **Borrá `.git/hd-wt/<trabajo>/`** si quedó: los worktrees viven ahí, fuera del árbol de trabajo. Al borrar, **no sigas los symlinks de dependencias** (`node_modules`, `.venv`): `rm -rf` sobre un symlink no toca el original, pero verificá antes de disparar.
-- Limpiá artefactos temporales de la orquestación si los hubiera (`logs/` se conserva solo si el humano lo pidió; por defecto va fuera del commit).
-- Los artefactos `.hd/<nombre-del-trabajo>/` (spec, prompt, planes, ledger, reportes, review-progress) **se conservan y se commitean en el commit de cierre** (lo que no haya viajado ya en los commits de planificación y de ola): son el registro auditable del trabajo. **No preguntes si van incluidos: la decisión ya está tomada.** Hay solo dos exclusiones, y ambas son objetivas:
-  - `logs/` **no va**: es salida de proceso, no documento. Asegurate de que `.gitignore` lo cubra (`.hd/*/logs/`).
-  - **El humano lo pidió explícitamente** ("no commitees los artefactos", "dejá los `.hd` afuera"): quedan fuera del commit. Asentalo en el ledger y mencioná el motivo en el resumen final.
-  - **Git los ignora**: verificá con `git check-ignore -q .hd/<nombre-del-trabajo>/spec.md`. Si están ignorados (típico: `.hd/` en el `.gitignore`), quedan sin trackear y fuera del commit. **No los fuerces** con `git add -f`: el `.gitignore` del repo es una decisión del humano.
-  - En cualquier otro caso: se commitean, sin preguntar y sin avisar antes.
+- **Worktrees**: antes de borrar, verificá que ninguno tenga cambios sin consolidar (`git -C <wt> status --short`); si hay, FRENÁ. Después eliminá todos los del trabajo (`git worktree remove --force` + `git worktree prune`) y confirmá con `git worktree list` que no queda **ninguno** del trabajo.
+- **Directorio**: borrá `.git/hd-wt/<trabajo>/` si quedó, sin seguir los symlinks de dependencias.
+- **Stashes**: dropeá los del trabajo —los que tengan mensaje `hd(<trabajo>)` y los anotados en el ledger (`Stash:`)—. Dropealos por su mensaje, no por ref (las refs se corren). `git stash list` no debe mostrar ninguno del trabajo; no toques stashes ajenos, y si queda alguno sin relación, reportalo.
+- **Temporales**: limpiá `logs/` salvo que el humano haya pedido conservarlos.
 
 ## Paso 3 — Commit de cierre
 
-- Commiteá **lo que falte**: los artefactos `.hd/<trabajo>/` que no hayan viajado ya (por ejemplo `review-progress.md` y el ledger actualizado) y cualquier ajuste sin commitear. **No squashees**: los commits por ola del código se conservan tal cual.
-- El stage incluye los artefactos `.hd/<trabajo>/` salvo que estén ignorados o el humano los excluyó (ver Paso 2): no hace falta ningún paso extra ni ninguna confirmación.
-- Proponé el mensaje al usuario antes de commitear: derivado del spec (qué se hizo y por qué), siguiendo las convenciones del repo si las tiene.
+- Commiteá **lo que falte**: los artefactos `.hd/<trabajo>/` que no hayan viajado (por ejemplo `review-progress.md` y el ledger actualizado) y cualquier ajuste sin commitear. **No squashees**: los commits por ola del código se conservan tal cual.
+- El stage incluye los artefactos `.hd/<trabajo>/`, con tres exclusiones objetivas: `logs/` no va; si el humano pidió excluirlos, no van; si git los ignora, quedan fuera y **no los fuerces** con `git add -f`.
+- Proponé el mensaje al usuario antes de commitear: derivado del spec y siguiendo las convenciones del repo.
 - Si el repo tiene hooks o convenciones de formato de commit, respetalas.
 
-## Paso 4 — Push: solo con autorización
+## Paso 4 — Push automático (solo rama nueva)
 
-- **Jamás ejecutes `git push` de la rama de trabajo, de un PR o de `main` sin autorización explícita del humano.**
-- **El respaldo ya está hecho**: los commits por ola se subieron a `hd-backup/<trabajo>` durante implement y review. Ese push no se repite ni se reescribe.
-- Si el trabajo requiere publicar la rama de trabajo (PR, CI, revisión externa) o mergear a la rama por defecto, pedila y esperá el sí. Si el remoto de la rama de trabajo no existe, el primer push es `git push --set-upstream <remote> <rama>`.
-- **Nunca `--force`.** Si el remoto de la rama de trabajo ya tiene una historia distinta (por ejemplo, otra persona pusheó), el push se rechaza: no lo fuerces, reportalo y que el humano decida.
+- Para cada repo, si el spec dice `Rama: <nombre> (nueva)`, no es la default y hay remote: `git push --set-upstream <remote> <rama>` (o `git push <remote> HEAD:<rama>`). **Es automático: no pidas autorización.**
+- Si la rama es existente, ajena o default: **no pushees**. Queda pendiente; el humano puede autorizarlo después.
+- **Nunca `--force`.** Si el remoto tiene historia distinta o el push falla: reportalo, no fuerces y **no borres la rama de respaldo** en el paso siguiente.
 
-## Paso 5 — Resumen de cierre
+## Paso 5 — Borrar la rama de respaldo
+
+- Si el push del Paso 4 **falló**: no borres nada (ni local ni remota); reportalo.
+- Si el push no aplicaba y la rama de trabajo **no está en el remoto**: borrá la local y **conservá la remota** (es la única copia remota); reportalo.
+- Si el trabajo **ya está en el remoto** (push ok o rama ya publicada): borrá la local (`git branch -D hd-backup/<trabajo>`) y la remota (`git push <remote> --delete hd-backup/<trabajo>`).
+- Si la rama de respaldo no existe, no es un error: anotá `no aplica`.
+- Verificá que no queda `hd-backup/<trabajo>` donde correspondía.
+
+## Paso 6 — Resumen de cierre
 
 Sos un empleado que terminó el proyecto y le reporta a su jefe: **corto, con lo que importa**.
 
 1. **Qué se hizo** — dos renglones, desde el spec.
 2. **Desviaciones que requieren tu decisión** — problemas graves, algo no contemplado que afecta el comportamiento final, fallos conocidos que se ignoraron, residuales aceptados, decisiones que tomaste en su lugar, y lo que quedó fuera de alcance. Cada punto en tres líneas: qué pasó, por qué importa, qué se hizo o qué necesitás. Si no hay nada: *"Sin desviaciones que requieran tu decisión"*.
-3. **Estado del trabajo** — modo, cantidad de olas y planes, rama, hash del commit de cierre, commits por ola (N, el historial del trabajo), worktrees eliminados, artefactos en `.hd/<nombre-del-trabajo>/`, **respaldo**: `hd-backup/<trabajo>` con los commits por ola (local | remoto | no aplica), y push de la rama de trabajo / PR pendiente de autorización (o realizado si se autorizó). El historial por ola está en la rama de trabajo y en la de respaldo.
+3. **Estado del trabajo** — modo, cantidad de olas y planes, rama, hash del commit de cierre, commits por ola (N, el historial del trabajo), worktrees eliminados (0), stashes dropeados (N), **push**: hecho (rama nueva `<nombre>`) | no aplica (rama existente/default) | falló (<motivo>) | pendiente de autorización, **respaldo**: borrado (local | local y remoto) | conservado y por qué, y artefactos en `.hd/<nombre-del-trabajo>/`.
 4. **Rulings tomados en tu lugar** — la lista exhaustiva, una línea cada uno.
 
 ### Rulings que tomaste en nombre del humano (obligatorio)

@@ -1,11 +1,11 @@
 ---
 name: hd-implement
-description: Fase 3 del framework Hiper-driven (HD). Usar desde el prompt de implementación de un spec aprobado. El orquestador ejecuta los planes ola por ola; lanza por ola los implementadores (solo código) en un worktree compartido. Los agentes se autoverifican en su worktree (compilan y pasan el lint), pero solo la corrida del orquestador en la rama consolidada es evidencia, y solo él commitea. El orquestador consolida la ola, la commitea, corre su gate (build + lint + estándares) y hace una sola corrección si hace falta. No hay tests (el framework no los escribe).
+description: Fase 3 del framework Hiper-driven (HD). Usar al cerrar la fase 2, con spec y planes revisados. El orquestador ejecuta los planes ola por ola; lanza por ola los implementadores (solo código) en un worktree compartido. Los agentes se autoverifican en su worktree (compilan y pasan el lint), pero solo la corrida del orquestador en la rama consolidada es evidencia, y solo él commitea. El orquestador consolida la ola, la commitea, corre su gate (build + lint + estándares) y hace una sola corrección si hace falta. No hay tests (el framework no los escribe).
 ---
 
 # HD — Fase 3: Implementación (olas, worktrees y evidencia estática)
 
-Entrada: `spec.md` + `spec-prompt.md` + planes aprobados. Vos (el modelo de turno) sos el **orquestador**: no implementás con tus propias manos; coordinás agentes y sos dueño de TODA la evidencia. Si el prompt no existe, generá uno mínimo desde el spec antes de arrancar y anotalo; no improvises el alcance.
+Entrada: `spec.md` + planes + `review-progress.md` (con el veredicto de artefactos) + ledger. Vos (el modelo de turno) sos el **orquestador**: no implementás con tus propias manos; coordinás agentes y sos dueño de TODA la evidencia.
 
 > **La unidad es la OLA, no el plan.** Se consolidan, se commitean y se revisan olas. Un plan no tiene commit propio ni gate propio.
 
@@ -47,22 +47,22 @@ El costo del trabajo crece con **tu** contexto, no con el de tus agentes: ellos 
 - **No pegues el plan entero en el prompt del agente**: pasale la ruta. El agente lee; vos no.
 - Cuando el trabajo supera las tres olas, **el ledger es tu memoria**: releelo en vez de confiar en el historial.
 
-## Push de seguridad (respaldo en rama aparte)
+## Respaldo temporal (`hd-backup/<trabajo>`)
 
 Los commits por ola viven en la rama de trabajo hasta el cierre: un corte de luz puede romperlos. Para blindarlos, **cada commit de ola se sube a una rama de respaldo**, no a la rama de trabajo:
 
-> **Se pushea si y solo si** el spec dice `push de seguridad: habilitado` para ese repo **y** la rama actual no es la rama por defecto.
+> **Se pushea si y solo si** el spec dice `Respaldo: habilitado` para ese repo **y** la rama actual no es la rama por defecto.
 
-**Rama de respaldo:** `hd-backup/<trabajo>`. El push es `git push <remote> HEAD:refs/heads/hd-backup/<trabajo>`. Así los commits por ola quedan recuperables aunque la rama de trabajo se pierda: la rama de trabajo no se pushea automáticamente.
+**Rama de respaldo:** `hd-backup/<trabajo>`. El push es `git push <remote> HEAD:refs/heads/hd-backup/<trabajo>`. Es **temporal**: `hd-close` la borra al cerrar. Mientras dure el trabajo, los commits por ola quedan recuperables aunque la rama de trabajo se pierda.
 
 - **Es un respaldo, no una aprobación**: se sube el commit tal cual, aunque el gate de la ola todavía no haya pasado.
 - **Nunca `--force`**: si el remoto está adelantado o divergido, el push se rechaza; anotá el fallo y seguí.
 - **Un push fallido NO frena el trabajo**: credenciales, red, hook, remoto caído. Anotá `Push: FALLIDO (<motivo>)` y seguí.
-- **Nunca a la rama de trabajo ni a `main`**: la rama de trabajo se pushea recién en el cierre, con autorización explícita.
+- **Nunca a la rama de trabajo ni a `main`**: la rama de trabajo la pushea `hd-close`, y solo si es nueva.
 
 ## Los tres modos
 
-| Modo | Olas | Worktrees | Verificación | Revisor |
+| Modo | Olas | Worktrees | Verificación | Revisor de código |
 |---|---|---|---|---|
 | **Directo** | ninguna (un solo paso) | uno | build + lint + estándares | **obligatorio** |
 | **Cambio chico** | ninguna (un solo plan) | uno | build + lint + estándares | **obligatorio** (auditoría simple) |
@@ -100,7 +100,10 @@ Al arrancar, creá `.hd/<nombre-del-trabajo>/ledger.md` con primera línea `# HD
 - `Ola N: consolidada (worktree <sha> → rama) — evidencia: build <resultado>, lint <resultado>`
 - `Ola N: commit <sha> (gate: verde | fallos en baseline | corrección: sí | no)`
 - `Push: hd-backup/<trabajo> ← <sha> (ok | FALLIDO: <motivo> | no aplica)`
+- `Stash: <ref> — <motivo> (se dropea en el cierre)`
 - `Ruling: <qué decidiste> — <por qué> — <qué cuesta si te equivocaste>`
+
+Si usás `git stash`, nombralo `hd(<trabajo>): <motivo>` y anotalo en el ledger; `hd-close` dropea los stashes del trabajo. Nunca dejes un stash sin nombre ni registro.
 
 El ledger sobrevive a la compactación de contexto; tu memoria no. **Después de una compactación, creéle al ledger y a git, no a tu recuerdo** — re-lanzar trabajo ya hecho es el fallo más caro de este proceso.
 
@@ -141,7 +144,7 @@ git worktree add --detach .git/hd-wt/<trabajo>/ola<N> <Base-de-la-ola>
    a. **Chequeá los footprints antes de traer nada**: `git -C <wt> status --short` contra `Archivos` del plan. Si un implementador tocó un archivo fuera de su plan, o creó tests, es violación de contrato: corregí al agente **una sola vez**. Si reincide, **freno real**.
    b. **Traé el código**: el worktree commitea su trabajo (`git -C <wt> add -A && git -C <wt> commit -m "wip ola N"`) y vos lo traés **sin commit**: `git cherry-pick -n <sha-wip>`. Cherry-pick y no `merge --ff-only`: los worktrees salieron de la misma base, así que el merge siempre diverge. Como los archivos son disjuntos por contrato, el cherry-pick no conflictúa; si conflictúa, la ola estuvo mal planificada: **frená y re-partí**.
    c. **Commité la ola (checkpoint)**: `hd(<trabajo>): ola N — <qué entró>` (código + ledger). **Va antes del gate, no después**: el commit es la base real sobre la que corre el gate y sobre la que trabaja el corrector si algo falla. Lo hace el orquestador.
-   d. **Subí el commit a la rama de respaldo** (`hd-backup/<trabajo>`) si el push de seguridad está habilitado. **Inmediatamente después del commit, antes del gate**: es un respaldo, no una aprobación. Si falla, anotá y seguí.
+   d. **Subí el commit a la rama de respaldo** (`hd-backup/<trabajo>`) si el respaldo está habilitado. **Inmediatamente después del commit, antes del gate**: es un respaldo, no una aprobación. Si falla, anotá y seguí.
    e. **Build en la rama**: corré `Build:` una vez, con salida a log. Es el único build de la ola. Si falla, relanzá al agente responsable **una sola vez** con el error exacto. Si el segundo intento tampoco compila, **freno real**.
    f. **Lint en la rama**: corré `Lint:` una vez. Los fallos que ya estaban en el baseline con la misma firma se ignoran; los nuevos son hallazgos.
    g. **Gate de la ola**: build + lint + estándares sobre la rama. Esa es LA evidencia.
