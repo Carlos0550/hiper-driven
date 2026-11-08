@@ -1,11 +1,11 @@
 ---
 name: hd-fast-implement
-description: Vía rápida del framework Hiper-driven (HD), fuera de la cadena de 5 fases. Usar para cambios cortos o medianos sobre algo ya construido —renombrar, mover una pieza, ajustar un comportamiento puntual, arreglar un bug chico— cuando el humano quiere velocidad y no trazabilidad; sin spec, sin planes, sin rama, sin commit, sin revisores ni correctores. El mismo modelo hace todos los cambios y los deja en el árbol de trabajo. Entre iteraciones NO se corren builds, lints ni checks; el humano prueba. Cuando el humano da el OK final, recién ahí se corre todo y se cierra. Nunca invocar durante hd-implement o hd-review; sí después de hd-close. Si el cambio crece, se sale de la vía rápida y va a hd-discovery.
+description: Vía rápida del framework Hiper-driven (HD), fuera de la cadena de 5 fases. Usar para cambios cortos o medianos sobre algo ya construido —renombrar, mover una pieza, ajustar un comportamiento puntual, arreglar un bug chico, crear una migración de esquema sin backfill— cuando el humano quiere velocidad y no trazabilidad; sin spec, sin planes, sin rama, sin commit, sin revisores ni correctores. El mismo modelo hace todos los cambios y los deja en el árbol de trabajo. Entre iteraciones NO se corren builds, lints ni checks; el humano prueba. Cuando el humano da el OK final, recién ahí se corre todo y se cierra. Nunca invocar durante hd-implement o hd-review; sí después de hd-close. Si el cambio crece, se sale de la vía rápida y va a hd-discovery.
 ---
 
 # HD — Vía rápida: `/hd-fast-implement`
 
-Esta skill **no es una fase de HD**. Es una puerta lateral para retoques cortos o medianos sobre algo que ya está construido: renombrar, mover una pieza de sección, corregir un comportamiento puntual, arreglar un bug chico. Cambia el código y lo deja **sin commitear**; no escribe spec ni planes, no crea ramas ni worktrees, no lanza revisores ni correctores, y no deja artefactos `.hd/`.
+Esta skill **no es una fase de HD**. Es una puerta lateral para retoques cortos o medianos sobre algo que ya está construido: renombrar, mover una pieza de sección, corregir un comportamiento puntual, arreglar un bug chico, crear una migración de esquema sin backfill. Cambia el código y lo deja **sin commitear**; no escribe spec ni planes, no crea ramas ni worktrees, no lanza revisores ni correctores, y no deja artefactos `.hd/`.
 
 **El mismo modelo hace todo**: lee, edita, revisa su diff y reporta. No delega en subagentes.
 
@@ -36,12 +36,14 @@ Ejemplos:
 - Ajustar copy, estilos, labels o validaciones simples.
 - Un refactor chico y contenido, sin cambiar contratos.
 - Un ajuste chico en auth, permisos o pagos que no cambie el modelo ni el flujo, solo un detalle acotado.
+- Crear una migración de esquema **sin backfill**: borrar un catálogo (tabla), tocar un enum (agregar un valor o quitar uno que queda sin uso), agregar o quitar una columna, un índice, una constraint o una FK. Un `DROP TABLE`/`DROP COLUMN` pedido por el humano entra: no hay vuelta atrás de los datos y el humano lo sabe.
 
 **No entra** si cae en cualquiera de estos:
 
 - Hay que diseñar algo nuevo: un flujo, una entidad, una pantalla, un contrato.
-- Cambia un contrato: APIs públicas, tipos compartidos, esquemas, formatos que otros consumen. **Un rename interno que actualiza todas las referencias no es un cambio de contrato**; un rename de una API pública que consumen otros repos o clientes externos, sí.
-- Hay migraciones, backfills, cambios de esquema u **operaciones de datos en masa** sobre datos existentes.
+- Cambia un contrato **externo**: APIs públicas, tipos compartidos, formatos que otros repos, servicios o clientes consumen. **Un rename interno que actualiza todas las referencias no es un cambio de contrato**; un rename de una API pública que consumen otros repos o clientes externos, sí. Una migración de esquema local no es, por sí sola, un cambio de contrato; si la tabla la consumen otros servicios, sí.
+- La migración necesita **backfill**, transformar filas, mover datos, `UPDATE`/`INSERT` masivos o poblar una columna a partir de otra. Eso es fase de datos de HD, no vía rápida. Si el motor tiene que reescribir filas para aplicar un cambio de tipo, también queda afuera.
+- La migración incluye un **`TRUNCATE`** o un **`DELETE` masivo**: eso es operar sobre datos, no cambiar el esquema. Si hay que vaciar una tabla, es HD.
 - Cambia **estructuralmente** el modelo de auth/permisos, el flujo de pagos, la criptografía o el tratamiento de datos personales. (Un detalle chico en auth o pagos sí entra; cambiar el modelo o el flujo, no.)
 - Son **varios cambios distintos** entre sí, o el diff mezcla cambios de distinto tipo y no se puede revisar como un solo cambio.
 - Toca configuración de despliegue, secretos o CI, archivos generados (`dist/`, `build/`, lockfiles) o una dependencia nueva.
@@ -56,6 +58,7 @@ En esos casos, la salida es `hd-discovery` (o terminar la fase en curso y espera
 - **No hay límite por módulo, paquete o repo.** Un rename puede atravesar tres módulos o dos repos y seguir siendo un cambio fast: es el mismo cambio, repetido donde hace falta.
 - **El número de archivos no decide.** Un ajuste de copy en 20 archivos entra; un cambio de tres archivos que mezcla un fix, un refactor y una feature nueva, no.
 - **Lo que decide es la coherencia**: un solo objetivo, un diff que el humano puede revisar y un resultado que puede probar. Si necesitás un párrafo con varios "además", no es fast.
+- **Las migraciones de esquema sin backfill son un cambio coherente**: borrar un catálogo, tocar un enum o ajustar una constraint entra. Lo que no entra es una migración que tenga que mover o transformar datos o hacer DML masivo.
 - **Si el diff te sorprende a vos mismo**, frená y avisá antes de seguir.
 
 ### Antes de tocar nada
@@ -65,7 +68,8 @@ En esos casos, la salida es `hd-discovery` (o terminar la fase en curso y espera
 3. **Árbol y repos**: mirá el estado de **cada repo** que vas a tocar (`git status --short`). Si hay cambios sin commitear que no son tuyos, no los toques, no los commitees, no los reviertas: preguntá una vez si podés trabajar encima. Si hay merge/rebase/cherry-pick en curso, frená. Si no es un repo git, no hay diff ni commit: reportá los archivos tocados.
 4. **Rama**: trabajás sobre la rama actual de cada repo. No creás ramas. Si es la default, decilo en el reporte.
 5. **Checks de cierre**: identificá los comandos de build, lint y estándares de cada repo (package.json, Makefile, CI, README). **No los corras todavía**: son para el cierre. Si no existen, anotá "no aplica" y decilo en el reporte de cierre; no inventes comandos.
-6. **Alcance**: ubicá el código, leé lo que vas a tocar y a sus consumidores directos. Hacé la lista de archivos, módulos o repos que pensás tocar. Si es un solo cambio coherente, seguí; si son varios cambios distintos, salí a HD **antes de editar**.
+6. **Migraciones**: si el cambio incluye una, identificá cómo se genera y cómo se aplica (ORM, carpeta de migraciones, comando). **No la corras contra producción** ni contra datos que importen, salvo autorización explícita. Un `DROP TABLE`/`DROP COLUMN` es irreversible: el humano lo sabe, pero el reporte de iteración tiene que decir qué se pierde.
+7. **Alcance**: ubicá el código, leé lo que vas a tocar y a sus consumidores directos. Hacé la lista de archivos, módulos o repos que pensás tocar. Si es un solo cambio coherente, seguí; si son varios cambios distintos, salí a HD **antes de editar**.
 
 No hay discovery completo: el reconocimiento es el mínimo para no romper nada. Si falta un dato que cambia el resultado, hacé **una** pregunta y seguí; no conviertas el cambio en una entrevista.
 
@@ -76,12 +80,13 @@ No hay discovery completo: el reconocimiento es el mínimo para no romper nada. 
 3. **Seguí las convenciones de la casa**: nombres, estructura, manejo de errores, imports, formato. Un cambio que respeta el pedido pero rompe el estilo del repo no está listo.
 4. **Renombrar o mover**: buscá **todas** las referencias (código, strings, docs, configs, tests existentes) y actualizalas. El build no ve las referencias en strings; como no vas a compilar en la iteración, la búsqueda es tu red. Verificá con una búsqueda del nombre viejo antes de dar por cerrado.
 5. **Comportamiento**: ubicá el punto exacto donde se decide el comportamiento. No parchees el síntoma en la capa de arriba si la causa está abajo.
-6. **Bug**: `hd-debug` manda para la causa raíz, pero **la reproducción la aporta o la corre el humano**, no vos: no corrés checks en la iteración. Pedile el caso, los pasos o el log; investigá leyendo el código y el reporte. Si no hay reproducción, no arregles a ciegas. **Tres fixes fallidos reportados por el humano sobre el mismo problema = frená y cuestioná la arquitectura con el humano.**
-7. **Sin tests nuevos.** Si el repo ya tiene tests y tu cambio rompe referencias, actualizá solo esas referencias (no agregues casos) y decilo. No los corras: el cierre decide.
-8. **Sin dependencias nuevas** sin preguntar. Una dependencia nueva suele ser señal de que el cambio no era fast.
-9. **Sin restos**: nada de `console.log`/`print` de debug, código comentado, TODOs sin dueño, archivos temporales ni backups `.bak`.
-10. **No toques lo que no pediste.** Si encontrás otro bug o una mejora obvia, anotala y reportala; no la arregles de paso.
-11. **Autolectura del diff antes de reportar (por iteración)**: leé tu propio diff completo (`git diff -- <tus archivos>`). Buscá cambios fuera de alcance, restos de debug, referencias rotas, formato ruidoso y cualquier cosa que no puedas explicar. **No es un check ni un revisor**: es leer, y es la última pasada antes de que el humano pruebe. Corregí lo que encuentres antes de reportar.
+6. **Migraciones de esquema**: escribí la migración **sin backfill**. Si es destructiva (`DROP TABLE`, `DROP COLUMN`, `DROP TYPE` o quitar un valor de enum), decí en el reporte de iteración qué se pierde y que no hay rollback de datos. No la apliques a producción **sin autorización explícita**; si hay que aplicarla para probar, la corre el humano o la corrés solo en el entorno que él indique.
+7. **Bug**: `hd-debug` manda para la causa raíz, pero **la reproducción la aporta o la corre el humano**, no vos: no corrés checks en la iteración. Pedile el caso, los pasos o el log; investigá leyendo el código y el reporte. Si no hay reproducción, no arregles a ciegas. **Tres fixes fallidos reportados por el humano sobre el mismo problema = frená y cuestioná la arquitectura con el humano.**
+8. **Sin tests nuevos.** Si el repo ya tiene tests y tu cambio rompe referencias, actualizá solo esas referencias (no agregues casos) y decilo. No los corras: el cierre decide.
+9. **Sin dependencias nuevas** sin preguntar. Una dependencia nueva suele ser señal de que el cambio no era fast.
+10. **Sin restos**: nada de `console.log`/`print` de debug, código comentado, TODOs sin dueño, archivos temporales ni backups `.bak`.
+11. **No toques lo que no pediste.** Si encontrás otro bug o una mejora obvia, anotala y reportala; no la arregles de paso.
+12. **Autolectura del diff antes de reportar (por iteración)**: leé tu propio diff completo (`git diff -- <tus archivos>`). Buscá cambios fuera de alcance, restos de debug, referencias rotas, formato ruidoso y cualquier cosa que no puedas explicar. **No es un check ni un revisor**: es leer, y es la última pasada antes de que el humano pruebe. Corregí lo que encuentres antes de reportar.
 
 ## Cierre: todos los checks, al final
 
@@ -103,6 +108,8 @@ Cuando el humano da el OK:
 
 Si corregís algo en el cierre, volvé a hacer la autolectura del diff antes de reportar.
 
+Si hay migraciones, el reporte de cierre dice si quedaron aplicadas o pendientes y en qué entorno. No las corras contra producción sin autorización explícita.
+
 No hay commit, no hay push, no hay rama. Los checks del cierre corren sobre el árbol de trabajo tal como quedó.
 
 ## Entrega: sin commit
@@ -113,7 +120,7 @@ No hay commit, no hay push, no hay rama. Los checks del cierre corren sobre el �
 - **No hay respaldo**: lo que no commitees se puede perder. Decilo en el reporte de cierre.
 - Si el humano pide commitear o pushear, **eso ya no es esta skill**: avisá y hacelo solo como un pedido explícito, fuera de este flujo.
 
-Lo único que hacés es leer, buscar, editar en alcance, revisar tu diff y, en el cierre, correr los checks.
+Lo único que hacés es leer, buscar, editar en alcance (incluida la migración), revisar tu diff y, en el cierre, correr los checks.
 
 ### Reporte de iteración (después de cada cambio)
 
@@ -121,6 +128,7 @@ Lo único que hacés es leer, buscar, editar en alcance, revisar tu diff y, en e
 **Cambio**: <2-3 líneas de qué se hizo y por qué>
 **Archivos/repos**: <git status --short / git diff --stat, separado por repo>
 **Para probar**: <pasos exactos o caso que el humano tiene que validar>
+**Migración**: no aplica | <archivo, DDL, destructiva sí/no, qué se pierde, cómo aplicarla>
 **Checks**: no corridos (por diseño; se corren en el cierre)
 **Pendiente / riesgo**: <lo que quedó fuera de alcance o no se pudo verificar>
 ```
@@ -132,6 +140,7 @@ No declares que compila ni que pasa el lint: no lo corriste. Lo único que podé
 ```
 **Cambio**: <2-3 líneas de qué se hizo y por qué>
 **Archivos/repos**: <git status --short / git diff --stat, separado por repo>
+**Migración**: no aplica | <archivo, aplicada en <entorno> | pendiente>
 **Checks de cierre**: Build <resultado> · Lint <resultado> · Estándares <resultado>
 **No toqué**: <fuera de alcance / preexistente>
 **Riesgo / pendiente**: <lo que el humano todavía tiene que decidir>
@@ -142,7 +151,7 @@ Sin revisor, el reporte de cierre es lo que el humano tiene para decidir. Que se
 
 ## Si el cambio crece (salida de la vía rápida)
 
-En cuanto aparezca complejidad oculta —varios objetivos distintos, un contrato compartido, un cambio estructural de auth/pagos/datos, un módulo entero, un diseño nuevo— **frená**. No hay ratchet hacia arriba dentro de la vía rápida: se **sale a HD**.
+En cuanto aparezca complejidad oculta —varios objetivos distintos, un contrato compartido, un cambio estructural de auth/pagos, un backfill, una transformación de datos o DML masivo, un módulo entero, un diseño nuevo— **frená**. No hay ratchet hacia arriba dentro de la vía rápida: se **sale a HD**.
 
 1. Decí qué creció y por qué ya no es fast.
 2. Si todavía no editaste: no edites; ofrecé `hd-discovery`.
@@ -174,6 +183,7 @@ Si el humano insiste en seguir fuera de alcance, es su decisión, pero decilo co
 | Revisor, corrector o subagente | El mismo modelo hace todo; el humano es el revisor. |
 | Tests nuevos | El framework no escribe tests. |
 | Build, lint o checks durante la iteración | Se corren todos juntos en el cierre, con el OK del humano. |
+| Backfill, DML masivo o migración con transformación de datos | Si hay que mover, convertir o borrar datos en masa, es la fase de datos de HD. |
 | Refactors colaterales o arreglar lo preexistente | El diff tiene que ser atribuible al pedido. |
 
 ## Racionalizaciones comunes (y su realidad)
@@ -184,6 +194,9 @@ Si el humano insiste en seguir fuera de alcance, es su decisión, pero decilo co
 | "Toco varios módulos o repos, seguro no es fast" | Un solo cambio coherente puede atravesar módulos y repos. Lo que no entra es mezclar cambios distintos. |
 | "Es auth/pagos, seguro no es fast" | El dominio no decide. Un detalle chico entra; cambiar el modelo de permisos o el flujo de pagos, no. |
 | "Ya que estoy, ordeno esto otro" | El diff deja de ser legible y el humano no puede separar qué pidió de qué regalaste. |
+| "Una migración es tocar datos, seguro no entra" | Solo si hay backfill, transformación o DML masivo. Una migración de esquema sin backfill entra; un drop es irreversible y el humano lo sabe. |
+| "Es un drop, mejor no lo hago por las dudas" | Si el humano lo pidió y entiende que no hay vuelta atrás, se hace. La vía rápida no hace backfill ni rollback de datos, pero sí puede cambiar el esquema. Decí qué se pierde y seguí. |
+| "Pido confirmación tres veces por el drop" | El humano ya lo pidió y entiende el riesgo. Decilo una vez en el reporte y seguí; no lo conviertas en una negociación. |
 | "Corro el build rápido para ver si compila" | Entre iteraciones no se corren checks. El humano prueba; los checks se pagan una vez, en el cierre. |
 | "El humano dijo que anda, ya está" | El OK habilita el cierre, pero el cierre corre todos los checks igual. |
 | "Los checks fallan, pero el humano ya aprobó" | No se cierra: se corrige y se vuelven a correr. Si el fix cambia comportamiento, el humano prueba de nuevo. |

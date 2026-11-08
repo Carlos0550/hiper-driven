@@ -71,7 +71,9 @@ No todo cambio amerita el framework completo. Para retoques cortos o medianos so
 - **Qué conserva**: la ley de la evidencia en el cierre (checks frescos, nada de "debería compilar") y `hd-debug` para bugs (causa raíz antes del fix; la reproducción la valida el humano).
 - **Cómo cierra**: entre iteraciones no se corren checks; el humano prueba y reporta. Cuando dice que está todo bien, se corren todos los checks del cierre y recién ahí la fase se cierra.
 
-**Cuándo no**: si es un cambio estructural (contratos compartidos, esquema o datos en masa, modelo de auth/permisos, flujo de pagos, cripto o PII), si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, o si hay que diseñar algo nuevo. Tocar varios módulos o repos no lo descalifica: un rename mecánico puede cruzarlos. Ahí es HD.
+**Cuándo no**: si es un cambio estructural (contratos compartidos, migraciones con backfill, transformación o DML masivo de datos, modelo de auth/permisos, flujo de pagos, cripto o PII), si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, o si hay que diseñar algo nuevo. Tocar varios módulos o repos no lo descalifica: un rename mecánico puede cruzarlos. Ahí es HD.
+
+**Migraciones**: las de esquema **sin backfill** entran: borrar un catálogo (tabla), tocar un enum, agregar o quitar columnas, índices o constraints. Un `DROP TABLE`/`DROP COLUMN` es irreversible y el humano lo sabe: esta vía no hace backfill ni rollback de datos. Si la migración necesita backfill, transformar filas o DML masivo, es HD.
 
 **Cuándo se invoca**: se recomienda una **conversación nueva** (contexto limpio), pero no es bloqueante. **Nunca** durante `hd-implement` ni `hd-review`: metería cambios sin commitear en un trabajo que se verifica por ola y se revisa. **Sí** después de `hd-close`, que es el punto natural.
 
