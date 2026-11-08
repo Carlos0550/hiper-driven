@@ -31,6 +31,8 @@ Casi todo trabajo entra por una de estas cuatro puertas. El usuario normalmente 
 
 **Los revisores entran siempre.** El de artefactos audita spec y planes antes de implementar; el de código, en todos los modos, también en directo y cambio chico. No hay excepción por tamaño: sin tests, son la única capa que lee semántica.
 
+Fuera de esas cuatro puertas está **`hd-fast-implement`**, la vía rápida para retoques sobre algo ya construido. No es un modo de HD y se explica después de las fases.
+
 ## Las 5 fases
 
 Todas las fases van **atadas en cadena**: no se salta ninguna. La **aprobación humana es una sola**: el resumen de discovery. Después, spec, revisión de artefactos, implementación y revisión de código corren en el mismo flujo. La otra pausa es la **prueba humana** al final de la fase 4, cuyo OK habilita el cierre.
@@ -49,6 +51,31 @@ hd-discovery --> hd-spec --> hd-implement --> hd-review --> (humano prueba) --> 
 5. **Prueba humana y cierre** — El humano prueba el comportamiento con los **criterios de aceptación** como checklist; no revisa el diff (la revisión de código ya la hizo el revisor). Con el OK explícito: limpiar automáticamente worktrees y stashes del trabajo, commitear los artefactos que falten, **pushear la rama solo si es nueva** y borrar la rama de respaldo. Los commits por ola no se squashean. **Nunca `--force`; `main` y ramas ajenas no se pushean sin autorización.**
 
 Transversal a todas: **`hd-debug`** (causa raíz antes que fix), obligatoria para cualquier corrección de las fases 3 y 4 y para pedidos directos de bug.
+
+## La vía rápida: `hd-fast-implement`
+
+No todo cambio amerita el framework completo. Para retoques cortos o medianos sobre algo ya construido —renombrar, mover una pieza de sección, corregir un comportamiento puntual, arreglar un bug chico— está `hd-fast-implement`, una **vía rápida fuera de la cadena de 5 fases**.
+
+| | HD (directo, chico o mega) | Vía rápida |
+|---|---|---|
+| Spec y planes | Sí | No |
+| Rama y worktree | Sí | No: trabaja sobre la rama actual |
+| Commit | Sí (uno por ola; uno solo en directo y chico) | **No**: deja todo en el árbol de trabajo |
+| Revisor independiente | Obligatorio | No: el humano es el revisor |
+| Artefactos `.hd/` | Sí | No |
+| Verificación | Build + lint + estándares | Sin checks en la iteración; todos los checks en el cierre |
+| Para qué | Trabajo que tiene que ser confiable | Retoque que el humano va a probar y commitear |
+
+- **El mismo modelo hace todo**: no hay implementadores, revisores ni correctores (y, como en todo HD, no se escriben tests).
+- **Qué deja**: el diff sin commitear y un reporte corto con qué tocó y qué tiene que probar el humano. Los checks se corren recién en el cierre.
+- **Qué conserva**: la ley de la evidencia en el cierre (checks frescos, nada de "debería compilar") y `hd-debug` para bugs (causa raíz antes del fix; la reproducción la valida el humano).
+- **Cómo cierra**: entre iteraciones no se corren checks; el humano prueba y reporta. Cuando dice que está todo bien, se corren todos los checks del cierre y recién ahí la fase se cierra.
+
+**Cuándo no**: si es un cambio estructural (contratos compartidos, esquema o datos en masa, modelo de auth/permisos, flujo de pagos, cripto o PII), si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, o si hay que diseñar algo nuevo. Tocar varios módulos o repos no lo descalifica: un rename mecánico puede cruzarlos. Ahí es HD.
+
+**Cuándo se invoca**: se recomienda una **conversación nueva** (contexto limpio), pero no es bloqueante. **Nunca** durante `hd-implement` ni `hd-review`: metería cambios sin commitear en un trabajo que se verifica por ola y se revisa. **Sí** después de `hd-close`, que es el punto natural.
+
+> La vía rápida no da las garantías de HD: no hay revisor independiente y los checks se corren recién en el cierre. La confianza la pone el humano al probar y leer el diff. Si el cambio tiene que ser confiable sin que nadie lo mire, no es fast. Las reglas de oro de este README aplican al trabajo HD; esta vía es explícitamente otra cosa.
 
 ## El costo: dónde se va el tiempo
 
@@ -78,7 +105,8 @@ hiper-driven/
     ├── hd-review/             # Fase 4: auditoría por ola y corrección única
     │   ├── SKILL.md
     │   └── templates/         # review-progress-template.md
-    └── hd-close/              # Fase 5: cierre, push de rama nueva, limpieza y borrado del respaldo
+    ├── hd-close/              # Fase 5: cierre, push de rama nueva, limpieza y borrado del respaldo
+    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): sin commit ni revisores; checks al cierre
 ~~~
 
 ## Instalación
@@ -147,7 +175,7 @@ Al cerrar, `hd-close`:
 10. **La unidad es la ola, no el plan.** Al terminar cada ola se consolida, se commitea la ola, se corre su gate y se borran sus worktrees. No hay commit por plan ni archivos de parche. El commit va **antes** del gate: es la base sobre la que corre la evidencia y sobre la que trabaja el corrector.
 11. **Nunca, jamás, push de `main`, de una rama ajena o de un PR sin autorización explícita.** El único push automático es el de la **rama de trabajo nueva** al cerrar (y el respaldo temporal a `hd-backup/<trabajo>` durante el trabajo). Nunca `--force`.
 12. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería compilar" está prohibido; una corrida verde de build + lint solo prueba el árbol donde corrió.
-13. **Los revisores nunca son opcionales.** El de artefactos audita spec y planes antes de implementar; el de código audita cada ola en todos los modos, también en directo y en cambio chico. Son la capa que reemplaza a los tests: saltearlos es el atajo que hunde el framework.
+13. **Los revisores nunca son opcionales.** El de artefactos audita spec y planes antes de implementar; el de código audita cada ola en todos los modos, también en directo y en cambio chico. Son la capa que reemplaza a los tests: saltearlos es el atajo que hunde el framework. **Esto vale para todo trabajo HD**; la vía rápida de `hd-fast-implement` es explícitamente otra cosa y no tiene revisor.
 14. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): estados por ola, evidencias y `Ruling:`s. Sobrevive a la compactación de contexto.
 15. **La corrección de la fase 4 es una sola.** Se audita una vez, se juntan los hallazgos y se corrige una vez. Si no alcanza, se reporta al humano con diagnóstico; no se abre otra ronda automática.
 16. **Todo bug pasa por causa raíz** (`hd-debug`): 3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el humano, no un cuarto fix.
