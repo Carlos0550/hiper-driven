@@ -60,22 +60,22 @@ No todo cambio amerita el framework completo. Para retoques cortos o medianos so
 |---|---|---|
 | Spec y planes | Sí | No |
 | Rama y worktree | Sí | No: trabaja sobre la rama actual |
-| Commit | Sí (uno por ola; uno solo en directo y chico) | **No**: deja todo en el árbol de trabajo |
+| Commit | Sí (uno por ola; uno solo en directo y chico) | **Sí**: un commit por iteración |
 | Revisor independiente | Obligatorio | No: el humano es el revisor |
 | Artefactos `.hd/` | Sí | No |
 | Verificación | Build + lint + estándares | Sin checks en la iteración; todos los checks en el cierre |
 | Para qué | Trabajo que tiene que ser confiable | Retoque que el humano va a probar y commitear |
 
 - **El mismo modelo hace todo**: no hay implementadores, revisores ni correctores (y, como en todo HD, no se escriben tests).
-- **Qué deja**: el diff sin commitear y un reporte corto con qué tocó y qué tiene que probar el humano. Los checks se corren recién en el cierre.
+- **Qué deja**: un commit por iteración (local) y un reporte corto con qué tocó, el SHA y qué tiene que probar el humano. Los checks se corren recién en el cierre.
 - **Qué conserva**: la ley de la evidencia en el cierre (checks frescos, nada de "debería compilar") y `hd-debug` para bugs (causa raíz antes del fix; la reproducción la valida el humano).
-- **Cómo cierra**: entre iteraciones no se corren checks; el humano prueba y reporta. Cuando dice que está todo bien, se corren todos los checks del cierre y recién ahí la fase se cierra.
+- **Cómo cierra**: cada iteración queda commiteada; entre iteraciones no se corren checks; el humano prueba y reporta. Cuando dice que está todo bien, se corren todos los checks del cierre y recién ahí la fase se cierra.
 
 **Cuándo no**: si es un cambio estructural (contratos compartidos, migraciones con backfill, transformación o DML masivo de datos, modelo de auth/permisos, flujo de pagos, cripto o PII), si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, o si hay que diseñar algo nuevo. Tocar varios módulos o repos no lo descalifica: un rename mecánico puede cruzarlos. Ahí es HD.
 
 **Migraciones**: las de esquema **sin backfill** entran: borrar un catálogo (tabla), tocar un enum, agregar o quitar columnas, índices o constraints. Un `DROP TABLE`/`DROP COLUMN` es irreversible y el humano lo sabe: esta vía no hace backfill ni rollback de datos. Si la migración necesita backfill, transformar filas o DML masivo, es HD.
 
-**Cuándo se invoca**: se recomienda una **conversación nueva** (contexto limpio), pero no es bloqueante. **Nunca** durante `hd-implement` ni `hd-review`: metería cambios sin commitear en un trabajo que se verifica por ola y se revisa. **Sí** después de `hd-close`, que es el punto natural.
+**Cuándo se invoca**: se recomienda una **conversación nueva** (contexto limpio), pero no es bloqueante. **Nunca** durante `hd-implement` ni `hd-review`: metería commits de la vía rápida en un trabajo que se verifica por ola y se revisa. **Sí** después de `hd-close`, que es el punto natural.
 
 > La vía rápida no da las garantías de HD: no hay revisor independiente y los checks se corren recién en el cierre. La confianza la pone el humano al probar y leer el diff. Si el cambio tiene que ser confiable sin que nadie lo mire, no es fast. Las reglas de oro de este README aplican al trabajo HD; esta vía es explícitamente otra cosa.
 
@@ -108,7 +108,7 @@ hiper-driven/
     │   ├── SKILL.md
     │   └── templates/         # review-progress-template.md
     ├── hd-close/              # Fase 5: cierre, push de rama nueva, limpieza y borrado del respaldo
-    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): sin commit ni revisores; checks al cierre
+    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): commit por iteración, sin revisores; checks al cierre
 ~~~
 
 ## Instalación
