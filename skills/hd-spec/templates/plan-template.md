@@ -2,7 +2,7 @@
   Template de plan — Framework Hiper-driven (HD)
   REGLA DURA: sin lógica ni implementaciones. Comportamiento esperado: en prosa.
   EXCEPCIÓN (contratos): firmas exactas, nombres de tipos, constantes,
-  valores literales y formatos SÍ se fijan acá cuando otras olas los consumen.
+  valores literales y formatos se fijan acá cuando otras olas los consumen.
 
   NO HAY TESTS. El plan no declara archivos de tests ni flujos A/B:
   el implementador escribe solo código, y el "Comportamiento esperado"
@@ -17,6 +17,8 @@
 - **Ola**: <N>
 - **Depende de**: Ola(s) <N-1, ...> — NUNCA de otro plan de su misma ola
 - **Toca datos existentes**: sí | no
+- **Especialidad sugerida**: backend | frontend | datos | infra | full-stack
+- **Paralelizable con**: <plan-NN | ninguno> — <por qué: archivos disjuntos, sin interfaces cruzadas>
 
 ## Archivos (exactos, sin globs)
 

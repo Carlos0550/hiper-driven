@@ -1,77 +1,109 @@
 <!--
   Template de progreso de revisión — Framework Hiper-driven (HD)
-  Un bloque por etapa: "Spec y planes" (lo escribe la fase 2) y un bloque
-  por OLA. El diff se reconstruye desde el commit de la ola
-  (git show <sha> -- <rutas del plan>); no se guardan archivos de parche.
-  Se analiza SECUENCIALMENTE.
-  En la fase 4, la corrección es UNA sola para todas las olas; no hay re-revisión.
-  El revisor es OBLIGATORIO en todos los modos: en directo y en cambio chico
-  hay un solo bloque de ola, pero el bloque no se saltea.
-  No hay tests: la evidencia es build + lint, y el comportamiento lo
-  audita el revisor contra el spec y el plan.
+  Bloques: "Paquete (fase 2)" (lo escribe el QA de artefactos), un bloque
+  por OLA (lo escribe el revisor de la ola) y "Auditoría de cierre" (lo
+  escribe el auditor final). Se analiza SECUENCIALMENTE.
+  En la fase 4, la corrección de cierre es UNA sola; no hay re-auditoría.
+  El auditor es OBLIGATORIO en todos los modos.
+  No hay tests: la evidencia es build + lint + estándares, y el
+  comportamiento lo auditan los revisores contra el spec y los planes.
 -->
 
 # Progreso de revisión: <nombre-del-trabajo>
 
 - **Fecha de revisión**: <fecha>
 - **Spec de referencia**: .hd/<nombre-del-trabajo>/spec.md
+- **Technical spec**: .hd/<nombre-del-trabajo>/technical_spec.md
 - **Modo**: directo | cambio chico | mega cambio
 
-<!-- Si el archivo se crea en la fase 2, el primer bloque es:
+## Paquete (fase 2) — APROBADO | DENEGADO
 
-## Spec y planes (fase 2) — APROBADO | DENEGADO
+<!-- Lo escribe el QA de artefactos en hd-spec. La fase 3 no lo reescribe. -->
 
-**Auditado**: spec.md + plans/...
-**Hallazgos**: ...
-**Por qué**: ...
+**Auditado**: spec.md + technical_spec.md + plans/ + prototype/ + discovery/ + ledger.md
+**Hallazgos**:
 
-La fase 4 no lo reescribe: agrega los bloques de ola después. -->
+1. <hallazgo> — <archivo> — <qué falta para pasar a verde>
+
+**Por qué**: <justificación del veredicto>
+
+---
 
 ## Ola <N> — APROBADO | DENEGADO
 
 **Plan(es) revisado(s)**: plan-NN, ...
-**Commit de la ola**: `<sha>` — diff por plan: `git show <sha> -- <rutas del plan>`
+**Commit de la ola**: <sha> — diff: `git diff <base>..<sha> -- <rutas del plan>`
+
+### Gate
+
+- **Build**: <resultado> — log: <ruta>
+- **Lint**: <resultado> — log: <ruta>
+- **Estándares**: <resultado> — log: <ruta>
+- **Fallos del baseline ignorados**: <firmas>
 
 ### Hallazgos
 
 <!-- Buscar, en este orden:
-     1. Vulnerabilidades / huecos de seguridad
+     1. Seguridad
      2. Bugs lógicos
-     3. Trampas del lenguaje o librerías
-     4. Desviaciones entre spec/plan y lo implementado
-     5. Comportamiento esperado: ¿el código hace lo que el plan dice
-        (entradas, salidas, casos borde, errores)? Esto REEMPLAZA a los tests.
-     6. Estándares y calidad: convenciones del repo, manejo de errores,
-        duplicación evitable, complejidad innecesaria, dependencias nuevas
-        sin justificar, restos de debug.
+     3. Trampas del lenguaje / librerías
+     4. Desviaciones entre spec/technical spec/plan y lo implementado
+     5. Comportamiento esperado (entradas, salidas, bordes, errores)
+     6. Prototipo (si hay UI)
+     7. Estándares y calidad
+     8. Footprints y tests agregados
 -->
 
-1. <hallazgo> — clasificación: código | estándares | infra | contrato | comportamiento — severidad: alta | media | baja
+1. <hallazgo> — archivo:línea — clasificación: código | estándares | contrato | infra | comportamiento — severidad: alta | media | baja
 
 ### Por qué se aprueba / se deniega
 
-<!-- Justificación clara del veredicto. Si se deniega: qué debe corregirse
-     para pasar a verde, punto por punto. -->
+<!-- Justificación clara. Si se deniega: qué debe corregirse para pasar a
+     verde, punto por punto. -->
+
+### Correcciones de la ola
+
+| Tipo | Commit | Resultado | Confirmación |
+|---|---|---|---|
+| gate | <sha> | verde / residual | — (el agente principal re-corre el gate) |
+| revisión | <sha> | verde / residual | resuelto / pendiente |
 
 ---
 
-<!-- Repetir el bloque por cada ola, en orden de revisión. -->
+<!-- Repetir el bloque por cada ola, en orden. -->
 
-## Corrección única
+## Auditoría de cierre — APROBADO | DENEGADO
 
-<!-- TODOS los hallazgos de TODAS las olas en un solo corrector, con
-     hd-debug obligatorio y guarda de alcance (un hallazgo, un cambio;
-     nada de refactors colados). No escribe tests. Una sola pasada.
-     Verde: commit hd(<trabajo>): corrección única + push a hd-backup/<trabajo>.
-     Rojo: reporte al humano con diagnóstico. NO hay ronda 2. -->
+<!-- La escribe el auditor final en hd-review. No participó de ninguna ola.
+     Mira el trabajo completo, no ola por ola. -->
 
-- Resultado: verde (commit <sha>) | residual (reporte al humano)
-- Evidencia: build <resultado> · lint <resultado> · reproducción del hallazgo <resultado>
+**Auditado**: diff de código completo (base..HEAD, sin .hd) + spec + technical spec + planes + prototipo + waves.md + ledger.md
+**Evidencia**: build <resultado> · lint <resultado> · estándares <resultado> · logs <rutas>
+
+### Hallazgos
+
+1. <hallazgo> — archivo:línea — clasificación: código | estándares | contrato | infra | comportamiento — severidad: alta | media | baja
+
+### Por qué se aprueba / se deniega
+
+<!-- Si se deniega: qué debe corregirse para pasar a verde, punto por punto. -->
+
+### Corrección de cierre
+
+- **Commit**: <sha>
+- **Resultado**: verde | residual
+- **Confirmación del auditor**: <resuelto | pendiente>
+
+## Prueba del cliente
+
+- **Fecha**: <fecha>
+- **Resultado**: aprobado | con observaciones
+- **Observaciones**: <...>
+- **Fixes del cliente**: <sha(s)> | no aplica
+- **Cambios fast durante la prueba**: <sha(s)> | no aplica
 
 ## Veredicto global
 
-<!-- Verde: correr build + lint en la rama (evidencia fresca final), revisar el
-     diff total (sin archivos sueltos ni restos de debug) y avisar al humano
-     para que pruebe el comportamiento con los criterios de aceptación como
-     checklist. Los commits por ola se conservan: no se colapsan.
-     Rojo después de la corrección: freno real, reporte al humano; no se re-revisa. -->
+<!-- Verde: el cliente aprobó el comportamiento y el trabajo está listo
+     para hd-close. Los commits por ola se conservan.
+     Rojo después de la corrección: freno real, reporte al cliente. -->

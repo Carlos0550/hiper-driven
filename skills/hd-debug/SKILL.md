@@ -1,6 +1,6 @@
 ---
 name: hd-debug
-description: Skill transversal del framework Hiper-driven (HD). Usar ante CUALQUIER bug, build o lint roto, o comportamiento inesperado, y de forma OBLIGATORIA para los correctores de las fases 3 y 4 y para pedidos directos de arreglo. No hay tests (la prueba de un fix es la reproducción original que deja de fallar, más build y lint limpios). Nunca proponer fixes sin investigar la causa raíz primero; 3 fixes fallidos significan cuestionar la arquitectura, no intentar un cuarto.
+description: Skill transversal del framework Hiper-driven (HD). Usar ante CUALQUIER bug, build o lint roto, o comportamiento inesperado, y de forma OBLIGATORIA para los fixers de hd-implement y hd-review y para pedidos directos de arreglo. No hay tests (la prueba de un fix es la reproducción original que deja de fallar, más build, lint y estándares limpios). Nunca proponer fixes sin investigar la causa raíz primero; 3 fixes fallidos significan cuestionar la arquitectura, no intentar un cuarto.
 ---
 
 # HD — Debugging sistemático
@@ -16,7 +16,7 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 ## Cuándo se usa
 
 - Cualquier bug, build o lint roto, comportamiento inesperado o problema de performance.
-- **Obligatoria** para los subagentes correctores de hd-review (fases 3 y 4): no se arregla lo que no se entendió.
+- **Obligatoria** para los fixers de hd-implement (gate y revisión de ola) y de hd-review (auditoría de cierre y fixes del cliente): no se arregla lo que no se entendió.
 - **Especialmente** cuando hay presión ("es un fix rápido", "ya probé dos cosas"): apurarse acá es la forma más lenta de avanzar.
 
 ## Fase 1 — Investigación de causa raíz
@@ -42,7 +42,7 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 
 1. **Reproducción ANTES del fix, y la misma reproducción después.** HD no escribe tests: la prueba es un caso concreto y repetible —un comando, un input, unos pasos— que falla hoy y deja de fallar con el fix. Si no podés reproducirlo, o no entendiste la causa (volvé a la Fase 1) o es intermitente y necesitás más instrumentación, no un fix a ciegas. La reproducción queda escrita en el reporte y en el ledger.
 2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados.
-3. **El fix no está listo hasta que build y lint pasan limpios en la rama.** En HD los implementadores/correctores **se autoverifican en su worktree**, pero esa salida no es evidencia: las corridas que cuentan las hace el orquestador **sobre la rama consolidada**.
+3. **El fix no está listo hasta que build, lint y estándares pasan limpios en la rama.** En HD los implementadores y fixers **se autoverifican en su worktree**, pero esa salida no es evidencia: las corridas que cuentan las hace el agente principal **sobre la rama consolidada**.
 4. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y discutilo con el humano. El cuarto fix sin esa conversación está prohibido.
 
 ## Red flags — si te escuchás pensando esto, volvé a Fase 1

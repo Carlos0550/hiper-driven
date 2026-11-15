@@ -1,132 +1,233 @@
 ---
 name: hd-spec
-description: Fase 2 del framework Hiper-driven (HD). Usar después de hd-discovery, con las dudas resueltas. Confirma el modo (directo, cambio chico o mega cambio, con ratchet unidireccional), crea la rama, escribe el spec.md (qué, por qué, criterios de aceptación, Q&A) y parte el trabajo en planes con comportamiento esperado, interfaces y footprints de código. Un revisor independiente audita spec y planes; con una corrección y su confirmación, la implementación sigue en el mismo flujo. No hay tests (la verificación es build + lint + estándares, y el comportamiento lo audita el revisor). Nunca lógica ni implementaciones en los artefactos.
+description: Fase 2 del framework Hiper-driven (HD). La conduce el agente principal con el resumen ya aprobado por el cliente. Convierte ese resumen en el paquete de contrato —spec.md, technical_spec.md, planes, prototipo, ledger y QA—, crea la rama, commitea el paquete y sigue con la implementación en la misma conversación (o en una nueva si el cliente prefiere contexto limpio). No escribe código de producción. No hay tests; la verificación es build + lint + estándares, y el comportamiento lo auditan los revisores.
 ---
 
-# HD — Fase 2: Spec y plan
+# HD — Fase 2: El paquete de contrato
 
-Entrada: el resumen del entendimiento y la Q&A de `hd-discovery`. Salida: `spec.md` + planes + `review-progress.md` (con el veredicto de artefactos), listos para implementar en el mismo flujo.
+Seguís siendo el **agente principal**. Entrada: el resumen aprobado por el cliente, las notas de discovery, los reportes de research y el prototipo. Salida: un paquete que la implementación puede ejecutar sin tu chat. La implementación puede seguir en esta misma conversación o en una nueva.
 
-(Un **spike** nunca llega acá: su salida fue una recomendación en hd-discovery. Si el usuario quiere llevarlo a código, arrancá el flujo completo desde discovery.)
+## Reglas duras
 
-**REGLA DURA: ni el spec ni los planes contienen LÓGICA ni implementaciones.** El código es del implementador; para eso es implementador.
-**Única excepción (contratos):** los planes SÍ pueden fijar **firmas exactas, nombres de tipos, constantes, valores literales y formatos** cuando son el contrato que otras olas consumen (eso es precisamente la Ola 0). Firmas: sí. Comportamiento: en prosa. Lógica: nunca.
+1. **Ni el spec ni los planes contienen lógica ni implementaciones.** El código lo escribe un subagente implementador.
+2. **Única excepción: contratos.** Firmas exactas, nombres de tipos, constantes, valores literales y formatos se fijan cuando son el contrato que otras olas consumen (Ola 0). Firmas sí; lógica nunca.
+3. **Un solo spec.** No hay cadena de specs. Si el trabajo es grande, se parte en olas y planes; el spec sigue siendo uno.
+4. **No hay tests.** Ni el spec los pide, ni los planes los declaran, ni el implementador los crea. La verificación es build + lint + estándares, y el comportamiento lo auditan los revisores contra el `Comportamiento esperado`.
+5. **El agente principal no escribe código de producción.** Escribe artefactos. La implementación la hacen subagentes en la fase 3.
+6. **El paquete es un contrato técnico, no una nota de proceso.** No contiene instrucciones de conversación.
 
-**Un solo spec.** No hay cadena de specs ni numeración `spec-1`, `spec-2`. Si el trabajo es grande, se parte en **olas y planes**; el spec sigue siendo uno. La implementación sigue en la misma sesión, en cadena: no hay prompt ni conversación nueva.
+## El paquete
 
-**No hay tests.** HD no escribe tests: ni el spec los pide, ni los planes los declaran, ni el implementador los crea. Lo que el plan fija es el **comportamiento esperado en prosa** (entradas, salidas, casos borde, errores) y los **criterios de aceptación**; el revisor audita el código contra ese texto. Si en discovery apareció una suite existente, se respeta y no se toca, pero el trabajo no agrega tests.
+Todo vive en `.hd/<trabajo>/`, en el repo donde se trabaja:
 
-## Paso 1 — Decidir el modo
+```
+.hd/<trabajo>/
+├── spec.md                 # el contrato con el cliente: qué, por qué, alcance, criterios, Q&A
+├── technical_spec.md       # el brief para la implementación: qué hacer, cómo encaja, resultado, prototipo
+├── plans/                  # un archivo por plan, con archivos, interfaces y comportamiento esperado
+├── prototype/              # prototipo visual (solo si hay UI), con README
+├── discovery/              # notas y reportes de research
+├── waves.md                # lo escribe el agente principal en la fase 3: su plan de olas
+├── ledger.md               # memoria del trabajo: decisiones, evidencia, rulings
+└── review-progress.md      # QA del paquete (fase 2) y revisiones (fases 3 y 4)
+```
 
-- Si el usuario declaró el modo explícitamente, **respetalo**. Si tu análisis lo contradice fuerte, decilo una vez; si insiste, se hace como dice.
-- Si no dijo nada, **decidí vos y anuncialo con el porqué**, con esta escalera:
+## Paso 1 — Modo y tamaño del trabajo
+
+El modo define la maquinaria, no el rigor. Si el cliente lo declaró, respetalo; si tu análisis lo contradice fuerte, decilo una vez.
 
 | | Directo | Cambio chico | Mega cambio |
 |---|---|---|---|
-| **Cuándo** | 1-2 archivos, sin contratos nuevos que otros consuman, sin datos | Unas pocas piezas acotadas, un plan | 20+ archivos, módulos enteros, contratos compartidos, datos sensibles |
-| **Olas** | ninguna | ninguna | varias |
-| **Worktrees** | uno | uno | uno por ola |
-| **Verificación** | build + lint + estándares | build + lint + estándares | build + lint + estándares por ola |
-| **Revisor de código** | obligatorio | obligatorio | obligatorio, por ola |
+| **Señales** | 1-2 archivos, sin contratos nuevos, sin datos | Unas pocas piezas acotadas, un plan | 20+ archivos, módulos enteros, contratos compartidos, datos sensibles o en masa |
+| **Research** | 1 área | 1-2 áreas | 3-6 áreas |
+| **Planes** | 1 | 1 | Varios |
+| **Olas** | 1 | 1 | Varias |
+| **Prototipo** | Si hay UI | Si hay UI | Si hay UI |
+| **Revisión** | 1 revisor de ola + auditor de cierre | 1 revisor de ola + auditor de cierre | Revisor por ola + auditor de cierre |
+| **Datos** | No aplica | Preguntar | Ola final, sola, con respaldo y prueba en seco |
 
-El **revisor de artefactos** entra siempre, en los tres modos, al terminar los planes.
+**El default es el más chico que no mienta.** Un trabajo de 1-2 archivos sin contratos nuevos va a directo: la maquinaria de olas no se amortiza.
 
-- **El default es el más chico que no mienta.** Un trabajo que entra en 1-2 archivos y no cambia contratos va a **directo**: la maquinaria de olas no se amortiza con un plan, y el gate y la evidencia son los mismos.
-- Señales de **MEGA CAMBIO**: refactor de grandes superficies; del orden de 20+ archivos sustanciales; crear o borrar módulos o microservicios enteros; operaciones sobre datos sensibles o en masa; y la señal decisiva: **puede dejar el sistema inconsistente a mitad de camino**.
-- **Ratchet (unidireccional):** si en cualquier momento aparece complejidad oculta, el trabajo SUBE de modo: directo → chico → mega. Frená, anuncialo, re-planificá. Nada baja de modo a mitad de camino.
+**Señales de mega cambio:** refactor de grandes superficies; del orden de 20+ archivos sustanciales; crear o borrar módulos o servicios enteros; operaciones sobre datos sensibles o en masa; y la señal decisiva: **puede dejar el sistema inconsistente a mitad de camino**.
 
-### Si es mega cambio, avisá UNA sola vez:
+**Ratchet (unidireccional):** si aparece complejidad oculta, el trabajo sube: directo → chico → mega. Nada baja. Si la implementación descubre después que era más grande, también sube.
 
-> En este modo no hay garantía de que todo salga bien a la primera. Por eso el trabajo se parte en pasos chicos que se revisan uno por uno: es más barato encontrar un error en la ola 1 que en la ola 4, cuando ya hay código encima.
+Si es mega cambio, avisá UNA vez:
 
-## Paso 2 — Ramas (antes de escribir nada)
+> En este modo no hay garantía de que todo salga bien a la primera. Por eso el trabajo se parte en olas chicas que se revisan una por una: es más barato encontrar un error en la ola 1 que en la ola 4, cuando ya hay código encima.
 
-- **Rama**: si el humano ya indicó una, usala. Si no, y estás en la rama default, **creá `hd/<trabajo>`** desde ahí; si ya estás en una rama no-default, usá esa. Anunciálo en una línea: la aprobación del trabajo ya ocurrió en el resumen de discovery, no hay una segunda pausa acá. Nunca trabajes sobre `main`/default salvo que el humano lo haya pedido. La regla es la misma en los tres modos.
-- **Anotá en el spec y en el ledger, por repo**: `Rama: <nombre> (nueva | existente | default)`, `base: <rama>`, `commit base: <sha>` (la referencia del diff total y del historial por ola) y `Remote: <origin> | sin remote`.
-- **Anotá los comandos de verificación del repo**: `Build:` (build/typecheck), `Lint:` (lint + formato) y, si existe, `Estándares:` (el comando único de chequeo del repo: `make check`, `pnpm verify`, `npm run check`). Los usa `hd-implement` para el baseline y el gate por ola. Si el repo no tiene alguno, se anota `no aplica` — nunca se inventa.
-- **Respaldo temporal — se deriva de la rama, no se pregunta aparte.** Si hay remote y la rama de trabajo no es la default, `hd-backup/<trabajo>` queda habilitado: los commits por ola se suben ahí apenas se crean. Es **temporal**: `hd-close` la borra al cerrar. Si se trabaja sobre la default o sobre una rama ajena → `Respaldo: no aplica (<motivo>)`.
-  - Anotá el flag en el `spec.md` y en el ledger, **por repo**: `Respaldo: habilitado (hd-backup/<trabajo>) | no aplica — <motivo>`.
-  - Verificá que el repo tiene remote (`git remote -v`) y anotá cuál (`Remote: origin`). Si **no hay remote**, no hay respaldo: anotá `no aplica — el repo no tiene remote` y seguí igual.
+Anotá el modo en el spec, en el technical spec y en el ledger.
 
-## Paso 3 — Escribir el spec
+## Paso 2 — Rama, respaldo y comandos (antes de escribir)
 
-Creá `.hd/<nombre-del-trabajo>/` en el repo principal y escribí **`spec.md`** siguiendo el template empaquetado en esta skill (`templates/spec-template.md`, relativo a este SKILL.md): resumen del entendimiento, qué, por qué, criterios de aceptación verificables, riesgos y mitigaciones, **Q&A completo**, y el estado de datos en producción si aplica.
+- **Rama**: si el cliente indicó una, usala. Si no, y estás en la rama default, creá `hd/<trabajo>` desde ahí; si ya estás en una rama no-default, usá esa. Anunciálo en una línea: la aprobación del trabajo ya ocurrió en el resumen de la etapa 3 de discovery, no hay una segunda pausa acá. Nunca trabajes sobre la default salvo que el cliente lo haya pedido.
+- **Anotá por repo**: `Rama: <nombre> (nueva | existente | default)`, `base: <rama>`, `commit base: <sha>` y `Remote: <origin> | sin remote`.
+- **Comandos de verificación**: `Build:`, `Lint:` y, si existe, `Estándares:` (`make check`, `pnpm verify`, `npm run check`). Si el repo no tiene alguno, `no aplica`; no lo inventes. Los usa el agente principal para el baseline y el gate.
+- **Respaldo temporal**: si hay remote y la rama de trabajo no es la default, `hd-backup/<trabajo>` queda habilitado. Es temporal: `hd-close` lo borra al cerrar. Si se trabaja sobre la default o una rama ajena, `Respaldo: no aplica (<motivo>)`.
+- **`.hd/` ignorado**: si el repo lo ignora, el paquete no se versiona. Decilo al cliente y seguí; no lo fuerces con `git add -f`.
+- **Worktrees**: van en `.git/hd-wt/<trabajo>/`, no dentro del árbol. Anotá qué dependencias se linkean (`node_modules`, `.venv`, `vendor`, `target/`).
 
-Los **criterios de aceptación** no son decoración: sin tests, son la checklist con la que el humano prueba el trabajo al final de la fase 4 y el respaldo del revisor cuando el plan se queda corto. Cada criterio tiene que poder responderse con **sí/no** y con evidencia mirando el sistema.
+Anotá el baseline como `pendiente (se corre antes de la ola 1)`: lo corre el agente principal.
 
-En modo **directo**: mismo esqueleto, contenido mínimo. En **cambio chico**: mismo esqueleto, contenido breve. El rigor no se negocia; la burocracia sí.
+## Paso 3 — `spec.md`: el contrato con el cliente
 
-## Paso 4 — Partir el trabajo en planes
+Usá `templates/spec-template.md`. Es el documento que el cliente puede leer y que el revisor usa como fuente de verdad. Debe incluir:
 
-Un archivo por plan en `.hd/<nombre-del-trabajo>/plans/plan-NN-<nombre>.md` con `templates/plan-template.md`.
+- **Resumen del entendimiento** con las palabras del cliente y del agente principal, **idéntico al resumen aprobado**. Si cambiaste algo, no es el mismo trabajo: volvé a la etapa 2 de discovery.
+- **Qué se va a hacer** y **por qué**.
+- **Alcance**: lo que entra, lo que no entra y lo que no se puede romper.
+- **Criterios de aceptación** verificables: cada uno se responde sí/no mirando el sistema, no leyendo el código. Sin tests, esta lista es la checklist con la que el cliente prueba el trabajo al final y el último respaldo del revisor.
+- **Riesgos y mitigaciones**: datos, contratos rotos, consumidores, performance, seguridad, despliegue.
+- **Decisiones y supuestos**: lo que se decidió en la Q&A y lo que se confirmó en la investigación.
+- **Q&A completo**: todas las preguntas de la etapa 1 y de la etapa 2, con sus respuestas. Sin recortes.
+- **Datos en producción**: si aplica, respaldo, prueba en seco, ventana y rollback.
+- **Prototipo**: ruta, cómo abrirlo, qué cubre (o `no aplica` con motivo).
+- **`technical_spec.md`**: ruta y una línea de qué contiene.
+- **Enmiendas**: vacío al crear. Se usa solo si el cliente aprueba un cambio de alcance durante la ejecución, con fecha, qué, por qué e impacto.
+- **Aprobación**: fecha, qué aprobó el cliente (resumen y prototipo) y que el paquete pasó el QA.
 
-**Cada plan DEBE declarar, con valores exactos (sin globs, sin "y archivos relacionados"):**
-- **Archivos**: cuáles crea, cuáles modifica y cuáles elimina (todos de código; no hay archivos de tests).
-- **Interfaces**: qué **consume** de planes anteriores y qué **produce** para los posteriores (firmas exactas).
+## Paso 4 — `technical_spec.md`: el brief para la implementación
+
+Usá `templates/technical-spec-template.md`. **Este documento es la entrada de la implementación.** Los subagentes de implementación no tienen tu chat: todo lo que necesiten para ejecutar tiene que estar acá o en los archivos que referenciás. Vos lo relees en la fase 3; los subagentes lo consultan.
+
+Debe incluir:
+
+- **Misión**: qué tiene que lograr el trabajo, en dos o tres frases.
+- **Mapa del paquete**: qué es cada archivo y en qué orden leerlo.
+- **Contexto y arquitectura**: el mapa de impacto verificado —entry points, contratos, consumidores, datos, convenciones, build/lint, riesgos—. Con rutas, no con relatos.
+- **Qué hay que construir**: por área o por pieza, en prosa. Sin lógica.
+- **Contratos (Ola 0)**: si hay contratos nuevos que otras olas consumen, firmas exactas, tipos, constantes y formatos. Sin implementación.
+- **Mapa de planes y olas**: una tabla con plan, ola propuesta, objetivo, depende de, archivos y especialidad sugerida. Es una **propuesta**: el agente principal puede re-olear, nunca cambiar el alcance.
+- **Resultado esperado**: qué va a poder hacer el cliente y qué va a cambiar en el sistema; qué NO cambia.
+- **Prototipo**: ruta exacta, cómo abrirlo, qué cubre y qué no. Si no hay UI, decilo.
+- **Verificación**: comandos de build, lint y estándares; baseline pendiente; tests existentes que no se tocan; chequeos manuales.
+- **Restricciones y convenciones**: stack, capas, nombres, manejo de errores, logging, seguridad, performance, compatibilidad.
+- **Trampas conocidas**: lo que el research encontró y puede morder.
+- **Fuera de alcance**: explícito, para que la implementación no lo absorba.
+- **Definición de terminado**: build + lint + estándares, revisión por ola, auditoría de cierre, prueba del cliente. Sin tests.
+- **Preguntas abiertas**: no debería haber. Si hay, el paquete no está listo.
+
+## Paso 5 — Los planes
+
+Un archivo por plan en `.hd/<trabajo>/plans/plan-NN-<nombre>.md`, con `templates/plan-template.md`.
+
+Cada plan declara, con valores exactos (sin globs, sin "y archivos relacionados"):
+
+- **Archivos**: cuáles crea, modifica y elimina. Todos de código; no hay archivos de tests.
+- **Interfaces**: qué **consume** de planes anteriores y qué **produce** para posteriores, con firmas exactas.
 - **Depende de**: qué olas anteriores. Nunca de otro plan de su misma ola.
-- **Comportamiento esperado**: en prosa — entradas y salidas exactas, casos borde, errores y códigos, y qué NO cambia. Es la fuente del revisor: si falta algo, el plan no está listo.
+- **Comportamiento esperado**: en prosa —entradas y salidas exactas, casos borde, errores y códigos, qué NO cambia—. Es la fuente del revisor: si falta algo, el plan no está listo.
+- **Criterios de aceptación** del plan.
+- **Especialidad sugerida** y **paralelizable con** (el cálculo del agente principal; la implementación lo verifica).
 
 **El paralelismo se calcula, no se intuye.** Dos planes son seguros en la misma ola SOLO si:
-1. Sus archivos de **código** son disjuntos.
-2. Lo que uno **produce** no es lo que el otro **consume**.
-3. No comparten estado mutable (misma base de datos, lock, puerto, archivo de config, servicio externo).
-4. Ninguno **depende** del otro.
-5. Ninguno toca la configuración que el otro necesita para compilar o pasar el lint (build, tsconfig, linter, formatter, CI).
 
-**El default es un plan por ola.** Agrupá dos o más planes en una ola solo cuando **todos** los criterios de arriba se cumplan sin dudas. Ante la duda, serializá. Una ola serial extra es barata; un paralelismo mal calculado cuesta una corrección y contamina el resultado. **No fuerces paralelismo**: lo que no se permite es que dos planes de la misma ola se pisen, ni un plan de relleno.
+1. sus archivos de código son disjuntos;
+2. lo que uno produce no es lo que el otro consume;
+3. no comparten estado mutable (misma base de datos, lock, puerto, archivo de config, servicio externo);
+4. ninguno depende del otro;
+5. ninguno toca la configuración que el otro necesita para compilar o pasar el lint;
+6. ninguno cambia dependencias o lockfiles (eso se serializa: una instalación a la vez).
+
+**El default es un plan por ola.** Agrupá dos o más planes solo cuando todos los criterios se cumplan sin dudas. Ante la duda, serializá. **No fuerces paralelismo.** Una ola no debería tener más de ~4 planes: más que eso no se integra ni se revisa bien, aunque los archivos sean disjuntos.
 
 **Estructura de olas (mega cambio):**
-1. **Ola 0 — Contratos** (solo si hay contratos nuevos que otras olas consumen): tipos, esquemas, firmas, esqueleto inicial, migraciones. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal.
-2. **Olas siguientes**: planes independientes entre sí. **Default: un plan por ola.** Agrupá en paralelo solo cuando la matriz de footprints sea inequívoca; la ola serial es más barata que la ola mal planificada.
-3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes: confirmar datos en producción, **respaldo y prueba en seco**.
 
-Si no hay contratos nuevos que consuman otras olas, **no inventes una Ola 0**.
+1. **Ola 0 — Contratos** (solo si hay contratos nuevos que otras olas consumen): tipos, esquemas, firmas, esqueleto inicial, migraciones de contrato. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal.
+2. **Olas siguientes**: planes independientes entre sí. Default: un plan por ola. Agrupá solo cuando la matriz sea inequívoca.
+3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes: confirmar datos en producción, respaldo y prueba en seco.
 
-**Modo cambio chico:** un único `plans/plan-01-<nombre>.md`, breve, mismo esqueleto. Sin olas.
+Si no hay contratos nuevos que consuman otras olas, no inventes una Ola 0.
 
-**Modo directo:** un único `plans/plan-01-<nombre>.md`, mínimo. Sin olas, sin Ola 0 (si el trabajo no define contratos nuevos). Si al escribirlo aparecen contratos compartidos o más de dos archivos, **subí de modo** — el ratchet es unidireccional.
+**Modo cambio chico:** un único `plans/plan-01-<nombre>.md`, breve, mismo esqueleto, una sola ola.
+**Modo directo:** un único plan mínimo, una sola ola, sin Ola 0 (salvo que el trabajo defina un contrato nuevo; ahí subí de modo).
 
-## Paso 5 — Revisión de spec y planes
+## Paso 6 — El prototipo
 
-Antes de implementar, un **revisor independiente de artefactos** audita el spec y los planes. Es un subagente distinto del orquestador (que es el autor) y **no ejecuta comandos**: lee los archivos.
+Si hay UI, el prototipo ya se construyó y se aprobó en la etapa 3. Antes de cerrar el paquete:
 
-Pasale **rutas**: `spec.md` y cada plan. El revisor busca, contra el resumen/Q&A de discovery:
+- verificá que esté en `.hd/<trabajo>/prototype/` con su `README.md`;
+- verificá que abra sin build ni dependencias;
+- verificá que refleje el resumen aprobado (flujos, estados, validaciones);
+- si el cliente pidió cambios visuales después de la aprobación, actualizalo y volvé a pedir OK solo por eso.
 
-1. **Coherencia con lo aprobado**: el spec no inventa alcance ni contradice el resumen/Q&A.
-2. **Criterios de aceptación verificables**: cada uno se responde sí/no mirando el sistema.
-3. **Planes completos**: archivos exactos y disjuntos, interfaces produce/consume consistentes, dependencias por ola correctas.
-4. **Comportamiento esperado**: entradas, salidas, casos borde, errores y qué no cambia; sin huecos que obliguen al implementador a adivinar.
-5. **Sin lógica ni implementaciones**: solo contratos (firmas, tipos, constantes, formatos) cuando son Ola 0.
-6. **Estructura**: Ola 0 sola si hay contratos, datos al final y en solitario, paralelismo justificado por footprints.
-7. **Modo correcto** (ratchet) y riesgos/datos cubiertos.
-8. **Implementable**: rutas, comandos Build/Lint/Estándares, rama y base anotados.
+Si no hay UI, o si es un ajuste visual trivial que decidiste omitir, el spec y el technical spec dicen `Prototipo: no aplica (<motivo>)`. No inventes un prototipo para un cambio de backend.
 
-Veredicto **APROBADO** o **DENEGADO** con evidencia en `.hd/<trabajo>/review-progress.md`, bloque `Spec y planes` (veredicto, hallazgos con archivo y qué falta para pasar a verde).
+El prototipo **no se copia al producto**: es una referencia visual y de comportamiento. Los implementadores lo implementan de nuevo con el stack y las convenciones del repo.
 
-**Corrección (una sola):** si hay hallazgos, corregí los artefactos —un hallazgo, un cambio; sin ampliar alcance— y pedile al revisor **una confirmación acotada a los hallazgos**, no una re-auditoría completa. Verde → seguí. Si sigue rojo → **freno real** con diagnóstico.
+## Paso 7 — El ledger
 
-Con el veredicto verde, commiteá `hd(<trabajo>): spec y planes` (spec, planes y `review-progress.md`) y **cargá la skill `hd-implement` VOS MISMO**, en el mismo flujo. Nada de entregar prompts ni abrir una conversación nueva.
+Creá `.hd/<trabajo>/ledger.md` con primera línea `# HD ledger — trabajo: <nombre>`. Anotá:
+
+- `Agente principal: <quién conduce>`, `Modo: ...`, `Rama: ...`, `Base: <sha>`, `Remote: ...`, `Respaldo: ...`
+- `Build: ...`, `Lint: ...`, `Estándares: ...`
+- `Discovery: etapa 1 cerrada (<fecha>) — código involucrado revisado`
+- `Discovery: research <áreas>; verificado a mano`
+- `Decisión: ... — ...` (las que tomaste en nombre del cliente)
+- `Prototipo: ... | no aplica`
+- `Paquete: QA APROBADO (<fecha>)`
+- `Paquete: commit <sha>`
+
+## Paso 8 — QA del paquete
+
+Antes de commitear, un **subagente independiente** `qa-artefactos` audita el paquete. No es el agente principal, no es un research, no es el prototipo: es un revisor distinto, y **no ejecuta comandos**: lee archivos.
+
+Pasale **rutas**: `spec.md`, `technical_spec.md`, cada plan, el prototipo, las notas y el ledger. El QA busca:
+
+1. **Coherencia con lo aprobado**: el spec no inventa alcance ni contradice el resumen, la Q&A o el prototipo.
+2. **Criterios verificables**: cada criterio se responde sí/no mirando el sistema.
+3. **Coherencia interna**: spec, technical spec y planes dicen lo mismo; no hay contradicciones entre ellos.
+4. **Planes completos**: archivos exactos y disjuntos, interfaces produce/consume consistentes, dependencias por ola correctas, comportamiento esperado sin huecos.
+5. **Technical spec suficiente**: la implementación puede ejecutar sin adivinar. Si falta contexto, se deniega.
+6. **Prototipo**: existe si hay UI, abre, refleja el spec y tiene README; no se copia al producto.
+7. **Sin lógica ni implementaciones**: solo contratos (firmas, tipos, constantes, formatos) cuando son Ola 0.
+8. **Olas**: Ola 0 sola si hay contratos, datos al final y en solitario, paralelismo justificado, máximo ~4 planes por ola.
+9. **Modo correcto** (ratchet) y riesgos/datos cubiertos.
+10. **Implementable**: rutas, comandos Build/Lint/Estándares, rama, base y respaldo anotados.
+11. **Sin tests** pedidos ni declarados.
+
+Veredicto **APROBADO** o **DENEGADO** en `.hd/<trabajo>/review-progress.md`, bloque `Paquete (fase 2)`, con hallazgos, archivo y qué falta para pasar a verde.
+
+**Corrección (una sola):** si hay hallazgos, corregí los artefactos —un hallazgo, un cambio; sin ampliar alcance— y pedile al QA **una confirmación acotada a los hallazgos**, no una re-auditoría completa. Verde → seguí. Si sigue rojo → **freno real**: el paquete no se implementa y se lo decís al cliente con diagnóstico.
+
+## Paso 9 — Commit y respaldo del paquete
+
+Con el QA verde:
+
+- Commiteá el paquete: `hd(<trabajo>): contrato — spec, technical spec, planes y prototipo`. Incluí `spec.md`, `technical_spec.md`, `plans/`, `prototype/`, `discovery/`, `ledger.md` y `review-progress.md`. Excluí `logs/` y lo que git ignore.
+- **No fuerces** archivos ignorados con `-f`.
+- Si el respaldo está habilitado, subí el commit a `hd-backup/<trabajo>`: `git push <remote> HEAD:refs/heads/hd-backup/<trabajo>`. Nunca `--force`. Si falla, anotá `Push: FALLIDO (<motivo>)` y seguí.
+- Anotá en el ledger `Paquete: commit <sha>` y el resultado del push.
+- Verificá que el árbol de trabajo quedó limpio (salvo los logs) y que la rama es la que dice el spec.
+
+## Paso 10 — Seguir con la implementación
+
+Con el paquete commiteado y el QA verde, **la implementación sigue en esta misma conversación**:
+
+1. Decile al cliente dónde está el paquete y que vas a seguir con la implementación.
+2. **Cargá la skill `hd-implement` VOS MISMO** y pasale la ruta `.hd/<trabajo>/`.
+3. El mismo agente principal sigue, ahora orquestando la implementación: relee el paquete, verifica el código, arma las olas y despacha subagentes. No escribe código de producción.
+4. Si el cliente prefiere contexto limpio, puede abrir otra conversación y pasar la ruta. No es obligatorio.
+
+**No hay una transición obligatoria.** El paquete no contiene instrucciones de conversación: es un contrato técnico. La fuente sigue siendo el paquete, no la memoria del chat: releelo y verificá el código antes de despachar.
 
 ## Continuidad
 
-La fuente es `.hd/<trabajo>/`: `spec.md`, los planes, `review-progress.md` y el ledger. La implementación arranca en la misma sesión al terminar la revisión de artefactos; no hay prompt ni handoff. Si el trabajo se retoma tras una compactación, releé esos archivos y el ledger, no tu memoria.
-
-**No inventes archivos de memoria paralelos** (`memory/facts.md`, `INDEX.md`, etc.) para guardar el estado del trabajo. Si el harness tiene memoria, que apunte al ledger y al spec, no que los reemplace.
+La fuente es `.hd/<trabajo>/`: spec, technical spec, planes, prototipo, notas, ledger y review-progress. Si el trabajo se retoma tras una compactación, releé esos archivos, no tu memoria. No inventes archivos de memoria paralelos.
 
 ## Racionalizaciones comunes (y su realidad)
 
 | Excusa | Realidad |
-|--------|----------|
-| "Es chico, salteamos el spec" | Chico significa spec breve, no ausente. |
-| "Es chico, pero lo mando a mega por las dudas" | La maquinaria de olas no se amortiza con un plan: mandalo a directo o a chico. El gate y la evidencia no cambian. |
-| "Estos dos planes seguro no se pisan" | El paralelismo se calcula con Archivos/Interfaces, no se adivina. |
-| "Una ola de un plan es un defecto" | No: es el default sano. El defecto es forzar paralelismo. |
-| "Todo trabajo real es mega, por las dudas" | El criterio es "¿puede dejar el sistema inconsistente a mitad de camino?", no el tamaño percibido. Si no puede, es chico o directo. |
+|---|---|
+| "Es chico, salteamos el technical spec" | La implementación no tiene tu chat. Sin technical spec, adivina; con él, ejecuta. |
+| "El spec ya está aprobado, no hace falta el QA" | La aprobación cubre el qué; el QA cubre la coherencia, los huecos y la implementabilidad. |
+| "El QA lo reviso yo mismo" | El QA es un subagente distinto del autor: la autorevisión no es evidencia. |
 | "Pongo el código en el plan así el implementador no se equivoca" | Plan con lógica = implementador redundante y plan envejecido. Firmas exactas sí; lógica nunca. |
-| "Sin tests, el comportamiento esperado es opcional" | Es lo único que el revisor tiene para comparar. Sin él, la auditoría es a ciegas y la corrección, adivinanza. |
-| "Agrego unos tests al plan, total no molestan" | El framework no escribe tests. Un test sin suite, sin convención y sin dueño es deuda con forma de red de seguridad. |
-| "Ya tenemos plan, empecemos ya" | El gate es el revisor de artefactos: un spec denegado no se implementa. |
-| "El spec ya está aprobado en el resumen, no hace falta auditarlo" | La aprobación cubre el qué; el revisor cubre la coherencia, los huecos y la implementabilidad. |
-| "El spec lo escribí yo, lo reviso yo mismo" | El revisor de artefactos es distinto del autor: la autorevisión no es evidencia. |
-| "Parto el trabajo en dos specs" | No: un spec. Si es grande, se parte en olas y planes. |
-| "Creció, pero re-clasificar es perder el trabajo hecho" | El trabajo hecho se conserva; lo que cambia es la maquinaria. El ratchet no tiene reversa. |
+| "Sin tests, el comportamiento esperado es opcional" | Es lo único que el revisor tiene para comparar. Sin él, la auditoría es a ciegas. |
+| "Estos dos planes seguro no se pisan" | El paralelismo se calcula con archivos, interfaces y estado compartido, no se adivina. |
+| "Una ola de un plan es un defecto" | No: es el default sano. El defecto es forzar paralelismo. |
+| "Todo trabajo real es mega, por las dudas" | El criterio es "¿puede dejar el sistema inconsistente a mitad de camino?", no el tamaño percibido. |
+| "Implemento un cachito mientras espero" | El agente principal no escribe código de producción: la implementación la hacen subagentes. |
+| "El cliente ya aprobó, no necesito la etapa 3" | La etapa 3 es la aprobación. Sin ella, no hay paquete. |
+| "La implementación va en otra conversación" | Puede ir en la misma. Lo que no se salta es la relectura del paquete y la verificación del código. |
+| "Total ya tengo el chat, no hace falta releer el paquete" | La fuente es el paquete. El chat no es el contrato; releelo antes de despachar. |
