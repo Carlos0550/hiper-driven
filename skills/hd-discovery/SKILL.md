@@ -61,7 +61,9 @@ Si una entrada contradice al código, gana el código y se anota la corrección.
 
 Si el harness expone la herramienta `list_subagent_models`, **consultala antes de delegar**: sin argumentos devuelve los proveedores autorizados; con `provider`, sus modelos; con `provider` + `model`, sus esfuerzos de razonamiento. Si no está disponible o no hay modelos, usá el default y anotalo en la memoria: esto no frena el trabajo.
 
-1. **Investigá los candidatos**: buscá información pública de calidad, velocidad y precio por millón de tokens (entrada y salida). Lo que no se pueda verificar se marca como desconocido: no se inventan precios ni benchmarks. Cada dato verificado entra a `.hd/memory.md` como `[hecho]` con fuente y fecha, para no volver a buscarlo en las fases siguientes.
+**El catálogo no publica precios.** Solo devuelve la lista de modelos y sus esfuerzos de razonamiento, y puede no anunciar ninguno. Precios, calidad y velocidad **no se consultan al provider** (su API y su catálogo no los publican): se averiguan **buscando en internet** —páginas oficiales de precios, documentación pública— y cada dato entra a la memoria con su URL y fecha. Un precio que no se puede verificar en internet se trata como **desconocido**: se pregunta antes de usar el modelo, nunca se asume que está por debajo del umbral.
+
+1. **Investigá los candidatos en internet**: con búsqueda web (`web_search`, `web_fetch`) sobre las páginas oficiales de precios y la documentación pública de cada provider, averiguá calidad, velocidad y precio por millón de tokens (entrada y salida). **Nunca le preguntes al provider por su API ni tomes el catálogo como fuente de precios.** Lo que no se pueda verificar se marca como desconocido: no se inventan precios ni benchmarks. Cada dato verificado entra a `.hd/memory.md` como `[hecho]` con fuente (URL) y fecha, para no volver a buscarlo en las fases siguientes.
 2. **Asigná por tipo de tarea**:
    - **Research** (`research-inicial`, `research-<área>`): el más barato y/o rápido que cumpla.
    - **Prototipo** (`proto-<pieza>`) e **implementación** (fase 3): la mejor relación calidad/precio.

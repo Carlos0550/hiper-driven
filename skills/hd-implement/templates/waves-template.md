@@ -43,6 +43,7 @@
 
 <!-- La estrategia aprobada en discovery vive en .hd/memory.md ([decidido]).
      Si el harness no expone list_subagent_models, default y ruling.
+     El catálogo no publica precios: se buscan en internet (páginas oficiales).
      Premium (más de 5 USD/M en cualquier precio publicado): solo con permiso;
      sin ruling previo, una única pregunta al humano (excepción de la fase 3). -->
 

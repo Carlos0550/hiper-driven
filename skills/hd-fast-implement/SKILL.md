@@ -1,6 +1,6 @@
 ---
 name: hd-fast-implement
-description: Vía rápida del framework Hiper-driven (HD), fuera de la cadena de 5 fases. Usar para cambios cortos o medianos sobre algo ya construido —renombrar, mover una pieza, ajustar un comportamiento puntual, arreglar un bug chico, crear o ajustar una migración de esquema, sumar una dependencia— cuando el humano quiere velocidad y no trazabilidad. Tiene tres fases por cambio —preguntas con contexto, implementación por un subagente y auditoría por un subagente—. El orquestador no edita código; escribe el brief, revisa el diff, commitea y corre los checks. La invoca el humano en cualquier conversación, cuando quiere velocidad y no trazabilidad. No se invoca automáticamente desde otra fase. HD corre solo, sin humano, hasta el cierre. Cada implementación y cada corrección se commitea. Sin spec, sin planes, sin rama nueva, sin worktree y sin artefactos .hd. Los checks estáticos se corren al cierre. No hay tests salvo que el humano los pida.
+description: Vía rápida del framework Hiper-driven (HD), fuera de la cadena de 5 fases. Usar para cambios cortos o medianos sobre algo ya construido —renombrar, mover una pieza, ajustar un comportamiento puntual, arreglar un bug chico, crear o ajustar una migración de esquema, sumar una dependencia— cuando el humano quiere velocidad y no trazabilidad. Tiene tres fases por cambio —preguntas con contexto, implementación por un subagente y auditoría por un subagente—. El orquestador no edita código; escribe el brief, revisa el diff, commitea y corre los checks. Cada subagente se despacha con el modelo del catálogo que corresponde a su tarea (implementación calidad/precio, auditoría el mejor); los premium de más de 5 USD por millón de tokens solo con permiso del humano. La invoca el humano en cualquier conversación, cuando quiere velocidad y no trazabilidad. No se invoca automáticamente desde otra fase. HD corre solo, sin humano, hasta el cierre. Cada implementación y cada corrección se commitea. Sin spec, sin planes, sin rama nueva, sin worktree y sin artefactos .hd. Los checks estáticos se corren al cierre. No hay tests salvo que el humano los pida.
 ---
 
 # HD — Vía rápida: `/hd-fast-implement`
@@ -75,6 +75,20 @@ En esos casos, la salida es `hd-discovery` (o terminar la fase en curso y espera
 
 **No hay discovery completo**: el reconocimiento es el mínimo para no romper nada. Pero **primero se mira el código y después se pregunta**, no al revés.
 
+## Catálogo de modelos: cada tarea, su modelo
+
+Si el harness expone `list_subagent_models`, **consultalo antes de despachar** (sin argumentos: proveedores autorizados; con `provider`: sus modelos; con `provider` + `model`: sus esfuerzos de razonamiento). Si no está disponible o no hay modelos, usá el default y decilo en el reporte: esto no frena el cambio.
+
+**El catálogo no publica precios.** Solo lista modelos y esfuerzos de razonamiento. Precios, calidad y velocidad **no se consultan al provider**: se averiguan **buscando en internet** (páginas oficiales de precios, documentación pública). Si un precio no se puede verificar, se trata como **desconocido** y se le pregunta al humano antes de usar el modelo.
+
+1. **Memoria previa**: si el proyecto ya tiene `.hd/memory.md` (de un trabajo HD), leela: la estrategia de modelos y los permisos premium ya decididos se respetan y no se vuelven a preguntar. La vía rápida no crea ni edita artefactos `.hd/`: lo nuevo queda en la conversación y en el reporte.
+2. **Investigá los candidatos que falten en internet**: con búsqueda web (`web_search`, `web_fetch`) sobre las páginas oficiales de precios y la documentación pública, averiguá calidad, velocidad y precio por millón de tokens (entrada y salida). **Nunca consultes al provider por su API para precios.** Lo no verificable se marca como desconocido y se pregunta antes de usarlo; no se inventa. Si el dato ya está en la memoria del proyecto, no se vuelve a buscar.
+3. **Asigná por tipo de tarea**:
+   - `impl-fast` y `fixer-fast`: la mejor relación calidad/precio.
+   - `auditor-fast`: el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos): la auditoría es la única lectura independiente del cambio.
+4. **Premium (más de 5 USD/M en cualquier precio publicado), solo con permiso**: preguntale al humano si se puede usar, con el precio y para qué tarea; puede ir junto con las preguntas de la fase 1. **Una vez por modelo**: si ya lo respondió en esta conversación o en la memoria, no se repite. Si dice que no, usá el mejor dentro del presupuesto y anotalo en el reporte: conformarse con lo que hay, sin frenar.
+5. **Dispatch explícito**: al lanzar cada `subagent`, pasá `provider`, `model` y `reasoning_effort` según la estrategia. El reporte de implementación dice qué modelo llevó cada subagente.
+
 ## Fase 1 — Preguntas con contexto
 
 **La regla de oro de esta fase: el código primero.** Antes de preguntar, el orquestador inspecciona:
@@ -95,7 +109,7 @@ Las preguntas y respuestas quedan en la conversación. La vía rápida no crea a
 
 ## Fase 2 — Implementación
 
-**El cambio lo hace un subagente.** El orquestador escribe el brief, despacha, revisa el diff y commitea. No edita código de producción.
+**El cambio lo hace un subagente**, despachado con el modelo calidad/precio de la estrategia (ver Catálogo de modelos). El orquestador escribe el brief, despacha, revisa el diff y commitea. No edita código de producción.
 
 ### 1. Briefear al subagente `impl-fast`
 
@@ -134,7 +148,7 @@ El commit de la implementación es la entrada de la auditoría.
 
 ## Fase 3 — Auditoría
 
-**Siempre prompt -> subagente.** Después del commit, el orquestador lanza un `auditor-fast` independiente. No participó de la implementación.
+**Siempre prompt -> subagente.** Después del commit, el orquestador lanza un `auditor-fast` independiente, con el modelo de mayor calidad disponible y permitido de la estrategia. No participó de la implementación.
 
 ### Qué le pasás
 
@@ -255,6 +269,8 @@ Si el humano insiste en seguir fuera de alcance, es su decisión, pero decilo co
 | "El auditor puede corregir" | No: el auditor lee y reporta; la corrección la hace un subagente fixer. |
 | "El auditor puede pedir tests" | No: la vía rápida no agrega tests salvo que el humano los pida. |
 | "El orquestador puede hacer el fix, total es chico" | No: el código lo escriben subagentes. El orquestador commitea y corre los checks. |
+| "Todos los subagentes con el modelo default, total es rápido" | El catálogo existe para aprovecharlo: impl y fixer calidad/precio, auditoría el mejor. Los premium, solo con permiso. |
+| "El premium es mejor, lo uso sin preguntar" | Más de 5 USD/M en cualquier precio publicado exige permiso del humano. Si dice que no, el mejor dentro del presupuesto, anotado en el reporte. |
 
 ## Reporte de implementación (después de cada cambio)
 
@@ -263,6 +279,7 @@ Si el humano insiste en seguir fuera de alcance, es su decisión, pero decilo co
 **Commit**: <sha> — <mensaje>
 **Archivos/repos**: <git status --short / git diff --stat, separado por repo>
 **Decisiones**: <las preguntas que hiciste y qué elegiste>
+**Modelos**: <modelo de cada subagente> | default (catálogo no disponible)
 **Para probar**: <pasos exactos o caso que el humano tiene que validar>
 **Migración**: no aplica | <archivo, DDL, destructiva sí/no, qué se pierde, cómo aplicarla>
 **Checks**: no corridos (por diseño; se corren en el cierre)

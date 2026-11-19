@@ -38,8 +38,10 @@ Leé primero `technical_spec.md`, después `spec.md`, los planes, el README del 
 
 Antes de despachar, consultá el catálogo del harness con `list_subagent_models` (sin argumentos: proveedores autorizados; con `provider`: sus modelos; con `provider` + `model`: sus esfuerzos de razonamiento). Si el harness no lo permite o no hay modelos, usá el default y anotalo en el ledger: esto no frena el trabajo.
 
+**El catálogo no publica precios.** Solo lista modelos y esfuerzos de razonamiento, y puede no anunciar ninguno. Precios, calidad y velocidad **no se consultan al provider**: se averiguan **buscando en internet** (páginas oficiales de precios, documentación pública) y cada dato va a la memoria con su URL y fecha. Un precio no verificable se trata como **desconocido** y se pregunta antes de usar el modelo.
+
 1. **La estrategia de discovery manda si existe.** Leé `.hd/memory.md`: el modelo por tipo de tarea y los permisos premium aprobados en el resumen son `[decidido]`. No se vuelve a preguntar lo ya decidido.
-2. **Investigá los candidatos que falten**: calidad, velocidad y precio por millón de tokens (entrada y salida) con búsqueda pública; lo no verificable se marca como desconocido, no se inventa. Los datos verificados van a la memoria como `[hecho]` con fuente y fecha; si ya están ahí, no se vuelven a buscar.
+2. **Investigá los candidatos que falten en internet**: con búsqueda web (`web_search`, `web_fetch`) sobre las páginas oficiales de precios y la documentación pública, averiguá calidad, velocidad y precio por millón de tokens (entrada y salida). **Nunca consultes al provider por su API para precios.** Lo no verificable se marca como desconocido y se pregunta antes de usarlo; no se inventa. Los datos verificados van a la memoria como `[hecho]` con fuente (URL) y fecha; si ya están ahí, no se vuelven a buscar.
 3. **Asigná por tipo de tarea**:
    - `research-<área>` (re-derivación): el más barato y/o rápido que cumpla.
    - `dev-<pieza>` y `fixer-ola-<N>`: la mejor relación calidad/precio.

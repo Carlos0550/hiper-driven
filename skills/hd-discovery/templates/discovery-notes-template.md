@@ -118,8 +118,10 @@
 ## Estrategia de modelos
 
 <!-- Catálogo consultado con list_subagent_models (si el harness lo permite).
-     Precios y calidades verificados van a .hd/memory.md como [hecho];
-     los permisos premium, como [decidido]. -->
+     El catálogo NO publica precios: precios y calidad se buscan en internet
+     (páginas oficiales) y van a .hd/memory.md como [hecho] con URL y fecha;
+     los permisos premium, como [decidido]. Un precio no verificable no se
+     asume: se pregunta. -->
 
 - **Catálogo disponible**: sí | no (default, anotado en memoria)
 - **Research**: <modelo> — <por qué>

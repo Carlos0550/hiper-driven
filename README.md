@@ -77,7 +77,7 @@ El humano invoca la skill con su pedido. El orquestador:
 5. **Explica con lujo y detalle cada comportamiento nuevo** —qué lo dispara, qué hace, qué muestra, qué pasa si falla, qué no cambia— y pregunta *"¿es esto exactamente lo que se requiere?"*.
 6. **Pide la aprobación del resumen y del prototipo.** El humano no revisa el spec a mano: el resumen final es su contrato real, y el spec es su transcripción fiel. Ese OK es el **último punto de contacto humano**: con la aprobación, carga `hd-spec` y la cadena sigue sola.
 
-Si el harness expone un catálogo de modelos (`list_subagent_models`), discovery lo consulta, investiga calidad y precios, arma la estrategia por tipo de tarea y la aprueba con el resumen: research con el más barato y/o rápido, implementación con el mejor calidad/precio, auditoría con el de mayor calidad. Los modelos de más de 5 USD por millón de tokens (cualquier precio publicado) solo se usan con permiso explícito del humano.
+Si el harness expone un catálogo de modelos (`list_subagent_models`), discovery lo consulta para saber qué modelos hay —**el catálogo no publica precios**: los precios y la calidad se averiguan buscando en internet, en las páginas oficiales de cada provider—, arma la estrategia por tipo de tarea y la aprueba con el resumen: research con el más barato y/o rápido, implementación con el mejor calidad/precio, auditoría con el de mayor calidad. Los modelos de más de 5 USD por millón de tokens (cualquier precio publicado) solo se usan con permiso explícito del humano.
 
 Un **spike** (validación de una idea) termina en discovery con una recomendación y no genera paquete.
 
@@ -202,7 +202,7 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 21. **Una conversación, y la fuente es el paquete.** Lo que no se salta es la relectura del paquete y la verificación del código antes de despachar.
 22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
 23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva.
-24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
+24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. El catálogo solo lista modelos: **los precios se verifican buscando en internet** (páginas oficiales), nunca consultándole al provider, y un precio no verificable se trata como desconocido. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
 
 ## La vía rápida: `hd-fast-implement`
 
@@ -229,6 +229,7 @@ Tiene **tres fases por cambio**:
 | Para qué | Trabajo que tiene que ser confiable | Retoque que el humano va a probar y revisar |
 
 - **El orquestador no edita código**: escribe el brief, revisa el diff, commitea y corre los checks.
+- **Cada subagente lleva el modelo que corresponde a su tarea** según el catálogo del harness: implementación y fixers con el mejor calidad/precio, auditoría con el de mayor calidad. **Los precios se buscan en internet**, nunca consultándole al provider. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso del humano; si el proyecto tiene memoria HD previa, sus decisiones se respetan.
 - **Cada implementación y cada corrección se commitea**; no hay squash.
 - **Los checks estáticos se corren al cierre**, cuando el humano dice que está todo bien.
 - **Cuándo no**: solo en tres casos — si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, si toca configuración de despliegue, secretos, CI o archivos generados, o si no se puede describir el resultado esperado en dos o tres frases. Ahí es el flujo completo.
