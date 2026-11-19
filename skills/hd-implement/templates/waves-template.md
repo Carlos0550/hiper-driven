@@ -1,15 +1,25 @@
 <!--
   Template de waves.md — Framework Hiper-driven (HD)
-  Lo escribe el agente principal al entrar al paquete, antes de la ola 1.
-  Es su plan de ejecución: re-derivación, matriz de paralelismo y olas.
-  La propuesta de olas del technical spec es una propuesta; este archivo
-  es la fuente autoritativa. No cambia el alcance.
+  Lo escribe el orquestador al entrar al paquete, antes de la ola 1.
+  Es su plan de ejecución: re-derivación, teams y olas.
+  La propuesta del technical spec es una propuesta; este archivo es la
+  fuente autoritativa. No cambia el alcance.
+
+  MODELO DE EJECUCIÓN:
+  - Las olas van SECUENCIALES: una ola no se lanza hasta que la anterior
+    está cerrada (commit, gate verde, worktree borrado). Así el daño queda
+    contenido en una ola y no se multiplica.
+  - El paralelismo vive DENTRO de la ola: un team de 2 a 5 agentes en un
+    mismo worktree, con archivos disjuntos e interfaces congeladas.
+  - Los agentes del team NO ejecutan scripts ni commitean. El orquestador
+    corre el gate y commitea.
 -->
 
 # Waves: <trabajo>
 
-- **Agente principal**: <quién conduce>
+- **Orquestador**: <quién conduce>
 - **Paquete**: .hd/<trabajo>/
+- **Memoria**: .hd/memory.md
 - **Modo**: directo | cambio chico | mega cambio
 - **Rama**: <rama> (base: <sha>)
 - **Fecha**: <fecha>
@@ -17,63 +27,71 @@
 
 ## Re-derivación
 
-<!-- Qué verificó el agente principal por su cuenta, antes de ejecutar. -->
+<!-- Qué verificó el orquestador por su cuenta, antes de ejecutar. -->
 
-- **Leí**: technical_spec.md, spec.md, plans/, prototype/, ledger.md, review-progress.md
+- **Leí**: technical_spec.md, spec.md, plans/, prototype/, ledger.md, review-progress.md, .hd/memory.md
 - **Verifiqué en el código**: <entry points, contratos, datos, comandos, consumidores, convenciones>
 - **Coincide**: <...>
-- **No coincide**: <...> → <decisión / pregunta / enmienda>
+- **No coincide**: <...> → <ruling / enmienda / freno real>
 - **Footprints**: <ok | ajustes>
 - **Baseline**: <sha> — <n> hallazgos (<firmas>)
 
-## Matriz de paralelismo
+## Matriz de teams por ola
 
-| Plan | Archivos | Produce | Consume | Depende | Datos | Lockfile / build |
-|---|---|---|---|---|---|---|
-| plan-01-... | ... | ... | ... | — | no | no |
+<!-- Cada ola es un worktree y un team. Archivos disjuntos por contrato:
+     si dos piezas necesitan el mismo archivo, no comparten ola. -->
+
+| Ola | Agente | Pieza | Archivos | Produce | Consume | Interfaz congelada | Datos | Lockfile / build |
+|---|---|---|---|---|---|---|---|---|
+| 1 | dev-<pieza> | ... | ... | ... | ... | ... | no | no |
+| 1 | dev-<pieza> | ... | ... | ... | ... | ... | no | no |
 
 ## Olas
 
-| Ola | Planes | Depende de | Subagentes | Worktrees | Por qué en paralelo | Estado | Commit | Gate | Review |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | plan-01 | — | dev-backend | ola1-plan01 | un solo plan | pendiente | — | — | — |
+| Ola | Team | Depende de | Worktree | Base | Estado | Commit | Gate |
+|---|---|---|---|---|---|---|---|
+| 0 | <team> | — | ola-0 | <sha> | pendiente | — | — |
+| 1 | <team> | — | ola-1 | <sha> | pendiente | — | — |
 
 ## Ola 0 — contratos
 
-<!-- Solo si hay contratos nuevos que otras olas consumen. Va sola y se
-     revisa antes de la Ola 1. Si no hay, "No aplica". -->
+<!-- Solo si hay contratos nuevos que otras olas consumen. Va sola, con un
+     team mínimo o un agente, y se cierra antes de la Ola 1.
+     Si no hay, "No aplica". -->
 
 - **Aplica**: sí | no
 - **Plan(es)**: <...>
 - **Contratos**: <...>
-- **Revisión**: <veredicto>
+- **Gate**: <resultado>
 
 ## Ola de datos
 
 <!-- Solo si el trabajo mueve datos existentes. Última, sola, nunca en
-     paralelo. Antes: confirmación de producción, respaldo y prueba en seco. -->
+     paralelo. Antes: confirmación de producción del humano, respaldo y
+     prueba en seco. -->
 
 - **Aplica**: sí | no
 - **Plan(es)**: <...>
-- **Confirmación del cliente**: <fecha>
+- **Confirmación del humano**: <fecha>
 - **Respaldo**: <...>
 - **Prueba en seco**: <...>
 - **Migración escrita por**: subagente implementador
-- **Migración aplicada por**: agente principal
+- **Migración aplicada por**: orquestador
 - **Resultado**: <...>
 
 ## Enmiendas y rulings
 
-<!-- Ruling: decisión técnica del agente principal. Enmienda: cambio de
-     alcance aprobado por el cliente, con fecha e impacto. -->
+<!-- Ruling: decisión técnica del orquestador, en nombre del humano.
+     Enmienda: cambio de alcance aprobado por el humano, con fecha e impacto. -->
 
 - **Ruling**: <qué> — <por qué> — <qué cuesta si te equivocaste>
-- **Enmienda**: <fecha> — <qué> — <aprobación del cliente> — <impacto>
+- **Enmienda**: <fecha> — <qué> — <aprobación del humano> — <impacto>
 
 ## Estado final
 
 <!-- Cuando todas las olas están cerradas:
      - Olas: <N> cerradas
+     - Teams: <N agentes en total>
      - Commits: <shas>
      - Gate final: <resultado>
      - Worktrees: 0

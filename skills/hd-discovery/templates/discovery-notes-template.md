@@ -1,41 +1,69 @@
 <!--
   Notas de discovery — Framework Hiper-driven (HD)
-  Las escribe el agente principal durante las etapas 1-3.
-  NO es el spec: es la materia prima. El spec aprobado se escribe en hd-spec.
-  No contiene código de producción ni instrucciones de implementación.
+  Las escribe el orquestador durante los pasos 1-5.
+  NO son el spec: son la materia prima. El spec se escribe en hd-spec.
+  No contienen código de producción ni instrucciones de implementación.
+
+  La memoria compartida vive aparte, en .hd/memory.md: acá van los punteros,
+  no la copia. Cada hallazgo verificado y cada respuesta tienen su entrada ahí.
 -->
 
 # Discovery notes: <trabajo>
 
-- **Cliente**: <nombre>
-- **Agente principal**: <quién conduce>
+- **Humano**: <nombre>
+- **Orquestador**: <quién conduce>
 - **Fecha de inicio**: <fecha>
-- **Estado**: etapa 1 | etapa 2 | etapa 3 | aprobado para el paquete
+- **Estado**: research | preguntas | prototipo | aprobado para el paquete
 - **Slug**: <kebab-case>
+- **Memoria**: `.hd/memory.md` — <N> entradas nuevas de este trabajo
 
 ## Pedido en una frase
 
-<!-- La reformulación del agente principal, confirmada por el cliente. -->
+<!-- Reformulación del orquestador, confirmada por el humano. -->
 
-## Objetivo y porqué
+## Research automático
+
+- **Agente(s)**: `research-inicial` (<o `research-<área>` si se partió>)
+- **Reporte**: `discovery/research-inicial.md`
+- **Por qué se partió o no**: <...>
+- **Resumen de 5 líneas**: <...>
+
+## Hallazgos verificados a mano
+
+<!-- Solo los que el orquestador abrió y contrastó. Cada uno con su entrada
+     en .hd/memory.md ([hecho] ... — fuente: archivo:línea). -->
+
+1. <hallazgo> — `archivo:línea` — <qué implica para el pedido> — memoria: <entrada>
+2. ...
+
+## Lo que el research dijo y el código desmiente
+
+<!-- Contradicciones, supuestos inválidos, huecos. Si no hay: "ninguna". -->
+
+- <...>
+
+## Preguntas y respuestas
+
+<!-- Una por turno, en orden. Cada respuesta tiene su entrada [decidido]
+     en la memoria; acá va el puntero y el resumen. -->
+
+| # | Pregunta | Respuesta | Memoria |
+|---|---|---|---|
+| 1 | <...> | <...> | [decidido] ... |
+
+### Preguntas abiertas
+
+<!-- El humano dijo "no sé" o quedó pendiente. No se rellenan con supuestos. -->
+
+- <...>
+
+## Requisitos
+
+### Objetivo y porqué
 
 <!-- Qué problema resuelve, qué duele hoy, qué habilita, por qué ahora. -->
 
-## Alcance
-
-### Entra
-
-- <...>
-
-### No entra
-
-- <...>
-
-### No se puede romper
-
-- <...>
-
-## Actores y flujos
+### Actores y flujos
 
 - **Usuarios**: <...>
 - **Operación**: <...>
@@ -43,111 +71,59 @@
 - **Flujo actual**: <paso a paso>
 - **Flujo deseado**: <paso a paso>
 
-## Datos
+### Datos
 
 - **Entra/sale/se guarda**: <...>
 - **Volúmenes**: <...>
-- **Datos personales / compliance**: <...>
+- **Object storage / DB**: <proveedor, nombres, políticas>
 - **Producción**: <hay/no hay; respaldo; prueba en seco; ventana>
+- **Datos personales / compliance**: <...>
 
-## Éxito y criterios
+### Éxito y criterios
 
-<!-- Cómo sabe el cliente que quedó bien. Candidatos a criterios de aceptación. -->
+- [ ] <criterio verificable>
 
-- [ ] <...>
+### Alcance
 
-## Restricciones
+- **Entra**: <...>
+- **No entra**: <...>
+- **No se puede romper**: <...>
+
+### Restricciones
 
 - **Stack / arquitectura**: <...>
 - **Plazos / presupuesto**: <...>
 - **Compatibilidad / entornos**: <...>
 - **Compliance / seguridad**: <...>
 
-## Casos borde
+### Casos borde
 
-<!-- Vacío, error, permisos, concurrencia, límites, datos raros, primera vez. -->
+- <vacío, error, permisos, concurrencia, límites, datos raros, primera vez>
 
-- <...>
-
-## Prioridades
+### Prioridades
 
 - **Imprescindible**: <...>
 - **Deseable**: <...>
-
-## Supuestos (candidatos a pregunta)
-
-<!-- Todo lo que el agente principal asumió y todavía no confirmó. -->
-
-- <...>
-
-## Revisión de código — etapa 1
-
-<!-- La revisión completa del código directamente involucrado. -->
-
-- **Archivos y puntos de entrada**: <...>
-- **Contratos / interfaces**: <...>
-- **Modelo de datos / migraciones**: <...>
-- **Consumidores directos**: <...>
-- **Convenciones y comandos**: <build/lint/estándares>
-- **Riesgos y trampas**: <...>
-- **Qué NO se revisó (va a la etapa 2)**: <...>
-
-## Preguntas y respuestas — etapa 1
-
-<!-- Una por turno. Registro completo, con fecha si ayuda. -->
-
-1. **P:** <pregunta>
-   **R:** <respuesta>
-
-## Investigación — etapa 2
-
-### Áreas y agentes
-
-| Área | Agente | Reporte | Estado |
-|---|---|---|---|
-| <área> | `research-<área>` | `discovery/research-<área>.md` | pendiente |
-
-### Hallazgos que cambiaron el pedido
-
-- <hallazgo> — <archivo:línea> — <qué cambió>
-
-### Mapa de impacto
-
-- **Se cambia**: <...>
-- **Consumen**: <...>
-- **Contratos / datos**: <...>
-- **Convenciones y verificación**: <build/lint/estándares>
-- **Riesgos / trampas**: <...>
-- **Alternativas**: <...>
-
-### Preguntas y respuestas — etapa 2
-
-1. **P:** <pregunta>
-   **R:** <respuesta>
-
-## Resumen para aprobación — etapa 3
-
-<!-- El resumen que se le presenta al cliente. Debe coincidir con el
-     "Resumen del entendimiento" del spec. -->
-
-- **Qué se va a hacer**: <...>
-- **Cómo**: <enfoque, piezas, olas propuestas>
-- **Qué cambia / qué no**: <...>
-- **Criterios de aceptación**: <...>
-- **Riesgos**: <...>
-- **Fuera de alcance**: <...>
 
 ## Prototipo
 
 - **Aplica**: sí | no (<motivo>)
 - **Ruta**: `.hd/<trabajo>/prototype/`
-- **Cómo abrirlo**: <...>
-- **Qué cubre**: <...>
-- **Qué queda afuera**: <...>
-- **Revisión del agente principal**: <ok | ajustes>
+- **Equipo** (hasta 5):
 
-## Aprobación del cliente
+| Agente | Pieza / pantalla / estado | Archivos |
+|---|---|---|
+| `proto-<pieza>` | <...> | <...> |
+
+- **Integración**: <quién escribió el index.html y el CSS base>
+- **Cómo abrirlo**: <...>
+- **Qué cubre / qué no**: <...>
+- **Revisión del orquestador**: <ok | una ronda de ajustes>
+
+## Aprobación del humano
 
 - **Fecha**: <fecha>
 - **Aprobó**: resumen | prototipo | ambos
 - **Observaciones**: <...>
+- **Memoria**: `[decidido] aprobado ...`
+- **Siguiente**: hd-spec (automático, sin volver a preguntar)

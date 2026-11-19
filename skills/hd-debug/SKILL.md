@@ -13,16 +13,25 @@ NINGÚN FIX SIN INVESTIGACIÓN DE CAUSA RAÍZ PRIMERO.
 
 Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fracasar con pasos extra.
 
+## Quién ejecuta los comandos
+
+En HD los subagentes que tocan código **no ejecutan scripts**: no corren build, lint, tests ni servidores, y no commitean.
+
+- **hd-implement**: el orquestador corre el build, el lint y los estándares en la rama consolidada.
+- **hd-review**: el auditor visual corre el proyecto y produce la reproducción; el orquestador corre el gate después de la corrección.
+- **Un fixer** recibe la reproducción ya ejecutada (output, pasos y resultado esperado) y razona sobre eso. Si no la recibió, la pide en su reporte; no la inventa ni la ejecuta por su cuenta.
+- La única excepción es el **auditor visual** de `hd-review`, que necesita ejecutar y navegar para probar comportamiento.
+
 ## Cuándo se usa
 
 - Cualquier bug, build o lint roto, comportamiento inesperado o problema de performance.
-- **Obligatoria** para los fixers de hd-implement (gate y revisión de ola) y de hd-review (auditoría de cierre y fixes del cliente): no se arregla lo que no se entendió.
+- **Obligatoria** para los fixers de hd-implement (gate de ola) y de hd-review (corrección de revisión): no se arregla lo que no se entendió.
 - **Especialmente** cuando hay presión ("es un fix rápido", "ya probé dos cosas"): apurarse acá es la forma más lenta de avanzar.
 
 ## Fase 1 — Investigación de causa raíz
 
 1. **Leé el error completo.** Stack trace entero, números de línea, códigos. El error suele contener la solución; saltearlo es elegir adivinar.
-2. **Reproducí consistentemente.** ¿Pasos exactos? ¿Pasa siempre? Si no es reproducible: juntá más datos, no supongas.
+2. **Conseguí una reproducción consistente.** Pasos exactos, ¿pasa siempre? La produce quien ejecuta (orquestador o auditor visual); el fixer la usa tal cual. Si no es reproducible: juntá más datos, no supongas.
 3. **Revisá cambios recientes.** Diff, commits nuevos, dependencias, config, diferencias de entorno.
 4. **Instrumentá los límites entre componentes** (API → servicio → DB, CI → build → deploy): logueá qué entra y qué sale de cada capa, corré UNA vez para juntar evidencia de DÓNDE se rompe, y recién ahí investigá ese componente.
 5. **Trazá el dato malo hacia atrás.** ¿De dónde salió ese valor? ¿Quién llamó con eso? Seguí la cadena hasta el origen. **Se arregla en la fuente, no en el síntoma.**
@@ -42,8 +51,8 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 
 1. **Reproducción ANTES del fix, y la misma reproducción después.** HD no escribe tests: la prueba es un caso concreto y repetible —un comando, un input, unos pasos— que falla hoy y deja de fallar con el fix. Si no podés reproducirlo, o no entendiste la causa (volvé a la Fase 1) o es intermitente y necesitás más instrumentación, no un fix a ciegas. La reproducción queda escrita en el reporte y en el ledger.
 2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados.
-3. **El fix no está listo hasta que build, lint y estándares pasan limpios en la rama.** En HD los implementadores y fixers **se autoverifican en su worktree**, pero esa salida no es evidencia: las corridas que cuentan las hace el agente principal **sobre la rama consolidada**.
-4. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y discutilo con el humano. El cuarto fix sin esa conversación está prohibido.
+3. **El fix no está listo hasta que build, lint y estándares pasan limpios en la rama.** Los subagentes no ejecutan nada: las corridas que cuentan las hace el orquestador **sobre la rama consolidada**, y en revisión el auditor visual re-prueba el comportamiento.
+4. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y reportalo como freno real. El cuarto fix sin esa conversación está prohibido.
 
 ## Red flags — si te escuchás pensando esto, volvé a Fase 1
 
@@ -63,7 +72,8 @@ Si no completaste la Fase 1, no podés proponer fixes. Arreglar síntomas es fra
 | "Es simple, no necesita proceso" | Los bugs simples también tienen causa raíz. El proceso es rápido en bugs simples. |
 | "Es una emergencia, no hay tiempo" | Sistemático es MÁS RÁPIDO que prueba y error a ciegas. |
 | "Escribo un test después de confirmar que anda" | HD no escribe tests. La prueba es la reproducción que fallaba y ya no falla: sin ella escrita, el fix no se puede re-verificar mañana. |
-| "Sin tests no puedo probar el fix" | Sí podés: reproducís la falla con un comando o unos pasos, aplicás el fix y repetís la misma reproducción. Es más lento que un test y es lo que hay — por eso el revisor es obligatorio. |
+| "Sin tests no puedo probar el fix" | Sí podés: la reproducción la ejecuta el orquestador (o el auditor visual) y se repite igual antes y después. Es más lento que un test y es lo que hay. |
+| "Corro el build yo para asegurarme" | Los subagentes no ejecutan scripts. Tu corrida no es evidencia: la rama la verifica el orquestador. |
 
 ## Cierre
 

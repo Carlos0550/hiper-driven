@@ -1,8 +1,10 @@
 <!--
   Reporte de research — Framework Hiper-driven (HD)
-  Lo escribe un subagente de solo lectura para el agente principal.
+  Lo escribe un subagente de solo lectura para el orquestador.
   No arregla, no diseña, no commitea. Devuelve evidencia, no opiniones.
-  El agente principal verifica a mano los hallazgos que sostienen el diseño.
+  ANTES DE EMPEZAR: lee .hd/memory.md y no re-investigues lo que ya está.
+  El orquestador verifica a mano los hallazgos que sostienen el diseño y los
+  vuelca a la memoria como [hecho] con archivo:línea.
 -->
 
 # Research: <área>
@@ -52,12 +54,12 @@
 
 ## Lo que NO verifiqué
 
-<!-- Obligatorio: el research declara sus límites. El agente principal decide qué hacer
+<!-- Obligatorio: el research declara sus límites. El orquestador decide qué hacer
      con lo que quedó afuera. -->
 
 - <...>
 
-## Preguntas para el agente principal
+## Preguntas para el orquestador
 
 <!-- Solo preguntas; no decisiones. -->
 

@@ -4,7 +4,19 @@
 - **Cómo abrirlo**: abrí `index.html` en el navegador. No necesita build, servidor ni dependencias.
 - **Qué representa**: <vista / flujo / componente / lógica nueva>.
 - **Datos**: mock; no hay backend.
-- **Aprobado por el cliente**: <fecha | pendiente>
+- **Aprobado por el humano**: <fecha | pendiente>
+
+## Equipo que lo construyó
+
+<!-- El prototipo se arma con hasta 5 subagentes coordinados en una sola
+     ronda. Queda registrado quién hizo qué y quién escribió los archivos
+     compartidos (index.html, CSS base). -->
+
+| Agente | Pieza | Archivos |
+|---|---|---|
+| `proto-<pieza>` | <...> | <...> |
+
+- **Archivos compartidos**: <agente único que los escribió>
 
 ## Qué mirar
 

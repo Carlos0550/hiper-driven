@@ -1,141 +1,205 @@
 ---
 name: hd-review
-description: Fase 4 del framework Hiper-driven (HD). La conduce el agente principal cuando todas las olas están cerradas. Un auditor de cierre independiente audita el diff completo contra el spec, el technical spec, los planes y el prototipo; se hace UNA corrección de cierre con un subagente fixer y el auditor confirma. Después el cliente prueba el comportamiento contra los criterios de aceptación. Si aprueba, se carga hd-close. Si el cliente reporta un bug chico o pide un cambio, se invoca hd-fast-implement automáticamente. El auditor es obligatorio en todos los modos. No hay tests.
+description: Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en paralelo. Hasta cuatro revisores independientes, uno por ola, leen el código y escriben solo sus hallazgos; al mismo tiempo un auditor visual levanta el proyecto entero y prueba la feature como un humano, click por click, de punta a punta. Con todo junto, un solo fixer corrige los hallazgos uno por uno, el orquestador commitea y corre el gate, y el mismo auditor visual vuelve a probar la feature completa. Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests.
 ---
 
-# HD — Fase 4: Auditoría de cierre y prueba del cliente
+# HD — Fase 4: Revisión y auditoría visual
 
-Esta fase es la que hace que el trabajo de un LLM sea **confiable**. No arranca hasta que TODAS las olas están cerradas. Vos, el **agente principal**, orquestás; un **auditor de cierre independiente** —que no implementó, no revisó y no corrigió ninguna ola— audita el trabajo completo. La corrección de cierre es **una sola**. Después, el cliente prueba el comportamiento.
+Sos el **orquestador**. Esta fase es la que hace que el trabajo de un LLM sea **confiable** sin tests: dos lecturas independientes del mismo trabajo, una de código y una de comportamiento, en paralelo.
 
-> **Sin tests, esta fase no es un lujo: es la última lectura semántica del trabajo.** El build y el lint dicen que el código está bien formado; el auditor dice si el trabajo completo hace lo que el spec promete. Por eso entra **siempre**, en todos los modos.
-
-> **Sin loop de auditoría.** No hay rondas automáticas. Se audita, se juntan todos los hallazgos y se corrige una vez. Si no alcanza, se reporta al cliente con diagnóstico: la segunda ronda es una decisión suya, no un automatismo.
-
-**El agente principal no escribe código de producción.** El fix de cierre lo hace un **subagente fixer**; el agente principal consolida, commitea y corre la evidencia.
-
-## Qué se le habla al cliente (y qué no)
-
-**La auditoría es un trabajo interno: no se narra.** El auditor es un colega, no la audiencia del cliente: veredictos, hallazgos y correcciones van a `review-progress.md` y al ledger.
-
-El cliente se entera en dos momentos (y en las preguntas directas que haga):
-
-1. **Freno real**: un contrato roto, una decisión arquitectónica con dos caminos válidos, o el trabajo que quedó rojo después de la corrección de cierre.
-2. **Final**: la entrega para que pruebe el comportamiento y, después del OK, el resumen de cierre.
-
-## Ley de hierro de la evidencia
+No arranca hasta que **TODAS las olas están cerradas** en `hd-implement`.
 
 ```
-NINGÚN VEREDICTO NI AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
+olas cerradas
+   ├── sub1: revisores por ola (máx. 4, en paralelo) ──→ hallazgos por escrito
+   └── sub2: auditor visual (proyecto entero, como un humano) ──→ fallos por escrito
+                                   ↓
+                    un solo fixer corrige todo, uno por uno
+                                   ↓
+                    gate del orquestador en la rama
+                                   ↓
+                    el mismo auditor visual re-prueba la feature completa
+                                   ↓
+                          verde → hd-close automático
 ```
 
-- Todo veredicto cita la evidencia: la salida de build + lint + estándares que corriste vos y el diff que leyó el auditor.
-- El auditor **lee** código y diffs; no ejecuta builds ni modifica nada. Las corridas las hacés vos y viajan como archivo.
-- **La autoverificación del subagente no es evidencia.** Un worktree que compiló no prueba el árbol consolidado.
+**No hay humano en esta fase.** El humano aparece recién cuando el trabajo está cerrado, o si hay un freno real.
 
-## Respaldo temporal
+## Subagentes
 
-Misma regla que en hd-implement: **cada commit verificado se sube a `hd-backup/<trabajo>`** si el spec dice `Respaldo: habilitado` y la rama actual no es la default. Es temporal: `hd-close` lo borra al cerrar. Nunca `--force`; si el push falla, anotá `Push: FALLIDO (<motivo>)`, seguí y reportalo en el cierre.
+| Subagente | Qué hace | Qué no hace |
+|---|---|---|
+| **Orquestador** | Coordina, consolida, commitea, corre el gate, decide | **No escribe código de producción** |
+| **Revisor** (`revisor-ola-<N>`, hasta 4) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta, no narra |
+| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y lo prueba como un humano | No edita el producto |
+| **Fixer** (`fixer-review`) | Corrige todos los hallazgos, uno por uno | No rediseña, no amplía alcance, no commitea |
 
-El commit de la corrección de cierre también se respalda ahí. La rama de trabajo **no** se pushea automáticamente: solo en el cierre, y solo si es nueva.
+**Independencia:** los revisores no participaron de ninguna ola; el auditor visual tampoco; el fixer no audita. La corrección es una sola y la confirma el comportamiento, no el autor.
+
+## Reglas duras
+
+1. **Sub1 y sub2 corren en paralelo.** Los revisores leen código mientras el auditor visual prueba el sistema. No se serializan.
+2. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
+3. **El auditor visual prueba como un humano, de punta a punta.** Login, navegación, clicks, formularios, estados de error: si la feature no se puede recorrer entera, no está verificada.
+4. **Un solo fixer, con todos los hallazgos juntos.** Un hallazgo, un cambio. Nada de refactors colados.
+5. **Una sola corrección.** Si después de corregir y re-probar sigue rojo, es **freno real** con diagnóstico. No hay segunda ronda.
+6. **La re-prueba es completa**, no solo de lo que falló: la misma feature entera, de nuevo.
+7. **Ningún veredicto sin evidencia fresca en este turno.** La salida de build + lint + estándares que corriste vos, y los archivos de hallazgos y de prueba.
+8. **El orquestador no escribe producción.** El fix lo hace un subagente.
+9. **Sin tests.** Ni el fixer ni el auditor agregan tests; el orquestador no los pide.
+10. **Verde no es aprobación humana.** Si la revisión y la re-prueba salen bien, se cierra solo.
 
 ## Paso 0 — Estado de cierre
 
-Antes de auditar, verificá que el trabajo esté realmente cerrado:
+Verificá que el trabajo esté realmente listo para revisarse:
 
-- Todas las olas de `waves.md` en estado `cerrada`, con commit, gate y revisión.
+- Todas las olas de `waves.md` en `cerrada`, con commit y gate.
 - Worktrees del trabajo eliminados (`git worktree list`).
 - Rama limpia: solo pueden quedar artefactos `.hd/` sin commitear.
-- `.hd/<trabajo>/` actualizado: `ledger.md`, `waves.md`, `review-progress.md` (usá `templates/review-progress-template.md` para el bloque de cierre).
+- `.hd/<trabajo>/` actualizado: `ledger.md`, `waves.md`, `review-progress.md`.
 - Respaldo al día si está habilitado.
+- El proyecto **se puede levantar**: dependencias instaladas, variables de entorno, seeds o datos de demo, comando de arranque identificado. Si no se puede, el auditor visual lo va a declarar y eso es rojo: resolvelo antes de lanzar.
+- La memoria `.hd/memory.md` al día (el auditor la lee para no inventar datos de prueba que no existen).
 
-Si algo no está cerrado, **no audites**: volvé a la ola que falta o frená.
+Prepará el material por **rutas**:
 
-## Paso 1 — La auditoría de cierre
+- diff de cada ola: `.hd/<trabajo>/logs/ola-<N>-diff.patch` (`git diff <base-ola>..<commit-ola>`);
+- diff total: `.hd/<trabajo>/logs/cierre-diff.patch` (`git diff <base>..HEAD -- . ':(exclude).hd'`);
+- logs de gate de cada ola.
 
-Lanzá un `auditor-final` independiente. No participó de ninguna ola: no implementó, no revisó, no corrigió, no es el agente principal. **Su veredicto es para el cliente**, no para vos: no lo orientes hacia un resultado.
+## Paso 1 — Sub1: revisores por ola
 
-Pasale por **rutas**, no por contenido:
+Lanzá **hasta 4 revisores en paralelo**, uno por ola. Si hay más de 4 olas, agrupá olas consecutivas en un revisor y decilo en el brief.
 
-- `spec.md`, `technical_spec.md`, `plans/`, `prototype/`;
-- `waves.md`, `review-progress.md`, `ledger.md`;
-- el diff de código completo: `git diff <base>..HEAD -- . ':(exclude).hd'` guardado en `.hd/<trabajo>/logs/cierre-diff.patch` (o los SHAs de cada ola);
-- la evidencia de gate de cada ola y la salida fresca de build + lint + estándares que corriste vos.
+Cada `revisor-ola-<N>` recibe, por ruta:
 
-El auditor busca:
+- el diff de su ola;
+- `spec.md`, `technical_spec.md`, los planes de esa ola y el prototipo;
+- las convenciones del repo y los comandos de verificación;
+- la memoria (para no reportar como error algo que el humano decidió).
 
-1. **Alcance**: todo lo que el spec y los planes prometen está implementado; nada de lo que está implementado queda fuera del spec. Lo que sobra y lo que falta se reporta.
-2. **Coherencia entre olas**: contratos consistentes, sin duplicación, sin código muerto, sin integraciones a medias, sin deuda que una ola dejó a la siguiente.
-3. **Comportamiento**: ¿el trabajo completo cumple los criterios de aceptación y el `Comportamiento esperado` de cada plan, con entradas, salidas, casos borde y errores? **Esto reemplaza a los tests.**
-4. **Prototipo**: si hay UI, ¿la implementación respeta los flujos, estados, componentes y validaciones aprobados?
-5. **Seguridad, lógica y trampas**: inyecciones, secretos, validaciones faltantes, auth esquivable, concurrencia, recursos sin cerrar, errores silenciados, errores típicos del stack.
-6. **Estándares y calidad**: convenciones del repo, manejo de errores, duplicación evitable, complejidad innecesaria, dependencias nuevas sin justificar, restos de debug, tests agregados (prohibido).
-7. **Artefactos vs realidad**: el spec, el technical spec y los planes describen lo que se hizo; las enmiendas están aprobadas por el cliente; los rulings están registrados; el review-progress está completo.
-8. **Evidencia**: cada ola tiene gate y revisión; los commits existen; el respaldo está al día; no hay worktrees ni cambios sueltos.
-9. **Independencia**: el auditor no participó de ninguna ola y no tiene conflicto con el resultado.
+Qué busca, contra el spec, el technical spec y el plan:
 
-Veredicto **APROBADO** o **DENEGADO** en `review-progress.md`, bloque `Auditoría de cierre`, con hallazgos por archivo:línea, severidad, clasificación (código / estándares / contrato / infra) y qué falta para pasar a verde. Nada de "LGTM".
+1. **Seguridad**: inyecciones, secretos, validaciones faltantes, auth esquivable.
+2. **Bugs lógicos**: bordes, flujos incompletos, errores silenciados.
+3. **Trampas del lenguaje y librerías**: concurrencia, recursos sin cerrar, errores típicos del stack.
+4. **Desviaciones**: todo lo implementado se traza al spec y a un plan; todo lo prometido está implementado. Lo que sobra y lo que falta se reporta.
+5. **Comportamiento esperado**: ¿hace lo que dice el plan, con entradas, salidas, casos borde y errores? **Esto reemplaza a los tests.**
+6. **Prototipo**: si hay UI, ¿la implementación respeta los flujos, estados y componentes aprobados?
+7. **Estándares y calidad**: convenciones, manejo de errores, duplicación evitable, complejidad, dependencias nuevas sin justificar, restos de debug, tests agregados (prohibido).
+8. **Footprints**: archivos fuera del plan, archivos compartidos tocados, generados modificados.
 
-## Paso 2 — Corrección de cierre (una sola)
+**Formato de salida** (`.hd/<trabajo>/reports/revision-ola-<N>.md`):
 
-- **Un solo subagente fixer**, en un worktree desde el HEAD de la rama, con **todos** los hallazgos del auditor en un mismo prompt: archivo, comportamiento esperado, qué falló, clasificación. Reporta en `.hd/<trabajo>/reports/fixer-cierre.md` del repo principal.
-- **Obligado a seguir `hd-debug`**: causa raíz primero, un cambio por hipótesis. Corrige; no rediseña, no agrega alcance, no escribe tests.
-- **Guarda de alcance por hallazgo**: un hallazgo, un cambio. Si el hallazgo revela un problema más grande, se anota y se reporta; no se expande.
-- Como todo implementador: **se autoverifica en su worktree, no commitea**. Vos consolidás (`cherry-pick -n` + commit), corrés **build + lint + estándares** en la rama y anexás la salida como evidencia.
-- Commit `hd(<trabajo>): corrección de auditoría de cierre`, respaldo, y pedile al auditor **una confirmación acotada a los hallazgos**, no una re-auditoría completa.
-- **Una sola pasada.** Si sigue denegado o el gate queda rojo, **freno real** con reporte al cliente. No hay segunda ronda automática.
+```md
+# Revisión ola <N>
+Veredicto: SIN_HALLAZGOS | CON_HALLAZGOS
+1. [severidad] <hallazgo> — archivo:línea — <por qué es un problema> — <cómo verificarlo>
+2. ...
+```
 
-**El agente principal no escribe el fix.** Si el arreglo parece "de una línea", igual va a un subagente fixer: el agente principal integra, commitea y verifica.
+Nada más. Sin introducción, sin resumen, sin arreglos. El orquestador consolida.
 
-## Paso 3 — Verificación final
+## Paso 2 — Sub2: auditor visual (en paralelo con sub1)
 
-Con todo en verde (o adjudicado), verificá el **estado final consolidado**:
+Lanzá `auditor-visual` **al mismo tiempo** que los revisores. Su trabajo es sentarse como un humano y probar la feature de punta a punta.
 
-1. Los cambios están en la rama, consolidados y commiteados ola por ola. **No los colapses ni los squashees**: son el historial del trabajo y el respaldo en `hd-backup/<trabajo>`.
-2. Corré **build + lint + estándares en la rama**, como evidencia final fresca del estado completo. Nada de "ya corrió en cada ola": la última corrida es la que se reporta.
-3. Revisá que el diff total (`git diff <base>..HEAD`) no tenga archivos sueltos, restos de debug, tests agregados ni nada fuera del spec.
-4. Ledger: `Auditoría: APROBADO; evidencia final: build <resultado>, lint <resultado>, estándares <resultado>`.
+Brief:
 
-## Paso 4 — Entrega al cliente (prueba de comportamiento)
+- El proyecto, cómo levantarlo y qué entorno usar (dev/staging local, docker, seeds).
+- La feature y los flujos que el spec promete, con los criterios de aceptación.
+- **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
+- **No modifica código de producción.** Si para probar hace falta un dato o un usuario, lo crea en la base de prueba o con seeds, no en el código.
+- Puede ejecutar comandos y navegar: es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
+- Si el entorno no permite probar algo, lo declara **explícitamente** en el reporte como no verificable; no lo cuenta como verde.
 
-Avisá **breve**: qué se implementó (dos renglones), dónde están los artefactos, cómo se corre y que el historial quedó **como commits por ola** (no se colapsa).
+Qué prueba, en este orden:
 
-Pasale **los criterios de aceptación del spec como checklist**: sin tests, la prueba del cliente es la verificación final de comportamiento, y la checklist es lo que la vuelve verificable en vez de "mirá si anda".
+1. **Arranque**: levanta el proyecto entero, sin atajos, como lo haría un humano.
+2. **Camino principal**: inicia sesión, navega hasta la feature, la usa.
+3. **Todos los controles**: cada botón, link, formulario, selector y menú de la feature.
+4. **Estados**: vacío, carga, error, éxito, permisos insuficientes.
+5. **Bordes**: datos raros, campos vacíos, límites, doble click, volver atrás, refrescar.
+6. **Persistencia**: lo que se guarda, se ve después de recargar y en la sesión siguiente.
+7. **Consola y red**: errores de consola, requests fallidos, warnings relevantes.
 
-La prueba es **de comportamiento, no de código**: el cliente no revisa el diff (eso ya lo hizo el auditor); valida que el sistema haga lo que el spec promete. No le pidas que audite el código ni commit por commit.
+**Formato de salida** (`.hd/<trabajo>/reports/auditoria-visual.md`):
 
-Si hay UI, decile cómo abrir el prototipo para comparar y qué flujos mirar. Si hay datos o migraciones, decile qué se aplicó y en qué entorno.
+```md
+# Auditoría visual
+Veredicto: OK | CON_FALLOS
+- [severidad] <flujo> — pasos exactos — esperado — obtenido — evidencia (captura/log/ruta)
+```
 
-### Si el cliente encuentra algo
+Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
 
-Clasificá el pedido:
+## Paso 3 — Consolidar
 
-- **Si entra en la vía rápida** —un solo cambio coherente, sin deploy/secretos/CI/generados, describible en dos o tres frases—, **cargá `hd-fast-implement` automáticamente**. La vía rápida trabaja sobre esta misma rama, hace sus tres fases (preguntas con contexto, implementación por un subagente, auditoría por un subagente) y commitea. No lances el fixer ni el `auditor-final` de HD para ese cambio. Registrá los SHAs en el bloque "Prueba del cliente" de `review-progress.md` y devolvé el trabajo al cliente para que vuelva a probar.
-- **Si es grande, mezcla objetivos, toca contratos/datos/deploy o es un alcance nuevo**, seguí con el camino HD. Si es un trabajo nuevo, volvé a discovery.
+Cuando **ambos** terminan:
 
-**Camino HD — subagente fixer nuevo, en un worktree desde la rama, obligado a seguir `hd-debug`.** Reporta en `.hd/<trabajo>/reports/fixer-cliente.md` del repo principal. Corregido → el agente principal consolida, corre build + lint + estándares (evidencia fresca), reproduce el caso reportado y **commitea el fix** (`hd(<trabajo>): corrección del cliente`), con su respaldo en `hd-backup/<trabajo>`. El fix vuelve al `auditor-final` para una **confirmación acotada al hallazgo**; después se lo devolvés al cliente. La rama que prueba el cliente es la que se cierra: nada queda sin commitear. Recordá la regla de `hd-debug`: **3 fixes fallidos sobre el mismo problema = cuestionar la arquitectura con el cliente**, no un cuarto fix. En la vía rápida, la regla de 3 fixes es la de `hd-fast-implement`; en el camino HD, la de `hd-debug`.
+- Leé los reportes (no los pegues en el chat).
+- Consolidá una lista única de hallazgos: revisores + auditor visual, deduplicados, ordenados por severidad.
+- Volcá el resultado a `review-progress.md` (template en `templates/review-progress-template.md`).
+- Si no hay hallazgos y el veredicto visual es OK: **saltá al Paso 6** (cierre).
+- Si hay hallazgos: seguí al Paso 4.
 
-## Salida
+## Paso 4 — La corrección (una sola)
 
-- El cliente dice explícitamente que está todo bien → **cargá la skill `hd-close` VOS MISMO y ejecutá la fase 5** (sin esperar a que la invoquen).
-- Los commits de la vía rápida (`hd-fast: ...`) se conservan y el cierre los lista. Si hubo cambios fast, corré su cierre estático (build + lint + estándares) antes de `hd-close`.
-- La prueba del cliente SÍ es una pausa: entre tu entrega y su veredicto no avanzás. Una vez que dice "todo bien", el pase a hd-close es automático.
-- Nunca avances por inercia ni porque "compila": la aprobación es del cliente, después de probar.
+Un solo `fixer-review`, con **todos** los hallazgos en un mismo prompt, uno por uno:
+
+- para cada hallazgo: archivo, comportamiento esperado, qué falló, severidad y los pasos de reproducción del auditor visual;
+- `hd-debug` **obligatorio**: causa raíz primero, un cambio por hipótesis;
+- guarda de alcance: un hallazgo, un cambio; si el hallazgo revela un problema más grande, se anota y se reporta, no se expande;
+- **no ejecuta scripts** (build, lint, tests, servidores): la reproducción la aporta el auditor visual y el gate lo corre el orquestador;
+- **no commitea**; reporta en `.hd/<trabajo>/reports/fixer-review.md` del repo principal.
+
+El orquestador:
+
+1. Trabaja en un worktree desde el HEAD de la rama (`.git/hd-wt/<trabajo>/review-fix`).
+2. Revisa el diff: que cada hallazgo tenga su cambio y ninguno de más.
+3. Consolida (`cherry-pick -n`), commitea `hd(<trabajo>): corrección de revisión` y respalda.
+4. Corre **build + lint + estándares** en la rama. Si quedan rojos, **freno real**; no hay segunda corrección.
+5. Anota en el ledger y en `review-progress.md` qué hallazgo se corrigió con qué commit.
+
+## Paso 5 — Re-prueba visual
+
+Con el gate verde, lanzá **el mismo auditor visual** a probar **la feature completa de nuevo**, no solo los fallos:
+
+- mismos flujos, mismos controles, mismos estados y bordes que la primera pasada;
+- además, los casos que fallaron, con los pasos originales;
+- reporte nuevo en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`.
+
+- **OK**: todo verde. Anotá el veredicto en `review-progress.md` y pasá al cierre.
+- **CON_FALLOS**: **freno real**. Reportá al humano con diagnóstico: qué falló, qué se intentó y por qué no alcanzó. No hay segunda corrección ni segunda re-prueba automática.
+
+## Paso 6 — Cierre y encadenado
+
+Con revisores sin hallazgos abiertos y re-prueba visual OK:
+
+1. Actualizá `review-progress.md`: bloque por ola, bloque de auditoría visual, corrección y re-prueba, veredicto global.
+2. Actualizá el ledger: `Revisión: <N> revisores, <n> hallazgos, corregidos <sha>`, `Auditoría visual: OK (<fecha>)`, `Gate: build <r>, lint <r>, estándares <r>`.
+3. **Cargá la skill `hd-close` VOS MISMO** y ejecutá la fase 5. No esperes aprobación humana: la aprobación de producto ocurrió en discovery y el comportamiento lo validó el auditor visual.
+
+## Lo que no se hace en esta fase
+
+- No se le pide al humano que pruebe (el auditor visual lo reemplaza).
+- No se invoca `hd-fast-implement` desde acá: la vía rápida es solo para pedidos directos del humano.
+- No se re-audita todo después de la corrección: la re-prueba visual y el gate son la confirmación.
+- No se squashéan los commits: el historial por ola se conserva.
+- No se descarta un hallazgo en silencio: si es falso positivo, se marca con razón en el ledger.
 
 ## Racionalizaciones comunes (y su realidad)
 
 | Excusa | Realidad |
 |---|---|
+| "El gate ya pasó en cada ola, no hace falta correrlo" | La revisión corrige código: el gate de la rama es evidencia nueva y obligatoria. |
+| "Con un revisor alcanza" | Cada ola tiene su revisor; hasta cuatro en paralelo. Una sola lectura deja huecos. |
+| "El auditor visual es caro, lo salteo" | Sin tests, es la única prueba de comportamiento. Sin él, la confianza es fe. |
+| "El auditor probó la API y respondió 200" | Una feature no es un endpoint: es login, navegación, clicks, estados y persistencia. |
+| "El fixer ya arregló, no hace falta re-probar" | El fixer no ejecuta nada. La re-prueba completa es la única evidencia de que la feature quedó entera. |
+| "Re-pruebo solo lo que falló" | Un cambio puede romper otra parte del flujo. Se re-prueba la feature completa. |
 | "Una ronda más y converge" | No hay ronda 2: si no converge, el diagnóstico está mal o el problema es estructural. Se reporta. |
-| "Re-audito la corrección para estar seguro" | La corrección se valida con build + lint + estándares frescos, la reproducción del hallazgo y una confirmación acotada. Re-auditar todo es el loop que hizo impredecible la fase. |
-| "El auditor lo lanza el agente principal, puede ser benévolo" | El auditor no participó de ninguna ola y su veredicto es para el cliente. Si participó, no es auditor. |
-| "Sin tests el auditor no tiene contra qué comparar" | Tiene el spec, el technical spec, los planes y su `Comportamiento esperado` en prosa. Ese texto es el oráculo. |
-| "En directo son dos archivos, no hace falta auditor" | Sin tests es la única lectura del trabajo completo. La excepción por tamaño es el atajo que hunde el framework. |
-| "Pasa el lint, entonces está aprobado" | El lint no lee intención. Aprobar por lint verde es aprobar sin revisar. |
+| "El auditor visual puede tocar el código un poquito" | No: si toca el producto, deja de ser auditor. |
+| "Los revisores pueden corregir lo que encuentran" | No: el que revisa no corrige. El fixer es otro y va después. |
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
-| "Este hallazgo es obviamente falso, lo descarto" | Se marca como falso positivo con razón en el ledger y se reporta. Descartar en silencio está prohibido. |
-| "El cliente igual no mira el diff, no hace falta que la rama esté limpia" | El cliente no revisa código, sí prueba comportamiento: la rama que prueba tiene que ser la que se cierra, con todo commiteado y respaldado. |
-| "Los commits por ola son ruido: los squasheo al cerrar" | No: son el historial del trabajo y la red de respaldo. Squashearlos reescribe lo que el cliente ya probó. |
-| "Pusheo la rama de trabajo para asegurarla" | El respaldo ya está en `hd-backup/<trabajo>`. La rama la pushea `hd-close` si es nueva; si no, espera autorización. |
-| "El fix del cliente lo commitea el cierre" | El fix se commitea en el momento: sin commit no hay respaldo ni evidencia de qué se probó. |
-| "El fixer ya arregló, no hace falta build" | El fixer es un subagente: su verde no es evidencia. El gate de la rama es el único que vale. |
-| "El agente principal puede hacer el fix, total es chico" | No: el código lo escriben subagentes. El agente principal consolida, commitea y corre la evidencia. |
+| "El humano igual va a querer probar" | El humano recibe el trabajo cerrado y un resumen; si quiere probar, prueba, pero no es una puerta del proceso. |

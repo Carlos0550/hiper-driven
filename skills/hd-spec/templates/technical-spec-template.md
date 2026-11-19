@@ -1,6 +1,6 @@
 <!--
   Template de technical spec — Framework Hiper-driven (HD)
-  Lo escribe el agente principal para la implementación.
+  Lo escribe el orquestador para la implementación.
   Es la entrada de la fase 3: la implementación no tiene el chat de discovery.
   REGLA DURA: sin lógica ni implementaciones. Contratos (firmas, tipos,
   constantes, formatos): sí. Código: nunca.
@@ -9,12 +9,13 @@
 
 # Technical spec: <nombre-del-trabajo>
 
-- **Para**: la implementación (agente principal y subagentes)
-- **De**: el agente principal
+- **Para**: la implementación (orquestador y teams de subagentes)
+- **De**: el orquestador
 - **Paquete**: .hd/<trabajo>/
 - **Spec**: .hd/<trabajo>/spec.md
 - **Planes**: .hd/<trabajo>/plans/
 - **Prototipo**: .hd/<trabajo>/prototype/ | no aplica
+- **Memoria**: .hd/memory.md
 - **Modo**: directo | cambio chico | mega cambio
 - **Fecha**: <fecha>
 
@@ -30,10 +31,11 @@
 | Archivo | Qué contiene | Cuándo leerlo |
 |---|---|---|
 | technical_spec.md | este brief | primero |
-| spec.md | contrato con el cliente | segundo |
+| spec.md | contrato con el humano | segundo |
 | plans/ | unidades de ejecución | después |
 | prototype/ | referencia visual | si hay UI |
 | discovery/ | notas y research | para dudas de contexto |
+| .hd/memory.md | hechos verificados y decisiones del humano | antes de preguntar cualquier cosa |
 
 ## Contexto y arquitectura
 
@@ -57,19 +59,20 @@
      formatos. Nada de implementación.
      Si no hay, "No aplica". -->
 
-## Mapa de planes y olas (propuesta)
+## Mapa de planes, olas y teams (propuesta)
 
-<!-- La propuesta del agente principal. Se puede re-olear, nunca cambiar
-     el alcance. La fuente autoritativa de las olas es waves.md, que se
-     escribe en la fase 3. -->
+<!-- La propuesta del orquestador. Se puede re-olear y rearmar teams,
+     nunca cambiar el alcance. La fuente autoritativa es waves.md, que se
+     escribe en la fase 3. Las olas van secuenciales; el paralelismo vive
+     dentro de la ola, en el team (máximo 5 agentes en un worktree). -->
 
-| Plan | Ola propuesta | Objetivo | Depende de | Archivos | Especialidad sugerida |
+| Plan | Ola propuesta | Team (agente → pieza) | Objetivo | Depende de | Archivos |
 |---|---|---|---|---|---|
-| plan-01-... | 1 | ... | — | ... | backend |
+| plan-01-... | 1 | dev-<pieza> | ... | — | ... |
 
 ## Resultado esperado
 
-<!-- Qué va a poder hacer el cliente, qué cambia en el sistema y qué NO
+<!-- Qué va a poder hacer el humano, qué cambia en el sistema y qué NO
      cambia. En lenguaje verificable. -->
 
 ## Prototipo
@@ -84,7 +87,7 @@
 - **Estándares**: <comando> | no aplica
 - **Baseline**: pendiente (se corre antes de la ola 1)
 - **Tests existentes**: <dónde están; no se tocan>
-- **Chequeos manuales**: <qué mira el cliente al final>
+- **Chequeos manuales**: <qué prueba el auditor visual al final>
 
 ## Restricciones y convenciones
 
@@ -102,16 +105,16 @@
 
 ## Definición de terminado
 
-- Build + lint + estándares limpios en la rama, con evidencia fresca.
-- Cada ola consolidada, commiteada, con gate verde y revisión independiente.
-- Auditoría de cierre aprobada.
-- Cliente probó el comportamiento contra los criterios de aceptación.
+- Build + lint + estándares limpios en la rama, con evidencia fresca del orquestador.
+- Cada ola consolidada, commiteada y con gate verde.
+- Revisores independientes por ola sin hallazgos abiertos.
+- Auditor visual probó la feature completa de punta a punta, y la re-probó después de la corrección.
 - Sin tests: no se escriben, no se piden, no se aceptan.
 
 ## Preguntas abiertas
 
-<!-- No debería haber. Si hay, el paquete no está listo: volvé a la
-     etapa 2 de discovery. -->
+<!-- No debería haber. Se resuelven con la memoria, con el código o con
+     un ruling en el ledger. Solo un cambio de alcance vuelve al humano. -->
 
 ## Riesgos y mitigaciones
 

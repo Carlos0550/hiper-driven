@@ -8,17 +8,19 @@
   el implementador escribe solo código, y el "Comportamiento esperado"
   es lo que el revisor audita después, leyendo el diff contra este texto.
 
-  El paralelismo se CALCULA con Archivos/Interfaces/Depende de. El default
-  es UN plan por ola: agrupá solo cuando la disjunción sea inequívoca.
+  El plan es la unidad de trabajo de un agente dentro del team de su ola.
+  El paralelismo se CALCULA con Archivos/Interfaces/Depende de: dos piezas
+  comparten ola solo si no se pisan. Máximo 5 agentes por team.
 -->
 
 # Plan <NN>: <nombre-corto>
 
 - **Ola**: <N>
-- **Depende de**: Ola(s) <N-1, ...> — NUNCA de otro plan de su misma ola
+- **Team**: <agente> — <pieza que implementa>
+- **Comparte ola con**: <plan-NN / pieza | ninguno> — <por qué no se pisan: archivos disjuntos, sin interfaces cruzadas, sin estado mutable compartido>
+- **Depende de**: Ola(s) <N-1, ...> — NUNCA de otra pieza de su misma ola
 - **Toca datos existentes**: sí | no
 - **Especialidad sugerida**: backend | frontend | datos | infra | full-stack
-- **Paralelizable con**: <plan-NN | ninguno> — <por qué: archivos disjuntos, sin interfaces cruzadas>
 
 ## Archivos (exactos, sin globs)
 
@@ -28,8 +30,8 @@
 
 ## Interfaces
 
-- **Consume**: <qué usa de planes anteriores — firmas exactas>
-- **Produce**: <qué expone para planes posteriores — firmas exactas, tipos, constantes>
+- **Consume**: <qué usa de olas anteriores — firmas exactas>
+- **Produce**: <qué expone para otras piezas del team o para olas posteriores — firmas exactas, tipos, constantes>
 
 ## Objetivo
 
@@ -37,8 +39,8 @@
 
 ## Alcance
 
-<!-- Qué se toca y qué NO se toca (límites explícitos para que los
-     implementadores paralelos no se pisen). -->
+<!-- Qué se toca y qué NO se toca. Los límites son para que los agentes del
+     mismo team no se pisen: cada uno conoce los archivos de los demás. -->
 
 ## Comportamiento esperado (fuente de la auditoría)
 
@@ -59,12 +61,14 @@
 ## Notas para el implementador
 
 <!-- Contexto del spec y del codebase: restricciones, convenciones, trampas
-     conocidas del lenguaje/librerías.
+     conocidas del lenguaje/librerías, interfaces congeladas con el resto
+     del team.
 
-     El implementador se AUTOVERIFICA en su worktree — compila/typechea y
-     pasa el lint sobre sus archivos. Su salida NO es evidencia: no commitea,
-     no toca la rama, no aplica migraciones.
-
-     Y no escribe tests: si el plan no dice qué pasa en un caso borde,
-     reporta NECESITA_CONTEXTO; no inventa comportamiento ni un test que
-     lo fije. -->
+     Contrato del team (no negociable):
+     - trabaja en el worktree compartido de la ola, en sus archivos y en
+       ningún otro; puede leer lo de sus compañeros, nunca editarlo;
+     - NO ejecuta scripts de ningún tipo: ni build, ni lint, ni tests, ni
+       migraciones, ni servidores. El orquestador corre la evidencia.
+     - no commitea, no toca git, no crea archivos de verificación;
+     - no escribe tests: si el plan no dice qué pasa en un caso borde,
+       reporta NECESITA_CONTEXTO; no inventa comportamiento. -->

@@ -1,6 +1,6 @@
 <!--
   Template de spec — Framework Hiper-driven (HD)
-  Lo escribe el agente principal en hd-spec, después de la aprobación del cliente.
+  Lo escribe el orquestador en hd-spec, después de la aprobación del humano en discovery.
   REGLA DURA: no contiene snippets de código ni la implementación.
   Comportamiento esperado y contratos: sí. Lógica: nunca.
   NO HAY TESTS: la verificación es build + lint + estándares, y el
@@ -9,7 +9,7 @@
 
 # Spec: <nombre-del-trabajo>
 
-- **Cliente**: <nombre>
+- **Humano**: <nombre>
 - **Agente principal**: <quién conduce>
 - **Modo**: directo | cambio chico | mega cambio
 - **Rama**: <rama-de-trabajo> (base: <rama-base>, commit base: <sha>) — nueva | existente | default — por repo involucrado
@@ -24,12 +24,13 @@
 - **Technical spec**: .hd/<trabajo>/technical_spec.md
 - **QA de artefactos**: review-progress.md (bloque "Paquete (fase 2)")
 - **Fecha**: <fecha>
-- **Estado**: aprobado por el cliente en la etapa 3 de discovery; paquete auditado
+- **Memoria**: .hd/memory.md (<N> entradas nuevas; fuente de las decisiones)
+- **Estado**: aprobado por el humano en discovery; paquete auditado
 
 ## Resumen del entendimiento
 
-<!-- El resumen que el cliente aprobó, con sus palabras y las del agente
-     principal. Debe ser idéntico al de la etapa 3. Si cambió, no es el
+<!-- El resumen que el humano aprobó, con sus palabras y las del agente
+     principal. Debe ser idéntico al que se aprobó en discovery. Si cambió, no es el
      mismo trabajo. -->
 
 ## Qué se va a hacer
@@ -39,7 +40,7 @@
 
 ## Por qué
 
-<!-- La motivación del cliente: qué problema resuelve, qué dolor quita,
+<!-- La motivación del humano: qué problema resuelve, qué dolor quita,
      qué habilita. -->
 
 ## Alcance
@@ -60,7 +61,7 @@
 
 <!-- Lista verificable. Cada criterio se responde sí/no mirando el sistema
      (no leyendo el código). Sin tests, esta lista es la checklist con la
-     que el cliente prueba el trabajo y el último respaldo del revisor. -->
+     que el humano prueba el trabajo y el último respaldo de los revisores. -->
 
 - [ ] <criterio 1>
 - [ ] <criterio 2>
@@ -78,24 +79,28 @@
 
 ## Preguntas y respuestas (Q&A)
 
-<!-- Registro COMPLETO de la etapa 1 y de la etapa 2: cada pregunta hecha
-     (de a una por turno) y la respuesta del cliente. -->
+<!-- Registro COMPLETO de discovery: cada pregunta hecha
+     (de a una por turno) y la respuesta del humano. -->
 
-### Etapa 1 — Entender y revisar el código
+### Research y verificación
 
-1. **P:** <pregunta>
-   **R:** <respuesta>
-
-### Etapa 2 — Ampliar y cruzar
+<!-- Preguntas que nacieron del research y de la revisión del código. -->
 
 1. **P:** <pregunta>
    **R:** <respuesta>
+   **Memoria:** <entrada [decidido] o [hecho]>
+
+### Preguntas de producto y arquitectura
+
+1. **P:** <pregunta>
+   **R:** <respuesta>
+   **Memoria:** <entrada [decidido]>
 
 ## Datos en producción
 
 <!-- Solo si el trabajo toca datos existentes:
      ¿hay datos en producción? ¿respaldo hecho? ¿prueba en seco? ¿ventana?
-     ¿rollback? Respuestas del cliente, con fecha. -->
+     ¿rollback? Respuestas del humano, con fecha. -->
 
 ## Prototipo
 
@@ -104,9 +109,9 @@
 
 ## Enmiendas
 
-<!-- Vacío al crear. Se usa solo si el cliente aprueba un cambio de
+<!-- Vacío al crear. Se usa solo si el humano aprueba un cambio de
      alcance durante la ejecución. Cada enmienda: fecha, qué cambió, por qué,
-     impacto y aprobación del cliente. -->
+     impacto y aprobación del humano. -->
 
 ## Aprobación
 

@@ -1,246 +1,241 @@
 # Hiper-driven (HD)
 
-**HD** es un framework de trabajo con agentes. Un **agente principal** descubre, especifica, orquesta y cierra; los **subagentes** investigan, implementan, revisan, corrigen y auditan. No hay personas ni cargos: hay un agente que conduce y subagentes por tarea.
+**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido y aprueba el prototipo. Después, la cadena corre sola hasta el cierre.
 
 Dos pilares:
 
 - **SDD — Spec Driven Development**: ningún código se escribe sin un contrato que diga *qué*, *por qué* y *cómo se valida*.
-- **Verificación en dos capas**. **Estática**: un cambio no está listo si no **compila** limpio y no **cumple los estándares** del repo (lint, formato, convenciones, manejo de errores). **Semántica**: lo que el compilador y el linter no pueden ver lo auditan **subagentes independientes** contra el spec. **No hay tests**: no se escriben, no se piden y no se aceptan.
+- **Verificación en tres capas**. **Estática**: build + lint + estándares en cada ola. **Semántica**: revisores independientes leen el diff contra el spec. **Visual**: un auditor levanta el proyecto entero y prueba la feature como un humano, de punta a punta. **No hay tests**: no se escriben, no se piden y no se aceptan.
 
-El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, esa confianza no viene de la fe: viene de un agente que conduce, subagentes separados, contratos versionados, olas chicas, evidencia fresca y revisores que nunca son opcionales.
+El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, esa confianza viene de contratos versionados, olas chicas, memoria compartida, evidencia fresca y revisores que nunca son opcionales.
 
 ---
 
 ## Cómo trabaja
 
 ```
-                         CLIENTE
-                            |
-                     AGENTE PRINCIPAL
-                     (descubre, especifica,
-                      orquesta, commitea,
-                      corre gates, cierra)
-                            |
-       +--------------------+--------------------+
-       |                    |                    |
-  research-<área>      prototipo            qa-artefactos
-       |                    |                    |
-       +--------------------+--------------------+
-                            |
-                    implementadores
-                    revisores
-                    fixers
-                    auditores
+                    HUMANO
+              (pide y aprueba el prototipo)
+                          |
+                     ORQUESTADOR
+          (descubre, especifica, orquesta,
+           commitea, corre gates, cierra)
+                          |
+     +----------+---------+---------+-----------+
+     |          |                   |           |
+ research-*  prototipo (≤5)   teams (≤5)   revisores (≤4)
+                                 |        + auditor visual
+                                 |              |
+                              fixers  ←─────────┘
 ```
 
 | Quién | Qué hace | Qué no hace |
 |---|---|---|
-| **Agente principal** | Discovery, contrato, olas, despacho, integración, commits, gates y cierre | **No escribe código de producción** |
+| **Orquestador** | Discovery, contrato, olas, despacho, integración, commits, gates y cierre | **No escribe código de producción** |
 | `research-<área>` | Investiga el sistema y devuelve evidencia con archivo:línea | No decide, no edita, no commitea |
-| `prototipo` | Arma el prototipo visual en `.hd/<trabajo>/prototype/` | No toca el producto, no implementa |
+| `proto-<pieza>` | Arma su parte del prototipo visual (hasta 5 en paralelo) | No toca el producto, no implementa |
 | `qa-artefactos` | Audita el paquete antes de implementar | No escribe el paquete |
-| **Implementador** (`dev-<plan>`) | Escribe código de producción en su worktree | No commitea, no revisa, no escribe tests |
-| **Revisor** (`revisor-<ola>`) | Lee el diff de la ola y emite veredicto | No corrige, no participó de la ola |
-| **Fixer** (`fixer-<ola>`) | Corrige hallazgos de un gate o de una revisión | No rediseña, no audita, no commitea |
-| **Auditor** (`auditor-final`, `auditor-fast`) | Audita el cierre o un cambio de la vía rápida | No participó de la implementación |
+| **Team** (`dev-<pieza>`) | Implementa su pieza en el worktree compartido de la ola | No sale de sus archivos, **no ejecuta scripts**, no commitea |
+| **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta |
+| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y prueba como un humano | No edita el producto |
+| **Fixer** (`fixer-*`) | Corrige hallazgos, uno por uno | No rediseña, no audita, no commitea |
 
-**El agente principal conduce; los subagentes hacen.** El agente principal lee código, escribe los artefactos, despacha, revisa diffs, commitea y corre los gates. **Ningún cambio de código de producción lo hace el agente principal**: siempre lo hace un subagente implementador o fixer.
+**El orquestador conduce; los subagentes hacen.** Ningún cambio de código de producción lo escribe el orquestador: siempre lo hace un implementador o un fixer.
 
-## Una conversación o dos
+## La memoria del proyecto
 
-Por defecto, **todo el flujo va en una sola conversación**: discovery, paquete, implementación, auditoría y cierre. El mismo agente principal conduce las cinco fases.
+`.hd/memory.md` es la memoria compartida del proyecto: hechos verificados y decisiones del humano, en un archivo append-only que **escribe solo el orquestador** y **leen todos los subagentes**.
 
-También podés **cortar después del paquete**: abrís otra conversación y le pasás la ruta `.hd/<trabajo>/`. No es obligatorio. Sirve solo para arrancar la implementación con un contexto más limpio.
+- Antes de investigar o preguntar, se consulta: lo que ya está ahí no se vuelve a buscar ni se vuelve a preguntar.
+- Cada hallazgo verificado entra como `[hecho]` con `archivo:línea`; cada respuesta del humano, como `[decidido]`.
+- Si algo cambia, se agrega `[corrección]`; no se reescribe el pasado.
+- Se commitea con el paquete y sobrevive a la conversación.
 
-**La fuente es el paquete, no el chat.** Aunque la implementación siga en la misma conversación, el agente principal **relee el spec, el technical spec y los planes, y verifica el código** antes de despachar. No implementa de memoria ni hereda suposiciones: el paquete es el contrato.
+## Una sola conversación, sin humano en el medio
+
+Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despierta un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge) o el reporte final.
+
+La fuente es el paquete, no el chat: el orquestador relee el spec, el technical spec y los planes, y verifica el código antes de despachar.
 
 ## Las 5 fases
 
 ```
 hd-discovery --> hd-spec --> hd-implement --> hd-review --> hd-close
-   Fase 1         Fase 2         Fase 3          Fase 4        Fase 5
-   entender       contrato       olas            auditoría     cierre
-   revisar        + QA           + revisión      + cliente
-   aprobar
+   Fase 1         Fase 2       Fase 3          Fase 4        Fase 5
+   humano         contrato      teams           revisión      cierre
+   aprueba        + QA          + gate          + visual      automático
 ```
 
-### Fase 1 — Discovery
+### Fase 1 — Discovery (la única con humano)
 
-Tres etapas internas:
+El humano invoca la skill con su pedido. El orquestador:
 
-1. **Entender y revisar el código involucrado.** El agente principal reformula el pedido y hace una **revisión completa del código directamente involucrado**: archivos que se van a tocar, puntos de entrada, contratos, modelo de datos, consumidores, convenciones y comandos de verificación. Lee y hace grep; no edita. Las preguntas nacen del código, no de la imaginación. Pregunta **de a una por turno**, con la salida *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*.
-2. **Ampliar y cruzar.** Despacha `research-<área>` para cubrir la **superficie de impacto**: backend, frontend, datos, infraestructura, integraciones, por servicio o por módulo. **Verifica a mano** los 3-10 hallazgos que sostienen el diseño y cruza lo que el código dice con lo que el cliente pidió. Si algo no cuadra, vuelve a preguntar. No se cierra hasta que cada requisito esté anclado y cada supuesto confirmado o decidido.
-3. **Resumen, prototipo y aprobación.** Entrega un resumen detallado de qué se necesita y cómo se va a implementar. Si hay UI, un `prototipo` arma una referencia estática en `.hd/<trabajo>/prototype/` que refleja la lógica, la vista y los estados nuevos. El cliente aprueba o pide cambios. Si pide cambios de requisito, se vuelve a la etapa 2; si es un ajuste visual, se itera el prototipo.
+1. **Delega un research automático** (`research-inicial`) que busca todo lo relacionado: qué existe, dónde vive, quién lo consume, qué se rompe si cambia. El reporte vuelve con `archivo:línea`, y el orquestador **verifica a mano** los 3-10 hallazgos que sostienen el diseño.
+2. **Pregunta solo lo no obvio**, de a una por turno. Nombres de buckets y su política, si hay datos en producción, proveedor de object storage o base de datos, entornos, permisos, límites: si no está en el código ni en la memoria, es una pregunta.
+3. **Convierte cada hallazgo y cada respuesta en memoria** (`.hd/memory.md`): no se vuelve a buscar ni se vuelve a preguntar.
+4. **Arma el prototipo visual con hasta 5 subagentes coordinados**, cada uno dueño de una pieza y sus archivos, con interfaces congeladas y un solo escritor por archivo compartido.
+5. **Pide la aprobación del resumen y del prototipo.** Ese OK es el **último punto de contacto humano**: con la aprobación, carga `hd-spec` y la cadena sigue sola.
 
-Un **spike** (validación de una idea) termina en discovery con una recomendación, sin paquete.
+Un **spike** (validación de una idea) termina en discovery con una recomendación y no genera paquete.
 
-### Fase 2 — El paquete de contrato
+### Fase 2 — El paquete de contrato (autónoma)
 
-Con la aprobación del cliente, el agente principal escribe:
+Con el resumen aprobado, el orquestador escribe `spec.md`, `technical_spec.md`, los planes, el prototipo, el ledger y el QA. **No vuelve a preguntar**: las dudas se resuelven con la memoria, con el código o con un `Ruling` en el ledger; solo un cambio de alcance lo despierta.
 
-- `spec.md`: el contrato con el cliente —qué, por qué, alcance, criterios de aceptación, riesgos, Q&A completo, datos, prototipo—.
-- `technical_spec.md`: el brief para la implementación —misión, contexto verificado, qué construir, contratos, mapa de planes y olas, resultado esperado, prototipo, verificación, restricciones, trampas y definición de terminado—.
-- `plans/`: un plan por unidad de ejecución, con archivos exactos, interfaces, dependencias y **comportamiento esperado en prosa**.
-- `prototype/`: el prototipo aprobado, con README.
-- `ledger.md` y `review-progress.md`: memoria y QA.
+Un **subagente QA** independiente audita el paquete. Con verde, el orquestador commitea el paquete, lo respalda y **sigue con la implementación**, sin pausa.
 
-Un **subagente QA** independiente audita el paquete. Con verde, el agente principal lo commitea, lo respalda y **sigue con la implementación en la misma conversación** (o el cliente abre una nueva si prefiere contexto limpio). El agente principal no implementa: despacha subagentes.
+### Fase 3 — Implementación con teams (autónoma)
 
-### Fase 3 — Implementación
+El orquestador re-deriva el paquete contra el código, corre el baseline y arma las **olas** en `waves.md`. El modelo cambió:
 
-El agente principal **no confía en el paquete a ciegas**: lo valida, inspecciona el código involucrado, corre el baseline, verifica los footprints y arma las **olas** en `waves.md` pensando en paralelizar. Si algo no le cuadra, pregunta al cliente (una por turno) o frena.
+- **Cada ola es un team de hasta 5 agentes en un mismo worktree**, con archivos disjuntos, interfaces congeladas y un reparto que todos conocen. Cada agente sabe qué hace el otro y no toca sus archivos.
+- **Las olas van secuenciales.** Se paraleliza **dentro** de la ola, no entre olas: un daño queda contenido en una ola y no se multiplica.
+- **Los agentes no ejecutan scripts**: ni build, ni lint, ni tests, ni servidores, ni git. El orquestador consolida, commitea y corre el gate.
+- **Esta fase no tiene revisor.** La revisión independiente es la fase 4.
 
-Por ola:
+Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera.
 
-1. **Implementadores** en **worktrees separados, uno por plan**, con contrato: solo código, solo sus archivos, sin tests, sin commits, autoverificación local.
-2. **Consolidación**: el agente principal trae el código, commitea la ola y la respalda.
-3. **Gate**: build + lint + estándares en la rama.
-4. **Revisión**: un subagente revisor independiente audita el diff de la ola contra spec, technical spec, plan y prototipo.
-5. **Corrección**: una sola pasada de un subagente fixer por gate o por revisión, con `hd-debug` obligatorio. Si no alcanza, freno real.
+### Fase 4 — Revisión y auditoría visual (autónoma, en paralelo)
 
-Ola 0 (contratos) va sola y se revisa antes de seguir. La ola de datos va última, sola, con respaldo y prueba en seco.
+Dos subfases que corren al mismo tiempo:
 
-### Fase 4 — Auditoría de cierre y prueba del cliente
+1. **Revisores de código**: hasta 4, uno por ola (agrupando si hay más). Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada.
+2. **Auditor visual**: levanta el proyecto entero y lo prueba como un humano. Inicia sesión, navega hasta la feature, hace click en cada botón, completa formularios, prueba estados y bordes, y verifica que la feature funcione de punta a punta. Si el entorno no permite algo, lo declara no verificable en vez de inventar un verde.
 
-Cuando todas las olas están cerradas, un **subagente auditor de cierre** que no participó de ninguna ola mira el **diff completo** contra el spec, el technical spec, los planes y el prototipo. Busca alcance, coherencia entre olas, comportamiento, seguridad, estándares, artefactos y evidencia. Una sola corrección de cierre con un subagente fixer; el auditor confirma los hallazgos. Si sigue rojo, se reporta al cliente con diagnóstico.
+Con todo junto, **un solo fixer** corrige los hallazgos uno por uno (`hd-debug` obligatorio), el orquestador consolida, commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
 
-Con verde, el agente principal le entrega el trabajo al cliente con **los criterios de aceptación como checklist**. El cliente prueba **comportamiento**, no código. Si encuentra un bug chico o pide un cambio, se invoca `hd-fast-implement` automáticamente; si es grande, un subagente fixer lo corrige y el auditor confirma. Si aprueba, se cierra.
+### Fase 5 — Cierre (automática)
 
-### Fase 5 — Cierre
-
-Con el OK explícito del cliente: limpiar worktrees y stashes, commitear los artefactos que falten, **pushear la rama solo si es nueva**, borrar la rama de respaldo y rendir cuenta de los rulings. Los commits por ola se conservan. **Nunca `--force`; `main` y ramas ajenas no se pushean sin autorización.**
+Cuando la revisión y la re-prueba están en verde: limpiar worktrees y stashes, commitear los artefactos que falten, pushear la rama de trabajo **solo si es nueva**, borrar la rama de respaldo y rendir cuenta de los rulings. Los commits por ola se conservan. **Nunca `--force`; `main` y ramas ajenas no se pushean sin autorización.**
 
 ## El paquete de contrato
 
-Todo vive en `.hd/<trabajo>/`:
+Todo vive en `.hd/`:
 
 ```
-.hd/<trabajo>/
-├── spec.md                  # contrato con el cliente
-├── technical_spec.md        # brief para la implementación
-├── plans/                   # unidades de ejecución, con comportamiento esperado
-├── prototype/               # referencia visual (solo si hay UI), con README
-├── discovery/               # notas y reportes de research
-├── waves.md                 # plan de olas (se escribe en la fase 3)
-├── ledger.md                # memoria del trabajo: decisiones, evidencia, rulings
-├── review-progress.md       # QA del paquete, revisión por ola y auditoría de cierre
-├── reports/                 # reportes de implementadores, revisores y fixers
-└── logs/                    # salidas largas de build/lint (no se commitea)
+.hd/
+├── memory.md                # memoria del proyecto: hechos y decisiones (compartida)
+└── <trabajo>/
+    ├── spec.md              # contrato con el humano
+    ├── technical_spec.md    # brief para la implementación
+    ├── plans/               # unidades de ejecución, con comportamiento esperado
+    ├── prototype/           # referencia visual (solo si hay UI), con README
+    ├── discovery/           # notas y reporte de research
+    ├── waves.md             # plan de olas y teams (fase 3)
+    ├── ledger.md            # decisiones, evidencia, rulings
+    ├── review-progress.md   # QA del paquete, revisión, auditoría visual y re-prueba
+    ├── reports/             # reportes de implementadores, revisores, auditor y fixers
+    └── logs/                # salidas largas de build/lint (no se commitea)
 ```
 
 | Archivo | Para quién | Qué contiene |
 |---|---|---|
-| `spec.md` | cliente y revisores | qué, por qué, alcance, criterios verificables, Q&A, riesgos, datos, prototipo, enmiendas |
-| `technical_spec.md` | implementación | misión, contexto verificado, contratos, mapa de planes/olas, resultado esperado, verificación, trampas, definición de terminado |
+| `memory.md` | todos | hechos verificados y decisiones del humano; se consulta antes de investigar o preguntar |
+| `spec.md` | humano y revisores | qué, por qué, alcance, criterios verificables, Q&A, riesgos, datos, prototipo, enmiendas |
+| `technical_spec.md` | implementación | misión, contexto verificado, contratos, mapa de planes/olas/teams, resultado esperado, verificación, trampas |
 | `plans/` | implementadores y revisores | archivos exactos, interfaces, dependencias, comportamiento esperado, criterios |
-| `prototype/` | cliente, revisores e implementadores | referencia visual y de comportamiento; no se copia al producto |
-| `discovery/` | agente principal | notas de la entrevista y reportes de research con archivo:línea |
-| `waves.md` | agente principal | re-derivación, matriz de paralelismo, olas, enmiendas y rulings |
+| `prototype/` | humano, revisores e implementadores | referencia visual y de comportamiento; no se copia al producto |
+| `discovery/` | orquestador | notas y reporte de research con archivo:línea |
+| `waves.md` | orquestador | re-derivación, teams por ola, olas, enmiendas y rulings |
 | `ledger.md` | todos | baseline, olas, evidencia, pushes, rulings, enmiendas |
-| `review-progress.md` | todos | QA del paquete, veredictos por ola, auditoría de cierre y prueba del cliente |
+| `review-progress.md` | todos | QA del paquete, revisión por ola, auditoría visual, corrección y re-prueba |
 
 Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbol de trabajo, para que `git add -A` no se los lleve al commit. Los **logs** tampoco se commitean.
-
-El diff de cada plan **no se guarda como artefacto**: se reconstruye desde el commit de su ola con `git show <sha> -- <rutas>`. El commit es el artefacto.
 
 ## Los modos y el tamaño del trabajo
 
 | | Directo | Cambio chico | Mega cambio |
 |---|---|---|---|
 | Señales típicas | 1-2 archivos, sin contratos nuevos, sin datos | Unas pocas piezas acotadas, un plan | Refactor masivo, módulos enteros, contratos compartidos, datos sensibles o en masa |
-| Research | 1 área | 1-2 áreas | 3-6 áreas |
+| Research | 1 área | 1 área | 1-3 áreas |
 | Spec / technical spec | Breve | Breve | Completo |
 | Planes | Uno, mínimo | Uno | Varios |
-| Olas | Una | Una | Varias, **default un plan por ola** |
+| Olas | Una, team chico | Una, team chico | Varias, secuenciales; team de hasta 5 por ola |
 | Prototipo | Si hay UI | Si hay UI | Si hay UI |
-| Revisión | 1 revisor de ola + auditor de cierre | 1 revisor de ola + auditor de cierre | Revisor por ola + auditor de cierre |
+| Revisión | Revisores de ola + auditor visual | Revisores de ola + auditor visual | Revisor por ola + auditor visual |
 | Datos en producción | No aplica: si toca datos, sube a mega | Preguntar si aplica | Preguntar siempre; ola de datos al final, sola, con respaldo y prueba en seco |
 
-**El default es el modo más chico que no mienta.** Un trabajo de 1-2 archivos sin contratos nuevos va a directo: la maquinaria de olas no se amortiza. La señal decisiva para mega es **"¿puede dejar el sistema inconsistente a mitad de camino?"**.
+**El default es el modo más chico que no mienta**, y el team más grande que no se pise. La señal decisiva para mega es **"¿puede dejar el sistema inconsistente a mitad de camino?"**.
 
-**Ratchet (unidireccional):** si a mitad de camino aparece complejidad oculta, el trabajo **sube** de categoría (directo → chico → mega). Nada baja de categoría una vez clasificado: "ya casi está" no es un argumento, es una alarma. El agente principal puede subirlo en discovery o en la fase 3.
+**Ratchet (unidireccional):** si aparece complejidad oculta, el trabajo **sube** de categoría (directo → chico → mega). Nada baja: "ya casi está" es una alarma, no un argumento.
 
 ## Los gates
 
 | Gate | Quién | Qué mira | Si falla |
 |---|---|---|---|
-| **G0 — Paquete** | `qa-artefactos` | coherencia con lo aprobado, criterios verificables, planes completos, technical spec suficiente, prototipo, olas, sin lógica ni tests | una corrección del agente principal; si sigue rojo, no se implementa |
-| **G1 — Ola (estático)** | agente principal | build + lint + estándares en la rama consolidada, contra el baseline | una corrección con subagente fixer + `hd-debug`; si sigue rojo, freno real |
-| **G2 — Ola (semántico)** | `revisor-<ola>` | seguridad, lógica, trampas, desviaciones, comportamiento esperado, prototipo, estándares, footprints | una corrección con subagente fixer; el revisor confirma solo los hallazgos; si sigue rojo, freno real |
-| **G3 — Cierre** | `auditor-final` | diff completo: alcance, coherencia entre olas, comportamiento, seguridad, estándares, artefactos, evidencia | una corrección de cierre con subagente fixer; si sigue rojo, reporte al cliente |
-| **G4 — Cliente** | cliente | comportamiento contra los criterios de aceptación | cambio chico: `hd-fast-implement`; cambio grande: subagente fixer + `hd-debug` + confirmación del auditor; 3 fallos = arquitectura |
+| **G0 — Paquete** | `qa-artefactos` | coherencia con lo aprobado, criterios verificables, planes completos, technical spec suficiente, prototipo, teams, sin lógica ni tests | una corrección; si sigue rojo, no se implementa |
+| **G1 — Ola (estático)** | orquestador | build + lint + estándares en la rama consolidada, contra el baseline | una corrección con fixer + `hd-debug`; si sigue rojo, freno real |
+| **G2 — Revisión (semántico)** | hasta 4 `revisor-ola-<N>` en paralelo | seguridad, lógica, trampas, desviaciones, comportamiento esperado, prototipo, estándares, footprints | una corrección única con fixer; no hay segunda ronda |
+| **G3 — Auditoría visual** | `auditor-visual` | la feature de punta a punta, como un humano: login, navegación, clicks, estados, bordes, persistencia | entra en la misma corrección única; después se re-prueba entera |
+| **G4 — Cierre** | orquestador | revisores sin hallazgos abiertos + re-prueba visual OK + gate limpio | freno real con diagnóstico al humano |
 
-**Los revisores nunca son opcionales.** Sin tests, G0, G2 y G3 son la única lectura semántica del trabajo. La independencia es parte del gate: el que implementa no revisa, el que revisa no corrige, el que corrige no audita el cierre.
+**Los revisores y el auditor visual nunca son opcionales.** Sin tests, son la única lectura del trabajo. La independencia es parte del gate: el que implementa no revisa, el que revisa no corrige, el que corrige no audita.
 
 ## Reglas de oro (no negociables)
 
 1. **El contrato manda.** Ningún código sin paquete aprobado. Ni el spec ni los planes contienen lógica ni implementaciones; única excepción: firmas, tipos, constantes y formatos cuando son contrato (Ola 0).
-2. **Las preguntas se hacen de a UNA por turno**, siempre con la opción *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*.
-3. **El comportamiento esperado va antes que el código.** El plan fija en prosa qué debe hacer el código —entradas, salidas, casos borde, errores— y el revisor audita el código contra ese texto. Sin tests, ese texto es la única fuente de verdad semántica.
-4. **En HD, el framework no escribe tests.** Ni el implementador, ni el fixer, ni el revisor: el trabajo se valida con **build + lint + estándares** y revisión. Si un agente propone tests, es alcance no pedido y se rechaza. La vía rápida es otra cosa: solo agrega tests si el cliente los pide.
-5. **Ola 0 (contratos) va sola y se revisa antes de seguir.** Si el contrato está mal, todo lo que venga después también.
-6. **El paralelismo se calcula, no se intuye**: dos planes comparten ola solo si sus archivos son disjuntos, ninguno produce lo que el otro consume, no comparten estado mutable, ninguno depende del otro, no tocan la misma configuración de build y no cambian dependencias/lockfiles. **El default es un plan por ola**; se agrupa solo cuando la disjunción es inequívoca. Máximo ~4 planes por ola.
-7. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
-8. **El agente principal no escribe código de producción.** Lo escriben los subagentes implementadores y fixers. Los subagentes se autoverifican en su worktree, pero **no tienen autoridad**: no commitean, no tocan la rama y no aplican migraciones; su salida **no es evidencia**. Solo el agente principal corre el gate sobre la rama consolidada y commitea.
-9. **Una corrección por gate.** Gate de ola, revisión de ola y auditoría de cierre: una pasada cada uno. Si después de la corrección sigue rojo, es **freno real**. Para bugs, **3 fixes fallidos = cuestionar la arquitectura**, no un cuarto fix.
-10. **La unidad es la ola, no el plan.** Al terminar cada ola se consolida, se commitea la ola, se corre su gate, se revisa y se corrigen sus hallazgos. El commit va **antes** del gate: es la base sobre la que corre la evidencia y sobre la que trabaja el fixer.
-11. **Nunca, jamás, push de `main`, de una rama ajena o de un PR sin autorización explícita.** El único push automático es el respaldo temporal a `hd-backup/<trabajo>` durante el trabajo, y la **rama de trabajo nueva** al cerrar. Nunca `--force`.
-12. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería compilar" está prohibido; una corrida verde solo prueba el árbol donde corrió. **Un subagente no es evidencia**: el agente principal verifica el build, el revisor lee el diff y el auditor mira el trabajo completo.
-13. **Los revisores nunca son opcionales.** El QA audita el paquete; el revisor audita cada ola; el auditor audita el cierre. En la vía rápida, un `auditor-fast` audita cada cambio. Todos son distintos del autor, y la independencia no se negocia.
-14. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): baseline, olas, evidencias, pushes, enmiendas y `Ruling:`s. Sobrevive a la compactación de contexto.
-15. **La corrección de cierre es una sola.** Se audita una vez, se juntan los hallazgos y se corrige una vez. Si no alcanza, se reporta al cliente con diagnóstico.
-16. **Todo bug pasa por causa raíz** (`hd-debug`): no se proponen fixes sin investigar; no se apilan fixes.
-17. **Los artefactos `.hd/<trabajo>/` van al commit.** Se commitean con el trabajo (el paquete en la fase 2, el resto en el cierre) y solo quedan fuera si el cliente lo pidió explícitamente o si git los ignora.
-18. **Los commits por ola se conservan**: el historial del trabajo es el historial por ola (`hd(<trabajo>): ola N — …`). Nadie los colapsa, los squashea ni los reescribe.
-19. **El agente principal no le narra el día a día al cliente.** Lo que los subagentes encuentran va al ledger y a `waves.md`. El cliente se entera en el **freno real**, en el **final** y cuando pregunta directamente.
-20. **La aprobación de producto es una sola**: el resumen y el prototipo que el cliente aprueba en discovery. El spec no se aprueba por separado: lo audita el QA. La prueba final del cliente es la aceptación.
-21. **Una conversación o dos, y la fuente es el paquete.** La implementación puede seguir en la misma conversación o en una nueva. Lo que no se salta es la relectura: el agente principal relee el paquete y verifica el código antes de despachar.
-22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo. Todo lo que entra al chat se paga en cada turno siguiente.
+2. **Las preguntas se hacen de a UNA por turno**, siempre con la opción *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*. Solo en discovery.
+3. **No se asume nada no obvio.** Si no está en el código ni en la memoria, es una pregunta o una verificación.
+4. **El comportamiento esperado va antes que el código.** El plan fija en prosa qué debe hacer el código —entradas, salidas, casos borde, errores— y el revisor audita contra ese texto. Sin tests, es la única fuente de verdad semántica.
+5. **En HD, el framework no escribe tests.** La vía rápida es otra cosa: solo agrega tests si el humano los pide.
+6. **Ola 0 (contratos) va sola y se cierra antes de seguir.**
+7. **El paralelismo vive dentro de la ola.** Cada ola es un team de hasta 5 agentes con archivos disjuntos, interfaces congeladas y un solo dueño por archivo compartido. **Las olas van secuenciales**: se paraleliza lo que no se pisa, nunca olas enteras.
+8. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
+9. **El orquestador no escribe código de producción.** Lo escriben los implementadores y fixers. **Los subagentes no ejecutan scripts**: no compilan, no lintean, no corren tests ni servidores. Solo el orquestador corre el gate y commitea; la única excepción es el auditor visual, que ejecuta para probar.
+10. **Una corrección por gate.** Gate de ola, revisión y auditoría visual comparten una sola pasada de corrección. Si después de corregir sigue rojo, es **freno real**. Para bugs, **3 fixes fallidos = cuestionar la arquitectura**.
+11. **La unidad es la ola.** Un worktree, un commit, un gate por ola. El commit va **antes** del gate: es la base sobre la que corre la evidencia y trabaja el fixer.
+12. **Nunca push de `main`, de una rama ajena o de un PR sin autorización explícita.** El único push automático es el respaldo temporal a `hd-backup/<trabajo>` y la rama de trabajo nueva al cerrar. Nunca `--force`.
+13. **Ninguna afirmación de éxito sin evidencia fresca en ese turno.** "Debería compilar" está prohibido; una corrida verde solo prueba el árbol donde corrió.
+14. **La independencia no se negocia.** El revisor no implementó su ola; el auditor visual no participó de la implementación; el fixer no audita.
+15. **La memoria compartida se consulta y se actualiza.** Nada se busca dos veces ni se pregunta dos veces. Si no está en `.hd/memory.md`, no existe para el subagente.
+16. **El ledger es la memoria del trabajo** (`.hd/<trabajo>/ledger.md`): baseline, olas, evidencia, pushes, enmiendas y `Ruling:`s. Sobrevive a la compactación de contexto.
+17. **Los artefactos `.hd/` van al commit.** El paquete en la fase 2, el resto en el cierre; solo quedan fuera si el humano lo pidió o si git los ignora.
+18. **Los commits por ola se conservan.** Nadie los colapsa, los squashea ni los reescribe.
+19. **El orquestador no le narra el día a día al humano.** Lo que encuentra va al ledger y a `waves.md`; el humano recibe el reporte final o un freno real.
+20. **La aprobación de producto es una sola**: el resumen y el prototipo que el humano aprueba en discovery. Después no hay aprobaciones: el QA audita el paquete y el auditor visual valida el comportamiento.
+21. **Una conversación, y la fuente es el paquete.** Lo que no se salta es la relectura del paquete y la verificación del código antes de despachar.
+22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
 23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva.
 
 ## La vía rápida: `hd-fast-implement`
 
-No todo cambio amerita el flujo completo. Para retoques cortos o medianos sobre algo ya construido —renombrar, mover una pieza, corregir un comportamiento puntual, arreglar un bug chico, ajustar una migración, sumar una dependencia— está `hd-fast-implement`, una **vía rápida fuera de la cadena de 5 fases**.
+Para retoques cortos o medianos sobre algo ya construido —renombrar, mover una pieza, corregir un comportamiento puntual, arreglar un bug chico, ajustar una migración, sumar una dependencia— está `hd-fast-implement`, una **vía rápida fuera de la cadena de 5 fases**.
+
+**La invoca el humano**, en cualquier conversación, cuando quiere velocidad y no trazabilidad. HD no la invoca desde ninguna fase: corre autónomo.
 
 Tiene **tres fases por cambio**:
 
-1. **Preguntas con contexto**: el agente principal inspecciona el código y, si hace falta, hace 2-3 preguntas.
-2. **Implementación**: un **subagente implementador** hace el cambio; el agente principal revisa el diff y commitea.
-3. **Auditoría**: un **subagente auditor** revisa el commit; si hay hallazgos, un **subagente fixer** corrige y el agente principal commitea la corrección.
+1. **Preguntas con contexto**: el orquestador inspecciona el código y, si hace falta, hace 2-3 preguntas.
+2. **Implementación**: un **subagente `impl-fast`** hace el cambio; el orquestador revisa el diff y commitea.
+3. **Auditoría**: un **subagente `auditor-fast`** revisa el commit; si hay hallazgos, un **`fixer-fast`** corrige y el orquestador commitea la corrección.
 
 | | HD (flujo completo) | Vía rápida |
 |---|---|---|
-| Agente principal + subagentes | Sí | Sí: implementación y auditoría por subagentes |
 | Spec, technical spec y planes | Sí | No |
 | Prototipo | Si hay UI | No |
 | Rama y worktree | Sí | No: trabaja sobre la rama actual |
 | Commit | Uno por ola | Uno por implementación y uno por corrección |
-| Auditoría | Revisores por ola + auditor de cierre | Un auditor subagente por cambio |
-| Corrección | Fixers | Subagente fixer |
+| Revisión | Revisores por ola + auditor visual | Un auditor subagente por cambio |
 | Artefactos `.hd/` | Sí | No |
-| Verificación | Gates por ola + auditoría de cierre | Auditoría semántica por cambio; checks al cierre |
-| Invocación | Al inicio del trabajo | En cualquier conversación o al final de un spec, en la revisión humana |
-| Para qué | Trabajo que tiene que ser confiable | Retoque que el cliente va a probar y revisar |
+| Checks | Gate por ola | Al cierre, cuando el humano da el OK |
+| Invocación | Al inicio del trabajo | Pedido directo del humano, en cualquier conversación |
+| Para qué | Trabajo que tiene que ser confiable | Retoque que el humano va a probar y revisar |
 
-- **El agente principal no edita código**: escribe el brief, revisa el diff, commitea y corre los checks. El cambio lo hace un subagente implementador; la corrección, un subagente fixer.
+- **El orquestador no edita código**: escribe el brief, revisa el diff, commitea y corre los checks.
 - **Cada implementación y cada corrección se commitea**; no hay squash.
-- **La auditoría no bloquea**: se lanza contra un commit y el agente principal puede recibir otro pedido. Las ediciones son secuenciales: no se editan dos cambios a la vez.
-- **Los checks estáticos se corren al cierre**, cuando el cliente dice que está todo bien.
-- **Tests**: no se agregan salvo que el cliente los pida; los existentes se respetan y no se corren hasta el cierre.
+- **Los checks estáticos se corren al cierre**, cuando el humano dice que está todo bien.
 - **Cuándo no**: solo en tres casos — si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, si toca configuración de despliegue, secretos, CI o archivos generados, o si no se puede describir el resultado esperado en dos o tres frases. Ahí es el flujo completo.
 
-La vía rápida **no da las garantías de HD**: hay un auditor por cambio, pero no hay spec, planes, gate por ola ni auditoría de cierre. Los checks se corren recién al cierre. La confianza la sigue poniendo el cliente al probar. Si el cambio tiene que ser confiable sin que nadie lo mire, no es fast.
+La vía rápida **no da las garantías de HD**: hay un auditor por cambio, pero no hay spec, planes, gate por ola ni auditoría visual. La confianza la sigue poniendo el humano al probar.
 
 ## El costo: dónde se va el tiempo
 
-El trabajo HD tarda porque el costo crece con **el contexto del agente principal**, no con el de sus subagentes: los subagentes nacen limpios y mueren al terminar; el agente principal acumula lo que lee. Cuatro reglas lo mantienen acotado:
+El costo crece con **el contexto del orquestador**, no con el de sus subagentes: los subagentes nacen limpios y mueren al terminar; el orquestador acumula lo que lee. Cuatro reglas lo mantienen acotado:
 
-- **Subagentes para el trabajo pesado**: la investigación, la implementación, la revisión y la auditoría las hacen agentes que nacen y mueren. El agente principal conserva el contrato y la evidencia.
-- **Autoverificación sin autoridad**: los subagentes compilan y pasan el lint para no entregar código roto. Eso ahorra el bucle de relanzamiento. Pero **solo la corrida del agente principal en la rama consolidada es evidencia**.
-- **Un worktree por plan, no por ola**: los footprints de la ola ya garantizan archivos disjuntos, y el aislamiento hace que la autoverificación de un agente no vea los archivos a medio escribir de otro. Las dependencias se enlazan por symlink en vez de reinstalarse.
-- **Rutas, no contenido**: los planes, los diffs y los logs se leen por ruta. La salida larga va al log y al contexto solo llegan las líneas de fallo.
-
-El diff de un plan no se guarda como artefacto: se reconstruye con `git show <sha> -- <rutas>`. Se elimina así la mitad de las operaciones de la ola sin perder trazabilidad.
+- **Subagentes para el trabajo pesado**: investigación, prototipo, implementación, revisión, auditoría y corrección las hacen agentes que nacen y mueren.
+- **Sin scripts en los subagentes**: el team no compila ni lintea; el orquestador corre el gate una vez sobre la rama. Menos ruido en el contexto y una sola fuente de evidencia.
+- **Un worktree por ola**: el team entero comparte el árbol y ve el trabajo de sus compañeros; las dependencias se enlazan por symlink en vez de reinstalarse.
+- **Rutas, no contenido**: los planes, los diffs y los logs se leen por ruta.
 
 ## Respaldo temporal y push al cerrar
 
@@ -268,21 +263,21 @@ hiper-driven/
 ├── README.md
 ├── LICENSE
 └── skills/                    # cada skill es autocontenida: copiás la carpeta y listo
-    ├── hd-discovery/          # Fase 1: entender, revisar código, research, prototipo
+    ├── hd-discovery/          # Fase 1: pedido, research automático, memoria, preguntas, prototipo (≤5), aprobación
     │   ├── SKILL.md
     │   └── templates/         # notas, research, README de prototipo
-    ├── hd-spec/               # Fase 2: paquete y QA
+    ├── hd-spec/               # Fase 2: paquete autónomo y QA
     │   ├── SKILL.md
     │   └── templates/         # spec, technical spec, plan
-    ├── hd-implement/          # Fase 3: olas, implementadores, revisores, fixers
+    ├── hd-implement/          # Fase 3: olas secuenciales con teams de hasta 5 en un worktree
     │   ├── SKILL.md
     │   └── templates/         # waves.md
-    ├── hd-review/             # Fase 4: auditoría de cierre y prueba del cliente
+    ├── hd-review/             # Fase 4: revisores por ola + auditor visual + corrección + re-prueba
     │   ├── SKILL.md
     │   └── templates/         # review-progress.md
-    ├── hd-close/              # Fase 5: cierre, push de rama nueva, limpieza y respaldo
+    ├── hd-close/              # Fase 5: cierre automático, push de rama nueva, limpieza y respaldo
     ├── hd-debug/              # Transversal: causa raíz antes que fix
-    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): un agente que orquesta
+    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): pedido directo del humano
 ```
 
 ## Instalación

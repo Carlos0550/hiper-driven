@@ -1,12 +1,14 @@
 <!--
   Template de progreso de revisión — Framework Hiper-driven (HD)
-  Bloques: "Paquete (fase 2)" (lo escribe el QA de artefactos), un bloque
-  por OLA (lo escribe el revisor de la ola) y "Auditoría de cierre" (lo
-  escribe el auditor final). Se analiza SECUENCIALMENTE.
-  En la fase 4, la corrección de cierre es UNA sola; no hay re-auditoría.
-  El auditor es OBLIGATORIO en todos los modos.
-  No hay tests: la evidencia es build + lint + estándares, y el
-  comportamiento lo auditan los revisores contra el spec y los planes.
+  Bloques: "Paquete (fase 2)" (lo escribe el QA de artefactos) y el bloque
+  de la fase 4 (revisores por ola + auditoría visual + corrección + re-prueba).
+  La fase 4 corre en dos subfases en paralelo: revisores de código (máx. 4)
+  y auditor visual. Los revisores escriben SOLO hallazgos en su archivo;
+  el orquestador consolida acá.
+
+  No hay prueba del humano ni tests: la evidencia es build + lint +
+  estándares, la revisión semántica y la prueba de comportamiento de punta
+  a punta del auditor visual.
 -->
 
 # Progreso de revisión: <nombre-del-trabajo>
@@ -20,7 +22,7 @@
 
 <!-- Lo escribe el QA de artefactos en hd-spec. La fase 3 no lo reescribe. -->
 
-**Auditado**: spec.md + technical_spec.md + plans/ + prototype/ + discovery/ + ledger.md
+**Auditado**: spec.md + technical_spec.md + plans/ + prototype/ + discovery/ + ledger.md + .hd/memory.md
 **Hallazgos**:
 
 1. <hallazgo> — <archivo> — <qué falta para pasar a verde>
@@ -29,81 +31,69 @@
 
 ---
 
-## Ola <N> — APROBADO | DENEGADO
+# Revisión (fase 4)
 
-**Plan(es) revisado(s)**: plan-NN, ...
-**Commit de la ola**: <sha> — diff: `git diff <base>..<sha> -- <rutas del plan>`
+## Ola <N> — SIN_HALLAZGOS | CON_HALLAZGOS
 
-### Gate
-
-- **Build**: <resultado> — log: <ruta>
-- **Lint**: <resultado> — log: <ruta>
-- **Estándares**: <resultado> — log: <ruta>
-- **Fallos del baseline ignorados**: <firmas>
+**Revisor**: revisor-ola-<N>
+**Reporte de hallazgos**: .hd/<trabajo>/reports/revision-ola-<N>.md
+**Diff revisado**: <ruta del patch> — <sha base>..<sha ola>
 
 ### Hallazgos
 
-<!-- Buscar, en este orden:
-     1. Seguridad
-     2. Bugs lógicos
-     3. Trampas del lenguaje / librerías
-     4. Desviaciones entre spec/technical spec/plan y lo implementado
-     5. Comportamiento esperado (entradas, salidas, bordes, errores)
-     6. Prototipo (si hay UI)
-     7. Estándares y calidad
-     8. Footprints y tests agregados
--->
+<!-- Los revisores escriben solo hallazgos; el orquestador los consolida
+     acá, deduplicados y ordenados por severidad.
+     Buscar: seguridad, bugs lógicos, trampas del lenguaje, desviaciones
+     spec/plan, comportamiento esperado, prototipo, estándares, footprints. -->
 
-1. <hallazgo> — archivo:línea — clasificación: código | estándares | contrato | infra | comportamiento — severidad: alta | media | baja
-
-### Por qué se aprueba / se deniega
-
-<!-- Justificación clara. Si se deniega: qué debe corregirse para pasar a
-     verde, punto por punto. -->
-
-### Correcciones de la ola
-
-| Tipo | Commit | Resultado | Confirmación |
-|---|---|---|---|
-| gate | <sha> | verde / residual | — (el agente principal re-corre el gate) |
-| revisión | <sha> | verde / residual | resuelto / pendiente |
+1. [severidad] <hallazgo> — archivo:línea — <por qué> — <cómo verificarlo>
 
 ---
 
-<!-- Repetir el bloque por cada ola, en orden. -->
+<!-- Repetir el bloque por cada ola revisada. Si hay más de 4 olas, un
+     revisor puede cubrir olas consecutivas: anotarlo. -->
 
-## Auditoría de cierre — APROBADO | DENEGADO
+## Auditoría visual — OK | CON_FALLOS
 
-<!-- La escribe el auditor final en hd-review. No participó de ninguna ola.
-     Mira el trabajo completo, no ola por ola. -->
+**Auditor**: auditor-visual
+**Reporte**: .hd/<trabajo>/reports/auditoria-visual.md
+**Entorno**: <cómo se levantó, qué se instaló, datos usados>
 
-**Auditado**: diff de código completo (base..HEAD, sin .hd) + spec + technical spec + planes + prototipo + waves.md + ledger.md
-**Evidencia**: build <resultado> · lint <resultado> · estándares <resultado> · logs <rutas>
+### Fallos
 
-### Hallazgos
+1. [severidad] <flujo> — <pasos> — <esperado> — <obtenido> — <evidencia>
 
-1. <hallazgo> — archivo:línea — clasificación: código | estándares | contrato | infra | comportamiento — severidad: alta | media | baja
+### No verificable
 
-### Por qué se aprueba / se deniega
+<!-- Lo que el entorno no permitió probar. No cuenta como verde. -->
 
-<!-- Si se deniega: qué debe corregirse para pasar a verde, punto por punto. -->
+- <...>
 
-### Corrección de cierre
+## Corrección de la revisión
 
+- **Fixer**: fixer-review
+- **Hallazgos asignados**: <N> (revisores + auditor visual)
+- **Reporte**: .hd/<trabajo>/reports/fixer-review.md
 - **Commit**: <sha>
-- **Resultado**: verde | residual
-- **Confirmación del auditor**: <resuelto | pendiente>
+- **Gate en la rama**: build <r> · lint <r> · estándares <r> — logs <rutas>
 
-## Prueba del cliente
+| # | Hallazgo | Cambio | Estado |
+|---|---|---|---|
+| 1 | <...> | <archivo> | corregido |
 
-- **Fecha**: <fecha>
-- **Resultado**: aprobado | con observaciones
-- **Observaciones**: <...>
-- **Fixes del cliente**: <sha(s)> | no aplica
-- **Cambios fast durante la prueba**: <sha(s)> | no aplica
+## Re-prueba visual — OK | CON_FALLOS
+
+**Reporte**: .hd/<trabajo>/reports/auditoria-visual-reprueba.md
+**Alcance**: feature completa, no solo los fallos.
+
+### Resultado
+
+- **Flujos re-probados**: <...>
+- **Fallos restantes**: <ninguno | ...>
 
 ## Veredicto global
 
-<!-- Verde: el cliente aprobó el comportamiento y el trabajo está listo
-     para hd-close. Los commits por ola se conservan.
-     Rojo después de la corrección: freno real, reporte al cliente. -->
+<!-- Verde: revisores sin hallazgos abiertos + re-prueba visual OK + gate
+     limpio. El orquestador carga hd-close automáticamente, sin humano.
+     Rojo después de la corrección: freno real, reporte al humano con
+     diagnóstico. No hay segunda ronda. -->
