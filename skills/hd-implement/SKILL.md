@@ -1,6 +1,6 @@
 ---
 name: hd-implement
-description: Fase 3 del framework Hiper-driven (HD), autónoma. El orquestador relee el paquete, verifica el código y arma las olas en waves.md; cada ola es un team de hasta cinco agentes en un mismo worktree, con archivos disjuntos y un reparto que todos conocen, para terminarla lo más rápido posible. Los agentes no ejecutan scripts ni commitean; el orquestador integra, commitea y corre el gate. Los teams se paralelizan dentro de la ola y las olas van secuenciales, para contener el daño. Esta fase no tiene revisor independiente, la revisión es la fase 4. Al terminar carga hd-review. No hay tests.
+description: Fase 3 del framework Hiper-driven (HD), autónoma. El orquestador relee el paquete, verifica el código y arma las olas en waves.md; cada ola es un team de hasta cinco agentes en un mismo worktree, con archivos disjuntos y un reparto que todos conocen, para terminarla lo más rápido posible. Los agentes no ejecutan scripts ni commitean; el orquestador integra, commitea y corre el gate. Los teams se paralelizan dentro de la ola y las olas van secuenciales, para contener el daño. Cada agente se despacha con el modelo del catálogo que corresponde a su tarea; los premium (más de 5 USD por millón de tokens) solo con permiso del humano, con una única pregunta permitida si no hay ruling previo. Esta fase no tiene revisor independiente, la revisión es la fase 4. Al terminar carga hd-review. No hay tests.
 ---
 
 # HD — Fase 3: Implementación
@@ -34,6 +34,19 @@ Leé primero `technical_spec.md`, después `spec.md`, los planes, el README del 
 
 **Sin revisor en esta fase.** La revisión independiente ocurre en `hd-review`, sobre todas las olas a la vez y en paralelo con la prueba visual. Acá la verificación es el gate del orquestador más la inspección de footprints.
 
+## Catálogo de modelos: cada tarea, su modelo
+
+Antes de despachar, consultá el catálogo del harness con `list_subagent_models` (sin argumentos: proveedores autorizados; con `provider`: sus modelos; con `provider` + `model`: sus esfuerzos de razonamiento). Si el harness no lo permite o no hay modelos, usá el default y anotalo en el ledger: esto no frena el trabajo.
+
+1. **La estrategia de discovery manda si existe.** Leé `.hd/memory.md`: el modelo por tipo de tarea y los permisos premium aprobados en el resumen son `[decidido]`. No se vuelve a preguntar lo ya decidido.
+2. **Investigá los candidatos que falten**: calidad, velocidad y precio por millón de tokens (entrada y salida) con búsqueda pública; lo no verificable se marca como desconocido, no se inventa. Los datos verificados van a la memoria como `[hecho]` con fuente y fecha; si ya están ahí, no se vuelven a buscar.
+3. **Asigná por tipo de tarea**:
+   - `research-<área>` (re-derivación): el más barato y/o rápido que cumpla.
+   - `dev-<pieza>` y `fixer-ola-<N>`: la mejor relación calidad/precio.
+   - Auditoría con criterio (fase 4): el de mayor calidad disponible; eso lo aplica `hd-review`.
+4. **Premium (más de 5 USD/M en cualquier precio publicado), solo con permiso**: si la memoria ya tiene el permiso, usalo y anotalo. **Excepción única de esta fase**: si conviene un modelo premium (p. ej. Fable o GPT Astra) y no hay ruling previo, preguntale al humano **una sola vez** —qué modelo, qué precio, para qué tareas— y registrá la respuesta en la memoria y el ledger. Si dice que no o salta la pregunta, usá el mejor dentro del presupuesto y anotá el ruling: conformarse con lo que hay, sin frenar. Esta es la única pregunta permitida fuera de discovery; no es enmienda ni freno real.
+5. **Dispatch explícito**: al lanzar cada `subagent`, pasá `provider`, `model` y `reasoning_effort` según la estrategia. Anotá en `waves.md` y en el ledger qué modelo lleva cada agente; apartarse de la estrategia es un `Ruling`.
+
 ## Reglas duras
 
 1. **No hay tests.** Ni unitarios, ni de integración, ni "uno chiquito". La verificación es build + lint + estándares, y la revisión semántica de la fase 4.
@@ -46,7 +59,8 @@ Leé primero `technical_spec.md`, después `spec.md`, los planes, el README del 
 8. **La unidad es la ola.** Un worktree, un commit, un gate por ola. Los commits por ola se conservan.
 9. **El alcance es del humano.** Vos decidís lo técnico (orden, teams, interfaces internas, worktrees); no cambiás el producto. Si hace falta, enmienda con el humano.
 10. **Nunca `--force`, nunca push a `main` ni a una rama ajena.**
-11. **El humano no está presente.** Lo que falte se resuelve con la memoria, con el código o con un ruling anotado en el ledger. Solo un cambio de alcance vuelve al humano, y eso es un freno real.
+11. **El humano no está presente.** Lo que falte se resuelve con la memoria, con el código o con un ruling anotado en el ledger. Solo un cambio de alcance vuelve al humano, y eso es un freno real. La única excepción es la pregunta única por un modelo premium sin ruling previo (ver Catálogo de modelos).
+12. **Cada agente se despacha con el modelo que corresponde a su tarea** según el catálogo y la estrategia de la memoria; los premium (más de 5 USD/M) solo con permiso explícito.
 
 ## Paso 0 — Re-derivación (antes de tocar nada)
 
@@ -100,7 +114,7 @@ La forma de trabajar cambió: **el paralelismo ya no está entre olas, está den
 
 Armá la matriz:
 
-| Ola | Team (agente → pieza) | Archivos por agente | Interfaces | Produce | Consume | Depende | Datos | Lockfile / build |
+| Ola | Team (agente → pieza, modelo) | Archivos por agente | Interfaces | Produce | Consume | Depende | Datos | Lockfile / build |
 |---|---|---|---|---|---|---|---|---|
 
 Reglas:
@@ -115,7 +129,7 @@ Reglas:
 - **Máximo 5 agentes por team.** Más que eso no se integra bien, aunque los archivos sean disjuntos. Si hay más piezas, partí en olas secuenciales.
 - **Ola de datos**: todo lo que mueve datos existentes va al final, sola, nunca en paralelo. Antes: confirmación de datos en producción del humano, respaldo y prueba en seco.
 
-Anotá cada ola con: team, piezas, archivos, interfaces, depende de, worktree, estado, commit y gate. Actualizá el archivo a medida que avanzás.
+Anotá cada ola con: team, piezas, archivos, interfaces, modelo por agente, depende de, worktree, estado, commit y gate. Actualizá el archivo a medida que avanzás.
 
 ## Paso 4 — El ciclo de una ola
 
@@ -134,7 +148,7 @@ git worktree add --detach .git/hd-wt/<trabajo>/ola-<N> <base-de-la-ola>
 
 ### 2. Despachar al team
 
-Lanzá todos los agentes de la ola en **un solo mensaje**, cada uno con **rutas**, no con contenido.
+Lanzá todos los agentes de la ola en **un solo mensaje**, cada uno con **rutas**, no con contenido, y con el **modelo de la estrategia** (`provider`, `model` y `reasoning_effort` explícitos en el `subagent`).
 
 **Brief de cada agente** (`dev-<pieza>`):
 
@@ -222,7 +236,7 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - No pegues el plan entero en el prompt del agente: pasale la ruta.
 - Cuando el trabajo supera las tres olas, **el ledger es tu memoria**: releelo en vez de confiar en el historial.
 
-**Ledger** (`.hd/<trabajo>/ledger.md`): anotá baseline, olas, teams, worktrees, consolidación, gate, correcciones, pushes, enmiendas y rulings. Después de una compactación, creéle al ledger y a git.
+**Ledger** (`.hd/<trabajo>/ledger.md`): anotá baseline, olas, teams, worktrees, consolidación, gate, correcciones, pushes, estrategia de modelos, permisos premium, enmiendas y rulings. Después de una compactación, creéle al ledger y a git.
 
 ## Enmiendas y rulings
 
@@ -255,3 +269,6 @@ Los cambios están en la rama **como un commit por ola**, los worktrees borrados
 | "El push falló, freno el trabajo" | Es un respaldo. Anotá y seguí. |
 | "El build no corre en este entorno, sigo igual" | Sin baseline no sabés qué estaba roto antes: el rojo no es atribuible y el verde no es evidencia. Freno real. |
 | "El humano preguntó por el estado, le cuento todo" | No está en el loop. Lo que encontrás va al ledger y a `waves.md`; el humano lee el resumen final. |
+| "Todos los agentes con el modelo default, total funciona" | El catálogo existe para aprovecharlo: research barato y/o rápido, implementación y fixers calidad/precio, auditoría el mejor. |
+| "El modelo premium es mejor, lo uso y listo" | Más de 5 USD/M en cualquier precio publicado exige permiso explícito. Sin ruling previo se pregunta una sola vez; si no, el mejor dentro del presupuesto. |
+| "Preguntar por modelos rompe la autonomía de la fase" | Es la única excepción, una sola vez, y solo si la memoria no tiene ruling. Todo lo demás sigue autónomo. |

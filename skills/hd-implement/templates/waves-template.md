@@ -13,6 +13,9 @@
     mismo worktree, con archivos disjuntos e interfaces congeladas.
   - Los agentes del team NO ejecutan scripts ni commitean. El orquestador
     corre el gate y commitea.
+  - Cada agente se despacha con el modelo del catálogo que corresponde a su
+    tarea (research barato, implementación calidad/precio, auditoría el mejor);
+    los premium (más de 5 USD/M) solo con permiso del humano en la memoria.
 -->
 
 # Waves: <trabajo>
@@ -36,15 +39,29 @@
 - **Footprints**: <ok | ajustes>
 - **Baseline**: <sha> — <n> hallazgos (<firmas>)
 
+## Estrategia de modelos
+
+<!-- La estrategia aprobada en discovery vive en .hd/memory.md ([decidido]).
+     Si el harness no expone list_subagent_models, default y ruling.
+     Premium (más de 5 USD/M en cualquier precio publicado): solo con permiso;
+     sin ruling previo, una única pregunta al humano (excepción de la fase 3). -->
+
+- **Catálogo consultado**: sí | no (default, ruling)
+- **Research**: <modelo>
+- **Implementación / fixers**: <modelo>
+- **Auditoría (fase 4)**: <modelo>
+- **Premium aprobados**: <modelo, tareas, fecha> | ninguno
+- **Pregunta única premium**: <fecha, respuesta> | no hizo falta
+
 ## Matriz de teams por ola
 
 <!-- Cada ola es un worktree y un team. Archivos disjuntos por contrato:
      si dos piezas necesitan el mismo archivo, no comparten ola. -->
 
-| Ola | Agente | Pieza | Archivos | Produce | Consume | Interfaz congelada | Datos | Lockfile / build |
-|---|---|---|---|---|---|---|---|---|
-| 1 | dev-<pieza> | ... | ... | ... | ... | ... | no | no |
-| 1 | dev-<pieza> | ... | ... | ... | ... | ... | no | no |
+| Ola | Agente | Pieza | Modelo | Archivos | Produce | Consume | Interfaz congelada | Datos | Lockfile / build |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | dev-<pieza> | ... | <provider/model> | ... | ... | ... | ... | no | no |
+| 1 | dev-<pieza> | ... | <provider/model> | ... | ... | ... | ... | no | no |
 
 ## Olas
 

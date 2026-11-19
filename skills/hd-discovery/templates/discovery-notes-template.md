@@ -105,6 +105,29 @@
 - **Imprescindible**: <...>
 - **Deseable**: <...>
 
+## Comportamientos nuevos en detalle
+
+<!-- Cada comportamiento nuevo o cambiado, explicado con lujo y detalle en el
+     Paso 5 y confirmado por el humano ("¿es esto exactamente lo que se requiere?").
+     Lo que no está confirmado acá no entra al spec. -->
+
+| # | Comportamiento | Dispara | Hace | Muestra | Si falla | Qué NO cambia | Confirmado |
+|---|---|---|---|---|---|---|---|
+| 1 | <...> | <...> | <...> | <...> | <...> | <...> | sí |
+
+## Estrategia de modelos
+
+<!-- Catálogo consultado con list_subagent_models (si el harness lo permite).
+     Precios y calidades verificados van a .hd/memory.md como [hecho];
+     los permisos premium, como [decidido]. -->
+
+- **Catálogo disponible**: sí | no (default, anotado en memoria)
+- **Research**: <modelo> — <por qué>
+- **Prototipo / implementación**: <modelo> — <por qué>
+- **Auditoría con criterio**: <modelo> — <por qué>
+- **Premium aprobados (más de 5 USD/M)**: <modelo, tareas, fecha> | ninguno
+- **Memoria**: <punteros a las entradas>
+
 ## Prototipo
 
 - **Aplica**: sí | no (<motivo>)
@@ -123,6 +146,7 @@
 ## Aprobación del humano
 
 - **Fecha**: <fecha>
+- **Comportamientos confirmados**: sí ("¿es esto exactamente lo que se requiere?") | no
 - **Aprobó**: resumen | prototipo | ambos
 - **Observaciones**: <...>
 - **Memoria**: `[decidido] aprobado ...`

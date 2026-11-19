@@ -1,6 +1,6 @@
 ---
 name: hd-review
-description: Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en paralelo. Hasta cuatro revisores independientes, uno por ola, leen el código y escriben solo sus hallazgos; al mismo tiempo un auditor visual levanta el proyecto entero y prueba la feature como un humano, click por click, de punta a punta. Con todo junto, un solo fixer corrige los hallazgos uno por uno, el orquestador commitea y corre el gate, y el mismo auditor visual vuelve a probar la feature completa. Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests.
+description: Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en paralelo. Hasta cuatro revisores independientes, uno por ola, leen el código y escriben solo sus hallazgos; al mismo tiempo un auditor visual levanta el proyecto entero y prueba la feature como un humano, click por click, de punta a punta. Con todo junto, un solo fixer corrige los hallazgos uno por uno, el orquestador commitea y corre el gate, y el mismo auditor visual vuelve a probar la feature completa. Los revisores y el auditor se despachan con el modelo de mayor calidad disponible según el catálogo y la estrategia de la memoria (premium solo con permiso ya dado). Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests.
 ---
 
 # HD — Fase 4: Revisión y auditoría visual
@@ -35,6 +35,16 @@ olas cerradas
 | **Fixer** (`fixer-review`) | Corrige todos los hallazgos, uno por uno | No rediseña, no amplía alcance, no commitea |
 
 **Independencia:** los revisores no participaron de ninguna ola; el auditor visual tampoco; el fixer no audita. La corrección es una sola y la confirma el comportamiento, no el autor.
+
+## Catálogo de modelos: la auditoría va con el mejor
+
+La auditoría con criterio —revisores y auditor visual— es la tarea que más calidad necesita: sin tests, es la única lectura del trabajo.
+
+1. **Leé la estrategia de `.hd/memory.md`**: el modelo por tipo de tarea y los permisos premium se aprobaron en discovery (o con la pregunta única de `hd-implement`). No se vuelve a preguntar.
+2. **Consultá el catálogo** con `list_subagent_models` si el harness lo permite, para verificar que los modelos de la estrategia siguen disponibles y elegir el esfuerzo de razonamiento. Si no está disponible, usá el default y anotalo en el ledger.
+3. **Asigná**: revisores y auditor visual con el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos); `fixer-review` con la mejor relación calidad/precio.
+4. **Premium (más de 5 USD/M en cualquier precio publicado)**: solo con permiso ya registrado en la memoria. **Esta fase no pregunta**: la excepción de la pregunta única es de `hd-implement`. Sin permiso, usá el mejor dentro del presupuesto y anotá el ruling.
+5. **Dispatch explícito**: pasá `provider`, `model` y `reasoning_effort` en cada `subagent`; anotá en el ledger qué modelo llevó cada revisor y el auditor.
 
 ## Reglas duras
 
@@ -203,3 +213,4 @@ Con revisores sin hallazgos abiertos y re-prueba visual OK:
 | "Los revisores pueden corregir lo que encuentran" | No: el que revisa no corrige. El fixer es otro y va después. |
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
 | "El humano igual va a querer probar" | El humano recibe el trabajo cerrado y un resumen; si quiere probar, prueba, pero no es una puerta del proceso. |
+| "Auditar con el modelo default alcanza" | Sin tests, la auditoría es la única lectura del trabajo: va con el mejor modelo disponible y permitido. El premium sin permiso no se usa; se anota el ruling. |

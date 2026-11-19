@@ -1,6 +1,6 @@
 # Hiper-driven (HD)
 
-**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido y aprueba el prototipo. Después, la cadena corre sola hasta el cierre.
+**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido, confirma los comportamientos nuevos y aprueba el resumen y el prototipo. Después, la cadena corre sola hasta el cierre.
 
 Dos pilares:
 
@@ -53,7 +53,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 
 ## Una sola conversación, sin humano en el medio
 
-Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despierta un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge) o el reporte final.
+Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final.
 
 La fuente es el paquete, no el chat: el orquestador relee el spec, el technical spec y los planes, y verifica el código antes de despachar.
 
@@ -71,10 +71,13 @@ hd-discovery --> hd-spec --> hd-implement --> hd-review --> hd-close
 El humano invoca la skill con su pedido. El orquestador:
 
 1. **Delega un research automático** (`research-inicial`) que busca todo lo relacionado: qué existe, dónde vive, quién lo consume, qué se rompe si cambia. El reporte vuelve con `archivo:línea`, y el orquestador **verifica a mano** los 3-10 hallazgos que sostienen el diseño.
-2. **Pregunta solo lo no obvio**, de a una por turno. Nombres de buckets y su política, si hay datos en producción, proveedor de object storage o base de datos, entornos, permisos, límites: si no está en el código ni en la memoria, es una pregunta.
+2. **No asume nada**, de a una pregunta por turno. Lo existente se lee del código y la memoria; lo nuevo se confirma siempre, aunque parezca obvio: el nombre exacto del bucket y si es privado o público, si hay datos en producción, proveedor de object storage o base de datos, entornos, permisos, límites.
 3. **Convierte cada hallazgo y cada respuesta en memoria** (`.hd/memory.md`): no se vuelve a buscar ni se vuelve a preguntar.
 4. **Arma el prototipo visual con hasta 5 subagentes coordinados**, cada uno dueño de una pieza y sus archivos, con interfaces congeladas y un solo escritor por archivo compartido.
-5. **Pide la aprobación del resumen y del prototipo.** Ese OK es el **último punto de contacto humano**: con la aprobación, carga `hd-spec` y la cadena sigue sola.
+5. **Explica con lujo y detalle cada comportamiento nuevo** —qué lo dispara, qué hace, qué muestra, qué pasa si falla, qué no cambia— y pregunta *"¿es esto exactamente lo que se requiere?"*.
+6. **Pide la aprobación del resumen y del prototipo.** El humano no revisa el spec a mano: el resumen final es su contrato real, y el spec es su transcripción fiel. Ese OK es el **último punto de contacto humano**: con la aprobación, carga `hd-spec` y la cadena sigue sola.
+
+Si el harness expone un catálogo de modelos (`list_subagent_models`), discovery lo consulta, investiga calidad y precios, arma la estrategia por tipo de tarea y la aprueba con el resumen: research con el más barato y/o rápido, implementación con el mejor calidad/precio, auditoría con el de mayor calidad. Los modelos de más de 5 USD por millón de tokens (cualquier precio publicado) solo se usan con permiso explícito del humano.
 
 Un **spike** (validación de una idea) termina en discovery con una recomendación y no genera paquete.
 
@@ -92,6 +95,7 @@ El orquestador re-deriva el paquete contra el código, corre el baseline y arma 
 - **Las olas van secuenciales.** Se paraleliza **dentro** de la ola, no entre olas: un daño queda contenido en una ola y no se multiplica.
 - **Los agentes no ejecutan scripts**: ni build, ni lint, ni tests, ni servidores, ni git. El orquestador consolida, commitea y corre el gate.
 - **Esta fase no tiene revisor.** La revisión independiente es la fase 4.
+- **Cada agente lleva el modelo que corresponde a su tarea** según el catálogo y la estrategia aprobada en discovery. Si hace falta un premium (más de 5 USD/M) sin permiso previo, se pregunta **una sola vez** —la única excepción a la autonomía de la fase—; si no, se usa el mejor dentro del presupuesto.
 
 Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera.
 
@@ -101,6 +105,8 @@ Dos subfases que corren al mismo tiempo:
 
 1. **Revisores de código**: hasta 4, uno por ola (agrupando si hay más). Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada.
 2. **Auditor visual**: levanta el proyecto entero y lo prueba como un humano. Inicia sesión, navega hasta la feature, hace click en cada botón, completa formularios, prueba estados y bordes, y verifica que la feature funcione de punta a punta. Si el entorno no permite algo, lo declara no verificable en vez de inventar un verde.
+
+Revisores y auditor visual se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos.
 
 Con todo junto, **un solo fixer** corrige los hallazgos uno por uno (`hd-debug` obligatorio), el orquestador consolida, commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
 
@@ -174,8 +180,8 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 ## Reglas de oro (no negociables)
 
 1. **El contrato manda.** Ningún código sin paquete aprobado. Ni el spec ni los planes contienen lógica ni implementaciones; única excepción: firmas, tipos, constantes y formatos cuando son contrato (Ola 0).
-2. **Las preguntas se hacen de a UNA por turno**, siempre con la opción *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*. Solo en discovery.
-3. **No se asume nada no obvio.** Si no está en el código ni en la memoria, es una pregunta o una verificación.
+2. **Las preguntas se hacen de a UNA por turno**, siempre con la opción *"Necesito más contexto sobre lo que me estás preguntando antes de decidir"*. Solo en discovery, más la pregunta única por modelos premium sin ruling previo en implementación.
+3. **No se asume nada.** Lo existente se lee del código y la memoria; lo nuevo se confirma siempre, aunque parezca obvio. Cada comportamiento nuevo se explica con lujo y detalle y se confirma antes de la aprobación; el resumen final es el contrato real del humano.
 4. **El comportamiento esperado va antes que el código.** El plan fija en prosa qué debe hacer el código —entradas, salidas, casos borde, errores— y el revisor audita contra ese texto. Sin tests, es la única fuente de verdad semántica.
 5. **En HD, el framework no escribe tests.** La vía rápida es otra cosa: solo agrega tests si el humano los pide.
 6. **Ola 0 (contratos) va sola y se cierra antes de seguir.**
@@ -196,6 +202,7 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 21. **Una conversación, y la fuente es el paquete.** Lo que no se salta es la relectura del paquete y la verificación del código antes de despachar.
 22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
 23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva.
+24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
 
 ## La vía rápida: `hd-fast-implement`
 
