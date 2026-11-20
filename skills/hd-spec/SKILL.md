@@ -125,16 +125,16 @@ Cada plan declara, con valores exactos (sin globs, sin "y archivos relacionados"
 - **Criterios de aceptación** del plan.
 - **Especialidad sugerida** y **con quién comparte team** (el cálculo del orquestador; la implementación lo verifica).
 
-**El paralelismo se calcula, no se intuye.** Dos piezas pueden ir en el mismo team (misma ola, mismo worktree) SOLO si:
+**El paralelismo se calcula, no se intuye.** Dos piezas pueden ir en el mismo team (misma ola, mismo worktree) si:
 
-1. sus archivos de código son disjuntos;
+1. sus **regiones** de código son disjuntas: no editan el mismo símbolo, bloque ni función. Pueden compartir archivo si cada una es dueña de una región distinta y declarada;
 2. lo que uno produce no es lo que el otro consume;
 3. no comparten estado mutable (misma base de datos, lock, puerto, archivo de config, servicio externo);
 4. ninguno depende del otro;
 5. ninguno toca la configuración que el otro necesita para compilar o pasar el lint;
 6. ninguno cambia dependencias o lockfiles (eso se serializa: una instalación a la vez).
 
-**El default es la ola más chica que termina el trabajo, con el team más grande que no se pise.** Agrupá piezas solo cuando todos los criterios se cumplan sin dudas. Ante la duda, serializá. **No fuerces paralelismo.** Un team no lleva más de **5 agentes**: más que eso no se integra ni se revisa bien, aunque los archivos sean disjuntos. Si hay más, partí en olas secuenciales.
+**El default es la ola más corta que termina el trabajo, con el team más grande que pueda trabajar a la vez sin bloquearse.** El piso es **2 agentes** cuando el trabajo se puede partir: un team de uno es la excepción (pieza indivisible), no la norma. Si el reparto deja piezas esperando a un compañero, se re-corta por regiones o se serializa esa pieza, pero no se deja un agente mirando. Un team no lleva más de **5 agentes**: más que eso no se coordina ni se revisa bien. Si hay más, partí en olas secuenciales.
 
 **Estructura de olas (mega cambio):**
 
@@ -183,11 +183,11 @@ Pasale **rutas**: `spec.md`, `technical_spec.md`, cada plan, el prototipo, las n
 1. **Coherencia con lo aprobado**: el spec no inventa alcance ni contradice el resumen, la Q&A o el prototipo.
 2. **Criterios verificables**: cada criterio se responde sí/no mirando el sistema.
 3. **Coherencia interna**: spec, technical spec y planes dicen lo mismo; no hay contradicciones entre ellos.
-4. **Planes completos**: archivos exactos y disjuntos, interfaces produce/consume consistentes, dependencias por ola correctas, comportamiento esperado sin huecos.
+4. **Planes completos**: archivos y regiones exactos (disjuntos, o con dueño por región declarado si comparten archivo), interfaces produce/consume consistentes, dependencias por ola correctas, comportamiento esperado sin huecos.
 5. **Technical spec suficiente**: la implementación puede ejecutar sin adivinar. Si falta contexto, se deniega.
 6. **Prototipo**: existe si hay UI, abre, refleja el spec y tiene README; no se copia al producto.
 7. **Sin lógica ni implementaciones**: solo contratos (firmas, tipos, constantes, formatos) cuando son Ola 0.
-8. **Olas y teams**: Ola 0 sola si hay contratos, datos al final y en solitario, olas secuenciales, team de hasta 5 agentes con archivos disjuntos y un solo dueño por archivo compartido.
+8. **Olas y teams**: Ola 0 sola si hay contratos, datos al final y en solitario, olas secuenciales, team de 2 a 5 agentes con regiones disjuntas y, si comparten archivo, un dueño por región declarado.
 9. **Modo correcto** (ratchet) y riesgos/datos cubiertos.
 10. **Implementable**: rutas, comandos Build/Lint/Estándares, rama, base y respaldo anotados.
 11. **Sin tests** pedidos ni declarados.

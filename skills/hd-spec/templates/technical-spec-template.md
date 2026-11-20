@@ -68,7 +68,7 @@
 
 | Plan | Ola propuesta | Team (agente → pieza) | Objetivo | Depende de | Archivos |
 |---|---|---|---|---|---|
-| plan-01-... | 1 | dev-<pieza> | ... | — | ... |
+| plan-01-... | 1 | dev-<zona> | ... | — | ... |
 
 ## Resultado esperado
 

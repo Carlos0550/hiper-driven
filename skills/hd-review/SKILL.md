@@ -84,6 +84,7 @@ Lanzá **hasta 4 revisores en paralelo**, uno por ola. Si hay más de 4 olas, ag
 Cada `revisor-ola-<N>` recibe, por ruta:
 
 - el diff de su ola;
+- el **tablero** de la ola (`reports/ola-<N>-tablero.md`), si existe: dice qué decidió cada agente y por qué;
 - `spec.md`, `technical_spec.md`, los planes de esa ola y el prototipo;
 - las convenciones del repo y los comandos de verificación;
 - la memoria (para no reportar como error algo que el humano decidió).
@@ -97,7 +98,7 @@ Qué busca, contra el spec, el technical spec y el plan:
 5. **Comportamiento esperado**: ¿hace lo que dice el plan, con entradas, salidas, casos borde y errores? **Esto reemplaza a los tests.**
 6. **Prototipo**: si hay UI, ¿la implementación respeta los flujos, estados y componentes aprobados?
 7. **Estándares y calidad**: convenciones, manejo de errores, duplicación evitable, complejidad, dependencias nuevas sin justificar, restos de debug, tests agregados (prohibido).
-8. **Footprints**: archivos fuera del plan, archivos compartidos tocados, generados modificados.
+8. **Footprints**: archivos fuera del plan, archivos compartidos tocados, generados modificados. Un archivo compartido está bien si el tablero declara al dueño de la región y la decisión.
 
 **Formato de salida** (`.hd/<trabajo>/reports/revision-ola-<N>.md`):
 

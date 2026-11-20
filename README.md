@@ -35,7 +35,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 | `research-<área>` | Investiga el sistema y devuelve evidencia con archivo:línea | No decide, no edita, no commitea |
 | `proto-<pieza>` | Arma su parte del prototipo visual (hasta 5 en paralelo) | No toca el producto, no implementa |
 | `qa-artefactos` | Audita el paquete antes de implementar | No escribe el paquete |
-| **Team** (`dev-<pieza>`) | Implementa su pieza en el worktree compartido de la ola | No sale de sus archivos, **no ejecuta scripts**, no commitea |
+| **Team** (`dev-<zona>`) | Implementa su zona en el worktree compartido, en paralelo con el resto, y deja sus decisiones en el tablero | No sale de su zona sin anotarlo, **no ejecuta scripts**, no commitea |
 | **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta |
 | **Auditor visual** (`auditor-visual`) | Levanta el proyecto y prueba como un humano | No edita el producto |
 | **Fixer** (`fixer-*`) | Corrige hallazgos, uno por uno | No rediseña, no audita, no commitea |
@@ -91,7 +91,7 @@ Un **subagente QA** independiente audita el paquete. Con verde, el orquestador c
 
 El orquestador re-deriva el paquete contra el código, corre el baseline y arma las **olas** en `waves.md`. El modelo cambió:
 
-- **Cada ola es un team de hasta 5 agentes en un mismo worktree**, con archivos disjuntos, interfaces congeladas y un reparto que todos conocen. Cada agente sabe qué hace el otro y no toca sus archivos.
+- **Cada ola es un team de 2 a 5 agentes trabajando a la vez en un mismo worktree**, como un equipo: cada uno con una zona precisa (archivos y regiones), interfaces congeladas y un **tablero de la ola** donde todos escriben qué hicieron y por qué. Si dos se pisan, el segundo lee el motivo y corrige o integra en vez de sobrescribir. El corte se hace para que las piezas arranquen juntas: un agente esperando es una ola más lenta.
 - **Las olas van secuenciales.** Se paraleliza **dentro** de la ola, no entre olas: un daño queda contenido en una ola y no se multiplica.
 - **Los agentes no ejecutan scripts**: ni build, ni lint, ni tests, ni servidores, ni git. El orquestador consolida, commitea y corre el gate.
 - **Esta fase no tiene revisor.** La revisión independiente es la fase 4.
@@ -185,7 +185,7 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 4. **El comportamiento esperado va antes que el código.** El plan fija en prosa qué debe hacer el código —entradas, salidas, casos borde, errores— y el revisor audita contra ese texto. Sin tests, es la única fuente de verdad semántica.
 5. **En HD, el framework no escribe tests.** La vía rápida es otra cosa: solo agrega tests si el humano los pide.
 6. **Ola 0 (contratos) va sola y se cierra antes de seguir.**
-7. **El paralelismo vive dentro de la ola.** Cada ola es un team de hasta 5 agentes con archivos disjuntos, interfaces congeladas y un solo dueño por archivo compartido. **Las olas van secuenciales**: se paraleliza lo que no se pisa, nunca olas enteras.
+7. **El paralelismo vive dentro de la ola.** Cada ola es un team de 2 a 5 agentes trabajando a la vez en el mismo worktree, con zonas (archivos y regiones) disjuntas, interfaces congeladas y un **tablero** donde cada uno deja sus decisiones; si comparten archivo, hay un dueño por región. **Las olas van secuenciales**: se paraleliza el trabajo, nunca olas enteras.
 8. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
 9. **El orquestador no escribe código de producción.** Lo escriben los implementadores y fixers. **Los subagentes no ejecutan scripts**: no compilan, no lintean, no corren tests ni servidores. Solo el orquestador corre el gate y commitea; la única excepción es el auditor visual, que ejecuta para probar.
 10. **Una corrección por gate.** Gate de ola, revisión y auditoría visual comparten una sola pasada de corrección. Si después de corregir sigue rojo, es **freno real**. Para bugs, **3 fixes fallidos = cuestionar la arquitectura**.

@@ -17,7 +17,7 @@
 
 - **Ola**: <N>
 - **Team**: <agente> — <pieza que implementa>
-- **Comparte ola con**: <plan-NN / pieza | ninguno> — <por qué no se pisan: archivos disjuntos, sin interfaces cruzadas, sin estado mutable compartido>
+- **Comparte ola con**: <plan-NN / pieza | ninguno> — <por qué no se pisan: archivos o regiones disjuntas (si comparten archivo, cada uno es dueño de una región), sin interfaces cruzadas, sin estado mutable compartido>
 - **Depende de**: Ola(s) <N-1, ...> — NUNCA de otra pieza de su misma ola
 - **Toca datos existentes**: sí | no
 - **Especialidad sugerida**: backend | frontend | datos | infra | full-stack
