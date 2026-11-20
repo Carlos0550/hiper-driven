@@ -1,40 +1,40 @@
 ---
 name: hd-review
-description: Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en paralelo. Hasta cuatro revisores independientes, uno por ola, leen el código y escriben solo sus hallazgos; al mismo tiempo un auditor visual levanta el proyecto entero y prueba la feature como un humano, click por click, de punta a punta. Con todo junto, un solo fixer corrige los hallazgos uno por uno, el orquestador commitea y corre el gate, y el mismo auditor visual vuelve a probar la feature completa. Los revisores y el auditor se despachan con el modelo de mayor calidad disponible según el catálogo y la estrategia de la memoria (premium solo con permiso ya dado). Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests.
+description: Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en serie. Primero, revisores independientes —uno por ola, tantos como permita el harness, todos en una sola tanda y avisando al humano el costo en tokens— leen el código y escriben solo sus hallazgos; un fixer los corrige, el orquestador commitea y corre el gate. Recién entonces un auditor visual levanta el proyecto entero y prueba la feature como un humano: por la UI si hay frontend, o con curl/fetch contra la API —como con Postman o APIdog— si no lo hay. Si la auditoría visual encuentra fallos, un fixer los corrige y el mismo auditor re-prueba la feature completa. Los revisores y el auditor se despachan con el modelo de mayor calidad disponible según el catálogo y la estrategia de la memoria (premium solo con permiso ya dado). Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests.
 ---
 
 # HD — Fase 4: Revisión y auditoría visual
 
-Sos el **orquestador**. Esta fase es la que hace que el trabajo de un LLM sea **confiable** sin tests: dos lecturas independientes del mismo trabajo, una de código y una de comportamiento, en paralelo.
+Sos el **orquestador**. Esta fase es la que hace que el trabajo de un LLM sea **confiable** sin tests: dos lecturas independientes del mismo trabajo, **en serie** —primero el código, después el comportamiento—.
 
 No arranca hasta que **TODAS las olas están cerradas** en `hd-implement`.
 
 ```
 olas cerradas
-   ├── sub1: revisores por ola (máx. 4, en paralelo) ──→ hallazgos por escrito
-   └── sub2: auditor visual (proyecto entero, como un humano) ──→ fallos por escrito
-                                   ↓
-                    un solo fixer corrige todo, uno por uno
-                                   ↓
-                    gate del orquestador en la rama
-                                   ↓
-                    el mismo auditor visual re-prueba la feature completa
-                                   ↓
-                          verde → hd-close automático
+   │
+   ├─ Paso 1 · sub1: revisores de código (uno por ola, todos a la vez) ──→ hallazgos
+   │      └─ Paso 2 · si hay: un fixer corrige → commit → gate
+   │
+   ├─ Paso 3 · sub2: auditor visual (UI, o API con curl/fetch) ──→ fallos
+   │      └─ Paso 4 · si hay: un fixer corrige → commit → gate
+   │
+   └─ Paso 5 · re-prueba visual completa ──→ Paso 6 · hd-close automático
 ```
 
-**No hay humano en esta fase.** El humano aparece recién cuando el trabajo está cerrado, o si hay un freno real.
+**Por qué en serie y no en paralelo:** el auditor visual tiene que probar el árbol **ya corregido**. Si corre junto con los revisores, prueba bugs que todavía vas a arreglar y su reporte nace viejo.
+
+**No hay humano en esta fase.** Aparece recién cuando el trabajo está cerrado o si hay un freno real. El aviso de tokens del Paso 1 es un aviso, no una pregunta.
 
 ## Subagentes
 
 | Subagente | Qué hace | Qué no hace |
 |---|---|---|
 | **Orquestador** | Coordina, consolida, commitea, corre el gate, decide | **No escribe código de producción** |
-| **Revisor** (`revisor-ola-<N>`, hasta 4) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta, no narra |
-| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y lo prueba como un humano | No edita el producto |
-| **Fixer** (`fixer-review`) | Corrige todos los hallazgos, uno por uno | No rediseña, no amplía alcance, no commitea |
+| **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta, no narra |
+| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y lo prueba como un humano: UI o API con `curl`/`fetch` | No edita el producto |
+| **Fixer** (`fixer-review`, `fixer-visual`) | Corrige todos los hallazgos de una tanda, uno por uno | No rediseña, no amplía alcance, no commitea |
 
-**Independencia:** los revisores no participaron de ninguna ola; el auditor visual tampoco; el fixer no audita. La corrección es una sola y la confirma el comportamiento, no el autor.
+**Independencia:** los revisores no participaron de ninguna ola; el auditor visual tampoco; el fixer no audita. La corrección la confirma el comportamiento, no el autor.
 
 ## Catálogo de modelos: la auditoría va con el mejor
 
@@ -42,22 +42,24 @@ La auditoría con criterio —revisores y auditor visual— es la tarea que más
 
 1. **Leé la estrategia de `.hd/memory.md`**: el modelo por tipo de tarea y los permisos premium se aprobaron en discovery (o con la pregunta única de `hd-implement`). No se vuelve a preguntar.
 2. **Consultá el catálogo** con `list_subagent_models` si el harness lo permite, para verificar que los modelos de la estrategia siguen disponibles y elegir el esfuerzo de razonamiento. Si no está disponible, usá el default y anotalo en el ledger. **El catálogo no publica precios**: si hace falta un precio —por ejemplo, para decidir si un modelo supera el umbral de 5 USD/M—, se busca en internet (páginas oficiales); no se le pregunta al provider, y un precio no verificable se trata como desconocido.
-3. **Asigná**: revisores y auditor visual con el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos); `fixer-review` con la mejor relación calidad/precio.
+3. **Asigná**: revisores y auditor visual con el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos); los fixers con la mejor relación calidad/precio.
 4. **Premium (más de 5 USD/M en cualquier precio publicado)**: solo con permiso ya registrado en la memoria. **Esta fase no pregunta**: la excepción de la pregunta única es de `hd-implement`. Sin permiso, usá el mejor dentro del presupuesto y anotá el ruling.
 5. **Dispatch explícito**: pasá `provider`, `model` y `reasoning_effort` en cada `subagent`; anotá en el ledger qué modelo llevó cada revisor y el auditor.
 
 ## Reglas duras
 
-1. **Sub1 y sub2 corren en paralelo.** Los revisores leen código mientras el auditor visual prueba el sistema. No se serializan.
-2. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
-3. **El auditor visual prueba como un humano, de punta a punta.** Login, navegación, clicks, formularios, estados de error: si la feature no se puede recorrer entera, no está verificada.
-4. **Un solo fixer, con todos los hallazgos juntos.** Un hallazgo, un cambio. Nada de refactors colados.
-5. **Una sola corrección.** Si después de corregir y re-probar sigue rojo, es **freno real** con diagnóstico. No hay segunda ronda.
-6. **La re-prueba es completa**, no solo de lo que falló: la misma feature entera, de nuevo.
-7. **Ningún veredicto sin evidencia fresca en este turno.** La salida de build + lint + estándares que corriste vos, y los archivos de hallazgos y de prueba.
-8. **El orquestador no escribe producción.** El fix lo hace un subagente.
-9. **Sin tests.** Ni el fixer ni el auditor agregan tests; el orquestador no los pide.
-10. **Verde no es aprobación humana.** Si la revisión y la re-prueba salen bien, se cierra solo.
+1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento.
+2. **Un revisor por ola, todos los que permita el harness, en una sola tanda.** Nada de cuatro y después otra tanda: se cubre todo el trabajo de una pasada.
+3. **El costo en tokens se avisa.** Antes de despachar los revisores, una línea al humano con cuántos agentes se lanzan y por qué; no se espera respuesta.
+4. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
+5. **El auditor visual prueba como un humano, de punta a punta.** Por la UI si hay frontend; si no, contra la API con `curl`/`fetch`, como con Postman o APIdog: auth real, secuencias completas, errores, permisos y persistencia.
+6. **Una corrección por tanda de hallazgos, con todos juntos.** Un hallazgo, un cambio. Nada de refactors colados.
+7. **Una sola re-prueba.** Si después de corregir los fallos visuales la re-prueba vuelve a fallar, es **freno real** con diagnóstico. No hay segunda ronda.
+8. **La re-prueba es completa**, no solo de lo que falló: la misma feature entera, de nuevo.
+9. **Ningún veredicto sin evidencia fresca en este turno.** La salida de build + lint + estándares que corriste vos, y los archivos de hallazgos y de prueba.
+10. **El orquestador no escribe producción.** El fix lo hace un subagente.
+11. **Sin tests.** Ni los fixers ni el auditor agregan tests; el orquestador no los pide.
+12. **Verde no es aprobación humana.** Si la revisión y la re-prueba salen bien, se cierra solo.
 
 ## Paso 0 — Estado de cierre
 
@@ -77,9 +79,15 @@ Prepará el material por **rutas**:
 - diff total: `.hd/<trabajo>/logs/cierre-diff.patch` (`git diff <base>..HEAD -- . ':(exclude).hd'`);
 - logs de gate de cada ola.
 
-## Paso 1 — Sub1: revisores por ola
+## Paso 1 — Sub1: revisores de código
 
-Lanzá **hasta 4 revisores en paralelo**, uno por ola. Si hay más de 4 olas, agrupá olas consecutivas en un revisor y decilo en el brief.
+**Cuántos: uno por ola, todos en una sola tanda.** Lanzá tantos revisores como olas tenga el trabajo, hasta el **máximo de agentes simultáneos que permita el harness**. Consultá ese límite antes de despachar; si no lo podés determinar, lanzá uno por ola y, si el harness rechaza el dispatch, continuá en la tanda siguiente anotándolo en el ledger. No partas las olas en tandas por comodidad: una segunda tanda de revisores cuesta más que la tanda completa.
+
+**Aviso de tokens, antes de despachar** —una línea, sin esperar respuesta:
+
+> "Lanzo <N> revisores en paralelo, uno por ola, para cubrir todo el trabajo en una pasada. Esto consume más tokens que revisar por partes; si preferís que vaya por tandas, decilo ahora."
+
+Anotá en el ledger: `Revisión: <N> revisores en una tanda (<modelo>)`.
 
 Cada `revisor-ola-<N>` recibe, por ruta:
 
@@ -111,28 +119,63 @@ Veredicto: SIN_HALLAZGOS | CON_HALLAZGOS
 
 Nada más. Sin introducción, sin resumen, sin arreglos. El orquestador consolida.
 
-## Paso 2 — Sub2: auditor visual (en paralelo con sub1)
+## Paso 2 — Consolidar los hallazgos de código y corregirlos
 
-Lanzá `auditor-visual` **al mismo tiempo** que los revisores. Su trabajo es sentarse como un humano y probar la feature de punta a punta.
+Cuando terminan **todos** los revisores:
+
+- Leé los reportes (no los pegues en el chat).
+- Consolidá una lista única: una fila por hallazgo, deduplicado, ordenado por severidad.
+- Volcá el resultado a `review-progress.md` (template en `templates/review-progress-template.md`).
+- **Sin hallazgos → saltá al Paso 3.**
+- **Con hallazgos → una corrección**, y después el Paso 3.
+
+La corrección: un solo `fixer-review`, con **todos** los hallazgos en un mismo prompt, uno por uno:
+
+- para cada hallazgo: archivo, comportamiento esperado, qué falló y severidad;
+- `hd-debug` **obligatorio**: causa raíz primero, un cambio por hipótesis;
+- guarda de alcance: un hallazgo, un cambio; si el hallazgo revela un problema más grande, se anota y se reporta, no se expande;
+- **no ejecuta scripts** (build, lint, tests, servidores): el gate lo corre el orquestador;
+- **no commitea**; reporta en `.hd/<trabajo>/reports/fixer-review.md` del repo principal.
+
+El orquestador:
+
+1. Trabaja en un worktree desde el HEAD de la rama (`.git/hd-wt/<trabajo>/review-fix`).
+2. Revisa el diff: que cada hallazgo tenga su cambio y ninguno de más.
+3. Consolida (`cherry-pick -n`), commitea `hd(<trabajo>): corrección de revisión` y respalda.
+4. Corre **build + lint + estándares** en la rama. Si quedan rojos, **freno real**; no hay segunda corrección.
+5. Anota en el ledger y en `review-progress.md` qué hallazgo se corrigió con qué commit.
+
+El código corregido **no se re-revisa**: la re-prueba visual y el gate son la confirmación.
+
+## Paso 3 — Sub2: auditor visual
+
+Se lanza **solo ahora**: después de que terminaron todos los revisores y, si hubo hallazgos, después de la corrección y con el gate en verde. Nunca antes, nunca en paralelo con el Paso 1.
+
+Su trabajo es sentarse como un humano y probar la feature de punta a punta.
 
 Brief:
 
 - El proyecto, cómo levantarlo y qué entorno usar (dev/staging local, docker, seeds).
 - La feature y los flujos que el spec promete, con los criterios de aceptación.
-- **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
+- **Qué probar: UI o API.**
+  - Si hay frontend: la UI, click por click.
+  - Si no hay frontend: la **API como un humano con Postman o APIdog**, con `curl` o `fetch` contra el servidor. Auth real (login, token, refresh), secuencias completas de punta a punta (`POST` → `GET` → `PATCH` → `DELETE`), códigos de estado, validaciones, permisos, paginación y persistencia consultando después. Un endpoint suelto que responde 200 no es una feature.
+  - Si hay UI pero la feature tiene partes que la UI no expone, se prueban por API además de la UI.
+- **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, `curl`, `jq`, `httpie`, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
 - **No modifica código de producción.** Si para probar hace falta un dato o un usuario, lo crea en la base de prueba o con seeds, no en el código.
-- Puede ejecutar comandos y navegar: es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
+- Puede ejecutar comandos y navegar (o pegarle a la API): es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
 - Si el entorno no permite probar algo, lo declara **explícitamente** en el reporte como no verificable; no lo cuenta como verde.
 
 Qué prueba, en este orden:
 
 1. **Arranque**: levanta el proyecto entero, sin atajos, como lo haría un humano.
-2. **Camino principal**: inicia sesión, navega hasta la feature, la usa.
-3. **Todos los controles**: cada botón, link, formulario, selector y menú de la feature.
-4. **Estados**: vacío, carga, error, éxito, permisos insuficientes.
-5. **Bordes**: datos raros, campos vacíos, límites, doble click, volver atrás, refrescar.
-6. **Persistencia**: lo que se guarda, se ve después de recargar y en la sesión siguiente.
-7. **Consola y red**: errores de consola, requests fallidos, warnings relevantes.
+2. **Auth y permisos**: inicia sesión o consigue el token; verifica qué puede y qué no puede hacer.
+3. **Camino principal**: recorre la feature completa —UI o API— y la usa como el usuario final.
+4. **Todos los controles / todas las operaciones**: cada botón, link, formulario, selector y menú; o cada endpoint, método y parámetro de la feature.
+5. **Estados y errores**: vacío, carga, error, éxito, permisos insuficientes; y en API los códigos `400`/`401`/`403`/`404`/`409`/`422`/`5xx` donde correspondan.
+6. **Bordes**: datos raros, campos vacíos, límites, doble click, paginación, duplicados, volver atrás, refrescar.
+7. **Persistencia**: lo que se guarda, se ve después de recargar, en la sesión siguiente o consultando de nuevo la API.
+8. **Consola, red y logs**: errores de consola, requests fallidos, warnings relevantes, y los logs del servidor.
 
 **Formato de salida** (`.hd/<trabajo>/reports/auditoria-visual.md`):
 
@@ -144,33 +187,14 @@ Veredicto: OK | CON_FALLOS
 
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
 
-## Paso 3 — Consolidar
+## Paso 4 — Corrección de los fallos visuales
 
-Cuando **ambos** terminan:
+- **Veredicto OK → saltá al Paso 6.**
+- **CON_FALLOS → una corrección**, y después el Paso 5.
 
-- Leé los reportes (no los pegues en el chat).
-- Consolidá una lista única de hallazgos: revisores + auditor visual, deduplicados, ordenados por severidad.
-- Volcá el resultado a `review-progress.md` (template en `templates/review-progress-template.md`).
-- Si no hay hallazgos y el veredicto visual es OK: **saltá al Paso 6** (cierre).
-- Si hay hallazgos: seguí al Paso 4.
+Un `fixer-visual` con todos los fallos juntos, cada uno con sus pasos de reproducción, `hd-debug` obligatorio, guarda de alcance, sin scripts y sin commitear. Reporta en `.hd/<trabajo>/reports/fixer-visual.md`.
 
-## Paso 4 — La corrección (una sola)
-
-Un solo `fixer-review`, con **todos** los hallazgos en un mismo prompt, uno por uno:
-
-- para cada hallazgo: archivo, comportamiento esperado, qué falló, severidad y los pasos de reproducción del auditor visual;
-- `hd-debug` **obligatorio**: causa raíz primero, un cambio por hipótesis;
-- guarda de alcance: un hallazgo, un cambio; si el hallazgo revela un problema más grande, se anota y se reporta, no se expande;
-- **no ejecuta scripts** (build, lint, tests, servidores): la reproducción la aporta el auditor visual y el gate lo corre el orquestador;
-- **no commitea**; reporta en `.hd/<trabajo>/reports/fixer-review.md` del repo principal.
-
-El orquestador:
-
-1. Trabaja en un worktree desde el HEAD de la rama (`.git/hd-wt/<trabajo>/review-fix`).
-2. Revisa el diff: que cada hallazgo tenga su cambio y ninguno de más.
-3. Consolida (`cherry-pick -n`), commitea `hd(<trabajo>): corrección de revisión` y respalda.
-4. Corre **build + lint + estándares** en la rama. Si quedan rojos, **freno real**; no hay segunda corrección.
-5. Anota en el ledger y en `review-progress.md` qué hallazgo se corrigió con qué commit.
+El orquestador repite la mecánica del Paso 2: worktree, revisar el diff, `cherry-pick -n`, commit `hd(<trabajo>): corrección de auditoría visual`, respaldo y **build + lint + estándares**. Rojo → **freno real**.
 
 ## Paso 5 — Re-prueba visual
 
@@ -185,17 +209,18 @@ Con el gate verde, lanzá **el mismo auditor visual** a probar **la feature comp
 
 ## Paso 6 — Cierre y encadenado
 
-Con revisores sin hallazgos abiertos y re-prueba visual OK:
+Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y el gate verde (y la re-prueba visual en OK si hubo corrección visual):
 
-1. Actualizá `review-progress.md`: bloque por ola, bloque de auditoría visual, corrección y re-prueba, veredicto global.
-2. Actualizá el ledger: `Revisión: <N> revisores, <n> hallazgos, corregidos <sha>`, `Auditoría visual: OK (<fecha>)`, `Gate: build <r>, lint <r>, estándares <r>`.
+1. Actualizá `review-progress.md`: bloque por ola, bloque de auditoría visual, correcciones y re-prueba, veredicto global.
+2. Actualizá el ledger: `Revisión: <N> revisores en una tanda, <n> hallazgos, corregidos <sha>`, `Auditoría visual: OK (<fecha>)`, `Re-prueba: OK | no aplica (sin corrección visual)`, `Gate: build <r>, lint <r>, estándares <r>`.
 3. **Cargá la skill `hd-close` VOS MISMO** y ejecutá la fase 5. No esperes aprobación humana: la aprobación de producto ocurrió en discovery y el comportamiento lo validó el auditor visual.
 
 ## Lo que no se hace en esta fase
 
+- No se lanza el auditor visual en paralelo con los revisores ni antes de corregir: probaría un árbol viejo.
 - No se le pide al humano que pruebe (el auditor visual lo reemplaza).
 - No se invoca `hd-fast-implement` desde acá: la vía rápida es solo para pedidos directos del humano.
-- No se re-audita todo después de la corrección: la re-prueba visual y el gate son la confirmación.
+- No se re-revisa el código después de la corrección: la re-prueba visual y el gate son la confirmación.
 - No se squashéan los commits: el historial por ola se conserva.
 - No se descarta un hallazgo en silencio: si es falso positivo, se marca con razón en el ledger.
 
@@ -204,9 +229,12 @@ Con revisores sin hallazgos abiertos y re-prueba visual OK:
 | Excusa | Realidad |
 |---|---|
 | "El gate ya pasó en cada ola, no hace falta correrlo" | La revisión corrige código: el gate de la rama es evidencia nueva y obligatoria. |
-| "Con un revisor alcanza" | Cada ola tiene su revisor; hasta cuatro en paralelo. Una sola lectura deja huecos. |
+| "Con un revisor alcanza" | Cada ola tiene su revisor y se lanzan todos los que el harness permita, en una sola tanda. Una sola lectura deja huecos. |
+| "Lanzo cuatro revisores y después otra tanda" | No: se cubre todo de una pasada. Encadenar tandas cuesta más tokens y más tiempo que lanzar la tanda completa. |
+| "El visual en paralelo ahorra tiempo" | No: tiene que probar el árbol corregido. Si corre antes, prueba bugs que ya vas a arreglar. |
 | "El auditor visual es caro, lo salteo" | Sin tests, es la única prueba de comportamiento. Sin él, la confianza es fe. |
-| "El auditor probó la API y respondió 200" | Una feature no es un endpoint: es login, navegación, clicks, estados y persistencia. |
+| "No hay frontend, así que no hay nada que auditar" | Se audita la API con curl/fetch, como un humano con Postman: auth, CRUD, errores, permisos y persistencia. |
+| "El auditor probó la API y respondió 200" | Un 200 suelto no verifica nada: hacen falta la secuencia completa, los estados, los permisos y la persistencia. |
 | "El fixer ya arregló, no hace falta re-probar" | El fixer no ejecuta nada. La re-prueba completa es la única evidencia de que la feature quedó entera. |
 | "Re-pruebo solo lo que falló" | Un cambio puede romper otra parte del flujo. Se re-prueba la feature completa. |
 | "Una ronda más y converge" | No hay ronda 2: si no converge, el diagnóstico está mal o el problema es estructural. Se reporta. |

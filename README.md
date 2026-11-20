@@ -23,10 +23,15 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
                           |
      +----------+---------+---------+-----------+
      |          |                   |           |
- research-*  prototipo (≤5)   teams (≤5)   revisores (≤4)
-                                 |        + auditor visual
-                                 |              |
-                              fixers  ←─────────┘
+ research-*  prototipo (≤5)   teams (2-5)
+                                 |
+                            revisores (1 por ola, todos)
+                                 |
+                            fixer de código
+                                 |
+                            auditor visual (UI o API)
+                                 |        (si la auditoría falla)
+                              fixers  ←──┘
 ```
 
 | Quién | Qué hace | Qué no hace |
@@ -37,7 +42,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 | `qa-artefactos` | Audita el paquete antes de implementar | No escribe el paquete |
 | **Team** (`dev-<zona>`) | Implementa su zona en el worktree compartido, en paralelo con el resto, y deja sus decisiones en el tablero | No sale de su zona sin anotarlo, **no ejecuta scripts**, no commitea |
 | **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta |
-| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y prueba como un humano | No edita el producto |
+| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y prueba como un humano: UI, o API con `curl`/`fetch` si no hay frontend | No edita el producto |
 | **Fixer** (`fixer-*`) | Corrige hallazgos, uno por uno | No rediseña, no audita, no commitea |
 
 **El orquestador conduce; los subagentes hacen.** Ningún cambio de código de producción lo escribe el orquestador: siempre lo hace un implementador o un fixer.
@@ -99,16 +104,16 @@ El orquestador re-deriva el paquete contra el código, corre el baseline y arma 
 
 Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera.
 
-### Fase 4 — Revisión y auditoría visual (autónoma, en paralelo)
+### Fase 4 — Revisión y auditoría visual (autónoma, en serie)
 
-Dos subfases que corren al mismo tiempo:
+Dos subfases, **una después de la otra**:
 
-1. **Revisores de código**: hasta 4, uno por ola (agrupando si hay más). Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada.
-2. **Auditor visual**: levanta el proyecto entero y lo prueba como un humano. Inicia sesión, navega hasta la feature, hace click en cada botón, completa formularios, prueba estados y bordes, y verifica que la feature funcione de punta a punta. Si el entorno no permite algo, lo declara no verificable en vez de inventar un verde.
+1. **Revisores de código**: uno por ola, **tantos como permita el harness y todos en una sola tanda**. Antes de despachar, el orquestador avisa al humano cuántos agentes lanza y el costo en tokens. Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada. Si hay hallazgos, **un fixer** los corrige, el orquestador commitea y corre el gate.
+2. **Auditor visual**: recién entonces, sobre el árbol ya corregido, levanta el proyecto entero y lo prueba como un humano. Si hay frontend, por la UI (login, navegación, cada control, estados, bordes, persistencia). Si no hay frontend, **contra la API con `curl`/`fetch`, como con Postman o APIdog**: auth real, secuencias completas, códigos de error, permisos y persistencia. Lo que no puede probar lo declara no verificable.
 
 Revisores y auditor visual se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos.
 
-Con todo junto, **un solo fixer** corrige los hallazgos uno por uno (`hd-debug` obligatorio), el orquestador consolida, commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
+Si la auditoría visual encuentra fallos, **un fixer** los corrige, el orquestador commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
 
 ### Fase 5 — Cierre (automática)
 
@@ -171,8 +176,8 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 |---|---|---|---|
 | **G0 — Paquete** | `qa-artefactos` | coherencia con lo aprobado, criterios verificables, planes completos, technical spec suficiente, prototipo, teams, sin lógica ni tests | una corrección; si sigue rojo, no se implementa |
 | **G1 — Ola (estático)** | orquestador | build + lint + estándares en la rama consolidada, contra el baseline | una corrección con fixer + `hd-debug`; si sigue rojo, freno real |
-| **G2 — Revisión (semántico)** | hasta 4 `revisor-ola-<N>` en paralelo | seguridad, lógica, trampas, desviaciones, comportamiento esperado, prototipo, estándares, footprints | una corrección única con fixer; no hay segunda ronda |
-| **G3 — Auditoría visual** | `auditor-visual` | la feature de punta a punta, como un humano: login, navegación, clicks, estados, bordes, persistencia | entra en la misma corrección única; después se re-prueba entera |
+| **G2 — Revisión (semántico)** | un `revisor-ola-<N>` por ola, todos los que permita el harness, en una sola tanda | seguridad, lógica, trampas, desviaciones, comportamiento esperado, prototipo, estándares, footprints | una corrección única con fixer; no hay segunda ronda |
+| **G3 — Auditoría visual** | `auditor-visual`, **después de G2 y de sus correcciones** | la feature de punta a punta, como un humano: UI, o API con `curl`/`fetch` si no hay frontend (auth, CRUD, errores, permisos, persistencia) | una corrección con fixer; después se re-prueba entera |
 | **G4 — Cierre** | orquestador | revisores sin hallazgos abiertos + re-prueba visual OK + gate limpio | freno real con diagnóstico al humano |
 
 **Los revisores y el auditor visual nunca son opcionales.** Sin tests, son la única lectura del trabajo. La independencia es parte del gate: el que implementa no revisa, el que revisa no corrige, el que corrige no audita.

@@ -2,9 +2,11 @@
   Template de progreso de revisión — Framework Hiper-driven (HD)
   Bloques: "Paquete (fase 2)" (lo escribe el QA de artefactos) y el bloque
   de la fase 4 (revisores por ola + auditoría visual + corrección + re-prueba).
-  La fase 4 corre en dos subfases en paralelo: revisores de código (máx. 4)
-  y auditor visual. Los revisores escriben SOLO hallazgos en su archivo;
-  el orquestador consolida acá.
+  La fase 4 corre en dos subfases EN SERIE: primero revisores de código
+  (uno por ola, todos los que permita el harness, en una sola tanda) y,
+  después de corregir y con el gate verde, el auditor visual (UI, o API con
+  curl/fetch si no hay frontend). Los revisores escriben SOLO hallazgos en
+  su archivo; el orquestador consolida acá.
 
   No hay prueba del humano ni tests: la evidencia es build + lint +
   estándares, la revisión semántica y la prueba de comportamiento de punta
@@ -50,8 +52,10 @@
 
 ---
 
-<!-- Repetir el bloque por cada ola revisada. Si hay más de 4 olas, un
-     revisor puede cubrir olas consecutivas: anotarlo. -->
+<!-- Repetir el bloque por cada ola revisada. Se lanza un revisor por ola,
+     todos a la vez, hasta el máximo de agentes simultáneos del harness.
+     Si el harness no alcanza, se cubren olas consecutivas en tandas y se
+     anota acá. -->
 
 ## Auditoría visual — OK | CON_FALLOS
 
@@ -69,15 +73,32 @@
 
 - <...>
 
-## Corrección de la revisión
+## Corrección de los hallazgos de código
+
+<!-- Solo si los revisores devolvieron hallazgos. Corre antes del auditor
+     visual: el visual prueba el árbol ya corregido. -->
 
 - **Fixer**: fixer-review
-- **Hallazgos asignados**: <N> (revisores + auditor visual)
+- **Hallazgos asignados**: <N>
 - **Reporte**: .hd/<trabajo>/reports/fixer-review.md
 - **Commit**: <sha>
 - **Gate en la rama**: build <r> · lint <r> · estándares <r> — logs <rutas>
 
 | # | Hallazgo | Cambio | Estado |
+|---|---|---|---|
+| 1 | <...> | <archivo> | corregido |
+
+## Corrección de la auditoría visual
+
+<!-- Solo si el auditor visual devolvió fallos. Una sola pasada. -->
+
+- **Fixer**: fixer-visual
+- **Fallos asignados**: <N>
+- **Reporte**: .hd/<trabajo>/reports/fixer-visual.md
+- **Commit**: <sha>
+- **Gate en la rama**: build <r> · lint <r> · estándares <r> — logs <rutas>
+
+| # | Fallo | Cambio | Estado |
 |---|---|---|---|
 | 1 | <...> | <archivo> | corregido |
 
