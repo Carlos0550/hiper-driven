@@ -61,6 +61,7 @@
 
 **Auditor**: auditor-visual
 **Reporte**: .hd/<trabajo>/reports/auditoria-visual.md
+**Modo**: UI | API (navegador no disponible: <motivo>)
 **Entorno**: <cómo se levantó, qué se instaló, datos usados>
 
 ### Fallos
@@ -69,7 +70,10 @@
 
 ### No verificable
 
-<!-- Lo que el entorno no permitió probar. No cuenta como verde. -->
+<!-- Lo que el entorno no permitió probar. No cuenta como verde.
+     Si la auditoría corrió en modo API porque el navegador no arrancó,
+     acá van los flujos de UI sin probar (clicks, estados visuales,
+     responsive, consola del cliente) y el motivo. -->
 
 - <...>
 

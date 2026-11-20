@@ -52,7 +52,7 @@ La auditoría con criterio —revisores y auditor visual— es la tarea que más
 2. **Un revisor por ola, todos los que permita el harness, en una sola tanda.** Nada de cuatro y después otra tanda: se cubre todo el trabajo de una pasada.
 3. **El costo en tokens se avisa.** Antes de despachar los revisores, una línea al humano con cuántos agentes se lanzan y por qué; no se espera respuesta.
 4. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
-5. **El auditor visual prueba como un humano, de punta a punta.** Por la UI si hay frontend; si no, contra la API con `curl`/`fetch`, como con Postman o APIdog: auth real, secuencias completas, errores, permisos y persistencia.
+5. **El auditor visual prueba como un humano, de punta a punta.** Por la UI si hay frontend; si no, contra la API con `curl`/`fetch`, como con Postman o APIdog: auth real, secuencias completas, errores, permisos y persistencia. **Si el navegador no arranca, cae a modo API** y declara qué parte de la UI quedó sin probar: nunca se declara verde lo que no se probó.
 6. **Una corrección por tanda de hallazgos, con todos juntos.** Un hallazgo, un cambio. Nada de refactors colados.
 7. **Una sola re-prueba.** Si después de corregir los fallos visuales la re-prueba vuelve a fallar, es **freno real** con diagnóstico. No hay segunda ronda.
 8. **La re-prueba es completa**, no solo de lo que falló: la misma feature entera, de nuevo.
@@ -161,6 +161,7 @@ Brief:
   - Si hay frontend: la UI, click por click.
   - Si no hay frontend: la **API como un humano con Postman o APIdog**, con `curl` o `fetch` contra el servidor. Auth real (login, token, refresh), secuencias completas de punta a punta (`POST` → `GET` → `PATCH` → `DELETE`), códigos de estado, validaciones, permisos, paginación y persistencia consultando después. Un endpoint suelto que responde 200 no es una feature.
   - Si hay UI pero la feature tiene partes que la UI no expone, se prueban por API además de la UI.
+  - **Si el navegador no arranca** (sin Docker, headless bloqueado por el sandbox —`spawn` con `EPERM`—, faltan dependencias del sistema, no hay display, crash al abrir): **no se declara la auditoría imposible**. Se pasa a **modo API** y se prueba todo lo que la API exponga, como un dev con Postman o APIdog. El reporte dice `Modo: API (navegador no disponible: <motivo exacto>)` y lista **qué flujos de UI quedaron sin probar** (clicks, estados visuales, responsive, consola del cliente): esos son **residuales declarados**, no verdes. Un intento de arreglar el entorno es válido (instalar deps, usar `--headless`, otro puerto) pero si no hay navegador, la API es la evidencia. Si además no hay API, ahí sí es `no verificable` y se reporta como tal.
 - **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, `curl`, `jq`, `httpie`, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
 - **No modifica código de producción.** Si para probar hace falta un dato o un usuario, lo crea en la base de prueba o con seeds, no en el código.
 - Puede ejecutar comandos y navegar (o pegarle a la API): es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
@@ -181,8 +182,12 @@ Qué prueba, en este orden:
 
 ```md
 # Auditoría visual
+Modo: UI | API (navegador no disponible: <motivo>)
 Veredicto: OK | CON_FALLOS
 - [severidad] <flujo> — pasos exactos — esperado — obtenido — evidencia (captura/log/ruta)
+
+## No verificado
+- <flujos de UI que el modo API no cubre>: residual declarado, no verde
 ```
 
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
@@ -234,6 +239,8 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 | "El visual en paralelo ahorra tiempo" | No: tiene que probar el árbol corregido. Si corre antes, prueba bugs que ya vas a arreglar. |
 | "El auditor visual es caro, lo salteo" | Sin tests, es la única prueba de comportamiento. Sin él, la confianza es fe. |
 | "No hay frontend, así que no hay nada que auditar" | Se audita la API con curl/fetch, como un humano con Postman: auth, CRUD, errores, permisos y persistencia. |
+| "El navegador no arranca, así que no puedo auditar" | Se audita por API, como un dev con Postman/APIdog, y se declara qué flujos de UI quedaron sin probar. Residual ≠ verde. |
+| "Total el navegador falló, cierro con OK igual" | No: se declara el modo API, los residuales de UI y el motivo. El cierre los reporta; no se inventa un verde. |
 | "El auditor probó la API y respondió 200" | Un 200 suelto no verifica nada: hacen falta la secuencia completa, los estados, los permisos y la persistencia. |
 | "El fixer ya arregló, no hace falta re-probar" | El fixer no ejecuta nada. La re-prueba completa es la única evidencia de que la feature quedó entera. |
 | "Re-pruebo solo lo que falló" | Un cambio puede romper otra parte del flujo. Se re-prueba la feature completa. |
