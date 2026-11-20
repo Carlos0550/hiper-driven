@@ -206,35 +206,37 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 
 ## La vía rápida: `hd-fast-implement`
 
-Para retoques cortos o medianos sobre algo ya construido —renombrar, mover una pieza, corregir un comportamiento puntual, arreglar un bug chico, ajustar una migración, sumar una dependencia— está `hd-fast-implement`, una **vía rápida fuera de la cadena de 5 fases**.
+Para cambios directos sobre algo ya construido —renombrar, mover una pieza, corregir un comportamiento, arreglar un bug, tocar una migración, sumar una dependencia, o una feature que el humano decide asumir— está `hd-fast-implement`, una **vía rápida fuera de la cadena de 5 fases**.
 
 **La invoca el humano**, en cualquier conversación, cuando quiere velocidad y no trazabilidad. HD no la invoca desde ninguna fase: corre autónomo.
 
-Tiene **tres fases por cambio**:
+Tiene **cuatro pasos por cambio**:
 
-1. **Preguntas con contexto**: el orquestador inspecciona el código y, si hace falta, hace 2-3 preguntas.
-2. **Implementación**: un **subagente `impl-fast`** hace el cambio; el orquestador revisa el diff y commitea.
-3. **Auditoría**: un **subagente `auditor-fast`** revisa el commit; si hay hallazgos, un **`fixer-fast`** corrige y el orquestador commitea la corrección.
+1. **Preguntas cortas**: solo si el pedido es ambiguo, 1-2 preguntas para entender el porqué o el resultado buscado.
+2. **Enriquecimiento de contexto**: el orquestador lee el código, las convenciones, git y la memoria, y abre el registro del cambio.
+3. **Worker**: un **subagente `worker-fast`** hace el cambio; el orquestador revisa el diff y commitea.
+4. **Entrega**: el humano recibe "probalo así" o "está listo". Nada más.
 
 | | HD (flujo completo) | Vía rápida |
 |---|---|---|
 | Spec, technical spec y planes | Sí | No |
 | Prototipo | Si hay UI | No |
 | Rama y worktree | Sí | No: trabaja sobre la rama actual |
-| Commit | Uno por ola | Uno por implementación y uno por corrección |
-| Revisión | Revisores por ola + auditor visual | Un auditor subagente por cambio |
-| Artefactos `.hd/` | Sí | No |
-| Checks | Gate por ola | Al cierre, cuando el humano da el OK |
+| Commit | Uno por ola | Uno por cambio |
+| Revisión | Revisores por ola + auditor visual | **Ninguna**: no hay auditor, revisor ni fixer |
+| Gate y checks | Por ola | No hay gate; se corren solo si el humano los pide |
+| Artefactos `.hd/` | Paquete, planes, waves, ledger | Un registro por cambio en `.hd/fast/` |
 | Invocación | Al inicio del trabajo | Pedido directo del humano, en cualquier conversación |
-| Para qué | Trabajo que tiene que ser confiable | Retoque que el humano va a probar y revisar |
+| Para qué | Trabajo que tiene que ser confiable | Cambio que el humano asume y prueba |
 
-- **El orquestador no edita código**: escribe el brief, revisa el diff, commitea y corre los checks.
-- **Cada subagente lleva el modelo que corresponde a su tarea** según el catálogo del harness: implementación y fixers con el mejor calidad/precio, auditoría con el de mayor calidad. **Los precios se buscan en internet**, nunca consultándole al provider. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso del humano; si el proyecto tiene memoria HD previa, sus decisiones se respetan.
-- **Cada implementación y cada corrección se commitea**; no hay squash.
-- **Los checks estáticos se corren al cierre**, cuando el humano dice que está todo bien.
-- **Cuándo no**: solo en tres casos — si mezcla varios cambios distintos entre sí o el diff no se puede leer como un solo cambio, si toca configuración de despliegue, secretos, CI o archivos generados, o si no se puede describir el resultado esperado en dos o tres frases. Ahí es el flujo completo.
+- **El orquestador no edita código**: delega, revisa que el diff sea el pedido y commitea.
+- **El worker lleva el modelo calidad/precio** del catálogo. **Los precios se buscan en internet**, nunca consultándole al provider; los premium (más de 5 USD/M publicado) solo con permiso del humano.
+- **Cada cambio tiene su commit**; no hay squash ni se reescribe historia.
+- **No hay revisión de ningún tipo**: no hay auditor, ni revisor, ni fixer, ni corrección automática, ni segunda pasada. La confianza la pone el humano al probar.
+- **Nada bloquea**: si el cambio es grande, riesgoso o mezcla objetivos, no se deriva ni se frena — se **registra el riesgo** y se sigue. La decisión de usar la vía rápida es del humano, y la responsabilidad también.
+- **Cada cambio deja un registro** en `.hd/fast/<fecha>-<slug>.md`: qué se pidió, cuándo, por qué, qué se hizo y qué riesgos tiene haberlo hecho por esta vía.
 
-La vía rápida **no da las garantías de HD**: hay un auditor por cambio, pero no hay spec, planes, gate por ola ni auditoría visual. La confianza la sigue poniendo el humano al probar.
+La vía rápida **no da las garantías de HD**: no hay spec, planes, gate por ola, revisión ni auditoría visual. Hay registro y hay commit, pero la verificación es la prueba del humano.
 
 ## El costo: dónde se va el tiempo
 

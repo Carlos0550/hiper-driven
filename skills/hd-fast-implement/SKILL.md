@@ -1,310 +1,153 @@
 ---
 name: hd-fast-implement
-description: Vía rápida del framework Hiper-driven (HD), fuera de la cadena de 5 fases. Usar para cambios cortos o medianos sobre algo ya construido —renombrar, mover una pieza, ajustar un comportamiento puntual, arreglar un bug chico, crear o ajustar una migración de esquema, sumar una dependencia— cuando el humano quiere velocidad y no trazabilidad. Tiene tres fases por cambio —preguntas con contexto, implementación por un subagente y auditoría por un subagente—. El orquestador no edita código; escribe el brief, revisa el diff, commitea y corre los checks. Cada subagente se despacha con el modelo del catálogo que corresponde a su tarea (implementación calidad/precio, auditoría el mejor); los premium de más de 5 USD por millón de tokens solo con permiso del humano. La invoca el humano en cualquier conversación, cuando quiere velocidad y no trazabilidad. No se invoca automáticamente desde otra fase. HD corre solo, sin humano, hasta el cierre. Cada implementación y cada corrección se commitea. Sin spec, sin planes, sin rama nueva, sin worktree y sin artefactos .hd. Los checks estáticos se corren al cierre. No hay tests salvo que el humano los pida.
+description: Vía rápida de Hiper-driven (HD), fuera de la cadena de fases. Usar cuando el humano pide un cambio directo sobre algo ya construido y quiere velocidad, no trazabilidad —renombrar, mover una pieza, ajustar un comportamiento, arreglar un bug, tocar una migración, sumar una dependencia, o una feature que él mismo decide asumir—. Cuatro pasos por cambio: preguntas cortas solo si el pedido es ambiguo, enriquecimiento de contexto, un worker subagente que implementa, y entrega al humano para que pruebe o reciba el OK. No hay auditores, revisores, fixers ni gate: se construye, no se revisa. Cada cambio deja un registro en .hd/fast/ con qué se pidió, cuándo, por qué y qué riesgos tiene haberlo hecho por esta vía. Nada bloquea: si el cambio es grande, riesgoso o son varios objetivos, se anota el riesgo y se sigue, porque la decisión es del humano.
 ---
 
 # HD — Vía rápida: `/hd-fast-implement`
 
-Esta skill **no es una fase de HD**. Es la vía rápida para cambios cortos o medianos sobre algo ya construido. Tiene **tres fases por cambio**:
+Esta skill **no es una fase de HD**. Es la vía rápida para cambiar algo que ya existe, cuando el humano quiere velocidad y no trazabilidad. El humano asume el riesgo de que acá hay mucha menos planificación: si el cambio es importante o delicado, la responsabilidad es suya, no del modelo.
 
-| Fase | Quién | Qué hace |
+| Paso | Quién | Qué hace |
 |---|---|---|
-| **1. Preguntas con contexto** | orquestador | inspecciona el código y, si hace falta, hace 2-3 preguntas |
-| **2. Implementación** | subagente `impl-fast` | hace el cambio en el árbol actual y reporta |
-| **3. Auditoría** | subagente `auditor-fast` | revisa el commit, busca bugs, ambigüedades, seguridad y fallos |
+| **1. Preguntas cortas** | orquestador | si el pedido es ambiguo, 1-2 preguntas sobre el porqué o el resultado buscado |
+| **2. Enriquecimiento de contexto** | orquestador | lee el código, las convenciones, git y la memoria; abre el registro del cambio |
+| **3. Worker** | subagente `worker-fast` | hace el cambio en el árbol actual y reporta |
+| **4. Entrega** | orquestador | commitea, cierra el registro y le pide al humano que pruebe (o le da el OK) |
 
-Si la auditoría encuentra algo, un **subagente `fixer-fast`** corrige; el orquestador revisa el diff y commitea la corrección. La auditoría es **siempre prompt -> subagente**. No es el orquestador revisándose.
+**No hay revisión.** No hay auditor, ni revisor, ni fixer, ni gate, ni corrección automática, ni segunda pasada. El cambio lo escribe un subagente, el orquestador lo commitea y se lo entrega al humano. La confianza la pone él al probar.
 
-**El orquestador no edita código de producción.** Escribe el brief, revisa el diff, commitea y corre los checks. Los cambios los hacen subagentes.
+**El orquestador no edita código de producción.** Escribe el brief, delega, revisa que el diff sea el del pedido, commitea y entrega.
 
-**Cada implementación y cada corrección tienen su propio commit.** No hay squash, amend ni rebase. Los commits los hace el orquestador; los subagentes no commitean.
+**Cada cambio tiene su commit y su registro.** No hay squash, amend ni rebase. Los subagentes no commitean.
 
-Se puede invocar:
+**No tiene**: spec, technical spec, planes, rama nueva, worktree, gate, auditoría, artefactos de trabajo. Sí tiene **registro** (paso 2 y 4): sin él no quedaría constancia de qué se pidió y por qué.
 
-- en **cualquier conversación**;
-- cuando el humano **pide un cambio chico** en cualquier conversación, sobre algo ya construido. Si HD está en curso, la vía rápida no se mezcla: termina la fase en curso o espera el cierre.
+## Nada bloquea
 
-**Qué no tiene**: spec, planes, rama nueva, worktree, artefactos `.hd/`, gate por ola ni revisión con auditor visual. Los checks estáticos se corren al cierre.
+Entra **cualquier cambio** sobre algo existente: chico, mediano o grande; de un archivo o de tres repos; un rename, un refactor, un bug, una migración con backfill, una dependencia nueva, un ajuste de auth o pagos, una feature nueva, un rediseño.
 
-## Qué entra y qué no
+**No hay puerta de entrada.** Si el cambio es grande, riesgoso o mezcla objetivos, no se frena ni se deriva: se **registra el riesgo** y se sigue. La decisión de ir por la vía rápida es del humano y el modelo no la revierte. Una sola vez, y sin insistir, podés ofrecer `hd-discovery` si el cambio te parece que pide contrato; si dice que no, seguí y anotá `excepción asumida: <motivo>`.
 
-Entra **cualquier cambio** sobre algo existente que el humano pueda probar y revisar, mientras sea **un solo cambio coherente**. No importa cuántos módulos, paquetes o repos toque, ni el dominio, ni el tamaño del diff: importa que no mezcle objetivos.
+Lo único que no se negocia es la **seguridad de ejecución**, no el alcance: no se aplican migraciones ni comandos contra producción sin que el humano lo autorice, y no se reescribe historia de git.
 
-Ejemplos:
+### Riesgos que se registran (no bloquean)
 
-- Renombrar algo y actualizar sus referencias, aunque el nombre atraviese varios módulos o repos.
-- Mover una pieza de sección, módulo o pantalla, y actualizar imports/exports donde haga falta.
-- Corregir un comportamiento puntual: "esto debe hacer X, no Y".
-- Arreglar un bug chico y acotado.
-- Ajustar copy, estilos, labels o validaciones simples.
-- Un refactor contenido o amplio, mientras siga siendo un solo cambio.
-- Un ajuste en auth, permisos o pagos: chico o estructural, entra igual.
-- Crear, ajustar o revertir una migración de esquema: borrar un catálogo (tabla), tocar un enum, agregar o quitar una columna, un índice, una constraint o una FK. Un `DROP TABLE`/`DROP COLUMN` pedido por el humano entra: no hay vuelta atrás de los datos y el humano lo sabe.
-- Una migración **con backfill**: transformar filas, mover datos, `UPDATE`/`INSERT` masivos, poblar una columna a partir de otra. Entra; el reporte dice qué se pierde o qué se reescribe.
-- Sumar o quitar una dependencia.
-- Sumar tests, si el humano los pide o el repo los espera.
+| Señal | Por qué importa |
+|---|---|
+| Migración destructiva o `UPDATE`/`INSERT` masivo | No hay vuelta atrás de los datos |
+| Auth, permisos o pagos | Un error es un agujero, no un bug visual |
+| Toca varios repos o módulos | El diff deja de revisarse de una vez |
+| Dependencia nueva | Cambia el lockfile y el build de todos |
+| Feature nueva o rediseño | Se decidió sin spec ni prototipo |
+| Deploy, secretos, CI o generados | Riesgo operativo, no de código |
+| Árbol inestable (HD a medio consolidar, merge/rebase en curso) | El commit puede mezclar trabajo ajeno |
+| El humano no lo puede probar | Sin revisión ni prueba, no queda verificación de nada |
 
-**No entra** — y son las **únicas tres** razones para quedarse afuera:
+## Paso 1 — Preguntas cortas
 
-- **Son varios cambios distintos entre sí**, o el diff mezcla cambios de distinto tipo y no se puede revisar como un solo cambio.
-- **Toca configuración de despliegue, secretos, CI o archivos generados** (`dist/`, `build/`, lockfiles).
-- **No podés describir el resultado esperado en dos o tres frases.**
+Preguntá **solo si el pedido es demasiado ambiguo**, y solo para entender **por qué** quiere el cambio o **qué quiere lograr**. Una o dos preguntas, en un mismo mensaje.
 
-En esos casos, la salida es `hd-discovery` (o terminar la fase en curso y esperar el cierre).
+- No preguntes lo que el código responde: eso es el paso 2, no una pregunta.
+- No preguntes detalles de implementación: eso lo decide el worker.
+- Si el pedido ya dice qué y para qué, **no preguntes nada**.
+- Si el humano dice "no sé", elegí la opción conservadora y anotalo en el registro.
 
-**Nada más bloquea**: ni el dominio, ni el tamaño del diff, ni que haya que diseñar algo nuevo, ni que la migración mueva o borre datos, ni una dependencia nueva, ni los tests, ni el estado de otro trabajo HD, ni un merge o rebase en curso en el repo.
+## Paso 2 — Enriquecimiento de contexto
 
-### Alcance: el límite es el cambio, no el mapa
+Es el paso que evita romper algo. Antes de delegar:
 
-- **No hay límite por módulo, paquete o repo.** Un rename puede atravesar tres módulos o dos repos y seguir siendo un cambio fast: es el mismo cambio, repetido donde hace falta.
-- **El número de archivos no decide.** Un ajuste de copy en 20 archivos entra; un cambio de tres archivos que mezcla un fix, un refactor y una feature nueva, no.
-- **Lo que decide es la coherencia**: un solo objetivo, un diff que el humano puede revisar y un resultado que puede probar. Si necesitás un párrafo con varios "además", no es fast.
-- **Una migración es un cambio coherente**, con o sin backfill. Si además cambia el modelo de datos de un servicio que la consume, eso ya es otro cambio: partilo o salí a HD.
-- **Una dependencia nueva es un cambio coherente** si no arrastra otros objetivos. Si trae un rediseño, eso ya es otro cambio.
-- **Si el diff te sorprende a vos mismo**, frená y avisá antes de seguir.
+1. **Código y repos**: estado de cada repo (`git status --short`), `HEAD` (`git rev-parse --short HEAD`) y rama actual (no se crean ramas). Mirá el archivo que se va a tocar, sus llamadores, el patrón que ya usa el repo y las convenciones. Si hay archivos modificados que no son del cambio, el worker no los toca y vos no los commiteás. Si no es un repo git, no hay commit: se reportan las rutas tocadas.
+2. **Memoria**: si el proyecto tiene `.hd/memory.md`, leela para no contradecir decisiones ya tomadas (convenciones, migraciones, modelos). La vía rápida **lee** la memoria, no la escribe.
+3. **Migraciones**: si hay, identificá cómo se generan y dónde se aplican. La escribe el worker; se aplica solo donde el humano diga.
+4. **Modelo del worker**: si el harness expone `list_subagent_models`, consultalo y elegí la **mejor relación calidad/precio**. Los precios se buscan en internet (páginas oficiales), nunca al provider. Premium (más de 5 USD/M publicado) solo con permiso del humano, una vez por modelo. Sin permiso, el mejor dentro del presupuesto y anotalo. Despachá siempre con `provider`, `model` y `reasoning_effort` explícitos.
+5. **Abrí el registro antes de editar**: `.hd/fast/<YYYY-MM-DD-HHmm>-<slug>.md` y una fila en `.hd/fast/index.md` (fecha | cambio | commit | riesgo). Así queda guardado qué se pidió y por qué aunque después el contexto se pierda.
 
-## Antes de tocar nada
+```md
+# <slug>
 
-1. **Árbol y repos**: mirá el estado de **cada repo** que vas a tocar (`git status --short`) y anotá su `HEAD` (`git rev-parse --short HEAD`): es la base y el punto de retorno.
-2. **Rama**: se trabaja sobre la rama actual de cada repo; los commits van ahí. No se crean ramas. Si es la default, decilo en el reporte.
-3. **Cambios ajenos**: si hay archivos modificados que no son del cambio, el subagente no los toca y el orquestador no los commitea: stageá solo las rutas del cambio y avisá en el reporte.
-4. **Checks de cierre**: identificá los comandos de build, lint y estándares de cada repo (package.json, Makefile, CI, README). **No los corras todavía**: son para el cierre. Si no existen, anotá "no aplica" y decilo en el reporte de cierre; no inventes comandos.
-5. **Migraciones**: identificá cómo se genera y cómo se aplica (ORM, carpeta de migraciones, comando). La migración la escribe el subagente; se aplica solo en el entorno que el humano indique; no contra producción sin autorización explícita. Un `DROP TABLE`/`DROP COLUMN` es irreversible: el humano lo sabe, pero el reporte tiene que decir qué se pierde.
-6. **Alcance**: ubicá el código, leé lo que se va a tocar y a sus consumidores directos. Hacé la lista de archivos, módulos o repos. Si es un solo cambio coherente, seguí; si son varios cambios distintos, salí a HD **antes de editar**.
-7. **Si no es un repo git**, no hay diff ni commit: reportá los archivos tocados.
-
-**No hay discovery completo**: el reconocimiento es el mínimo para no romper nada. Pero **primero se mira el código y después se pregunta**, no al revés.
-
-## Catálogo de modelos: cada tarea, su modelo
-
-Si el harness expone `list_subagent_models`, **consultalo antes de despachar** (sin argumentos: proveedores autorizados; con `provider`: sus modelos; con `provider` + `model`: sus esfuerzos de razonamiento). Si no está disponible o no hay modelos, usá el default y decilo en el reporte: esto no frena el cambio.
-
-**El catálogo no publica precios.** Solo lista modelos y esfuerzos de razonamiento. Precios, calidad y velocidad **no se consultan al provider**: se averiguan **buscando en internet** (páginas oficiales de precios, documentación pública). Si un precio no se puede verificar, se trata como **desconocido** y se le pregunta al humano antes de usar el modelo.
-
-1. **Memoria previa**: si el proyecto ya tiene `.hd/memory.md` (de un trabajo HD), leela: la estrategia de modelos y los permisos premium ya decididos se respetan y no se vuelven a preguntar. La vía rápida no crea ni edita artefactos `.hd/`: lo nuevo queda en la conversación y en el reporte.
-2. **Investigá los candidatos que falten en internet**: con búsqueda web (`web_search`, `web_fetch`) sobre las páginas oficiales de precios y la documentación pública, averiguá calidad, velocidad y precio por millón de tokens (entrada y salida). **Nunca consultes al provider por su API para precios.** Lo no verificable se marca como desconocido y se pregunta antes de usarlo; no se inventa. Si el dato ya está en la memoria del proyecto, no se vuelve a buscar.
-3. **Asigná por tipo de tarea**:
-   - `impl-fast` y `fixer-fast`: la mejor relación calidad/precio.
-   - `auditor-fast`: el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos): la auditoría es la única lectura independiente del cambio.
-4. **Premium (más de 5 USD/M en cualquier precio publicado), solo con permiso**: preguntale al humano si se puede usar, con el precio y para qué tarea; puede ir junto con las preguntas de la fase 1. **Una vez por modelo**: si ya lo respondió en esta conversación o en la memoria, no se repite. Si dice que no, usá el mejor dentro del presupuesto y anotalo en el reporte: conformarse con lo que hay, sin frenar.
-5. **Dispatch explícito**: al lanzar cada `subagent`, pasá `provider`, `model` y `reasoning_effort` según la estrategia. El reporte de implementación dice qué modelo llevó cada subagente.
-
-## Fase 1 — Preguntas con contexto
-
-**La regla de oro de esta fase: el código primero.** Antes de preguntar, el orquestador inspecciona:
-
-- el archivo que se va a tocar, sus imports/exports y sus llamadores;
-- el patrón que ya usa el repo para hacer algo parecido;
-- las convenciones de nombres, errores, formato y estructura;
-- el estado de git y los cambios recientes que puedan explicar el pedido.
-
-Con eso, decide:
-
-- **Si el pedido es claro**, no pregunta: pasa a la fase 2.
-- **Si es ambiguo o falta un dato que cambia el resultado**, hace **hasta 2-3 preguntas concretas**, con opciones. No es la regla de una por turno de HD: en la vía rápida se puede juntar un par, siempre después de haber mirado el código.
-- **No convierte el cambio en una entrevista.** Si la respuesta está en el código, no la pregunta.
-- **Si el humano dice "no sé"**, elige la opción conservadora, lo dice en el reporte y sigue; o hace una pregunta más si de verdad cambia el resultado.
-
-Las preguntas y respuestas quedan en la conversación. La vía rápida no crea artefactos: el reporte final menciona las decisiones.
-
-## Fase 2 — Implementación
-
-**El cambio lo hace un subagente**, despachado con el modelo calidad/precio de la estrategia (ver Catálogo de modelos). El orquestador escribe el brief, despacha, revisa el diff y commitea. No edita código de producción.
-
-### 1. Briefear al subagente `impl-fast`
-
-Pasale:
-
-- el pedido del humano y el resultado esperado;
-- **la lista exacta de archivos** que puede tocar;
-- las convenciones del repo y el patrón que tiene que seguir;
-- el alcance: un solo cambio, sin refactors colados, sin tests nuevos salvo que el humano los haya pedido;
-- la regla de **no commitear, no tocar la rama, no correr checks**;
-- el formato de reporte: estado, archivos tocados, decisiones y autolectura del diff.
-
-El subagente trabaja **en el árbol actual**, no en un worktree. Si el cambio toca un bug, investiga la causa raíz con `hd-debug`, pero no corre builds: la reproducción la aporta el humano o el hallazgo.
-
-### 2. Revisar el diff
-
-Cuando el subagente termina:
-
-```
-git status --short
-git diff -- <archivos del cambio>
+**Fecha**: <YYYY-MM-DD HH:mm> (<zona>)
+**Pedido**: <lo que dijo el humano, en sus palabras>
+**Por qué**: <el objetivo o el motivo; si no lo dijo, lo que se infiere>
+**Alcance**: <archivos, módulos o repos>
+**Riesgo**: bajo | medio | alto — <motivos de la tabla>
+**Decisión**: vía rápida por pedido directo del humano
+**Excepción asumida**: <si el cambio es grande o riesgoso, decilo acá>
 ```
 
-- Verificá que tocó **solo** los archivos del brief y que no hay restos de debug, tests no pedidos ni cambios fuera de alcance.
-- Si el diff está mal, **no lo arregles vos**: devolvéselo al subagente con el problema concreto y pedile **una** corrección. Si reincide, frená.
-- Si hay cambios ajenos en el árbol, no los mezcles: stageá solo las rutas del cambio.
+Si `.hd/` está ignorado por git, el registro se escribe igual y se avisa que queda local.
 
-### 3. Commitear
+## Paso 3 — Delegar el worker
 
-- Stageá **solo** los archivos del cambio (por ruta, nunca `git add -A` a ciegas).
-- Mensaje claro (convención del repo; si no hay, `hd-fast: <resumen>`).
-- Anotá el SHA. **No amendees, no squashées, no rebasees.**
-- **No corras build, lint, typecheck, tests ni ningún comando de chequeo.** No es que no haga falta: es que el auditor es semántico y los checks se pagan una sola vez, al cierre. No declares que compila ni que pasa el lint: no lo corriste.
+Despachá un `worker-fast` (nombre por pieza, p. ej. `worker-auth`) con:
 
-El commit de la implementación es la entrada de la auditoría.
+- el pedido y **por qué** se hace;
+- la **lista exacta de archivos** que puede tocar;
+- las convenciones del repo y el patrón a seguir;
+- el alcance: un solo objetivo, sin refactors colados, sin tests nuevos salvo que el humano los pida;
+- las prohibiciones: **no commitear, no tocar la rama, no ejecutar scripts** (build, lint, tests, migraciones, servidores);
+- el formato de reporte: estado, archivos tocados, decisiones, dudas.
 
-## Fase 3 — Auditoría
+Trabaja **en el árbol actual**, no en un worktree. Si el cambio es un bug, investiga la causa raíz con `hd-debug` antes de tocar nada.
 
-**Siempre prompt -> subagente.** Después del commit, el orquestador lanza un `auditor-fast` independiente, con el modelo de mayor calidad disponible y permitido de la estrategia. No participó de la implementación.
+Cuando termina: `git status --short` y `git diff -- <rutas>`. Verificá que tocó lo del brief y que no quedaron restos de debug ni cambios fuera del pedido. Si está mal, devolveselo **una vez** con el problema concreto; no lo arregles vos.
 
-### Qué le pasás
+**Commit**: stageá **solo** las rutas del cambio (nunca `git add -A`), mensaje con la convención del repo o `hd-fast: <resumen>`, y anotá el SHA en el registro. Nunca `amend`, `squash`, `rebase`, `reset --hard`, `checkout .` ni `clean`.
 
-- el pedido del humano y el resultado esperado;
-- el **SHA del commit** y su diff (`git show <sha>` o `git diff <padre>..<sha>`);
-- las convenciones del repo y el contrato de la vía rápida: sin tests nuevos salvo que el humano los haya pedido, sin cambio de alcance, sin checks en la iteración;
-- qué tiene que buscar.
+## Paso 4 — Entregar
 
-### Qué busca
+Dos formas, según el cambio:
 
-1. **Bugs**: condiciones borde, flujos incompletos, errores silenciados, referencias rotas.
-2. **Ambigüedades**: comportamiento que el pedido no define y el código resolvió por su cuenta.
-3. **Seguridad**: inyecciones, secretos, validaciones faltantes, auth esquivable, permisos.
-4. **Fallos posibles que el implementador no contempló**: concurrencia, estados intermedios, datos raros, reintentos, migraciones, compatibilidad.
-5. **Alcance**: cambios fuera de lo pedido, refactors colados, tests no pedidos, archivos que no corresponden.
-6. **Restos**: debug, código comentado, TODOs sin dueño, temporales.
-7. **Datos y despliegue**: migraciones destructivas, DML masivo, configuración, secretos.
+- **"Probalo"**: pasos exactos para que el humano reproduzca y valide (qué abrir, qué clickear, qué caso raro probar).
+- **"Está listo"**: cuando el cambio es trivial o autoexplicativo y no hay nada que probar.
 
-El auditor **lee** código y diff; no edita, no commitea, no corre builds ni checks. Devuelve hallazgos con **archivo:línea**, severidad, por qué es un problema y qué habría que verificar. Si no encuentra nada, responde **sin hallazgos** y el cambio queda cerrado.
+Antes de decir nada: completá el registro (`**Commit**`, `**Resultado**`, riesgos que aparecieron) y la fila del índice.
 
-### Si hay hallazgos
+**Honestidad, no gate**: no declares que compila ni que pasa el lint si no lo corriste, y no digas "probado" si lo probó el worker. Si el humano pide checks o el repo los espera antes de entregar, corrélos y reportá la salida tal cual.
 
-- **Una sola pasada de corrección**, con **todos** los hallazgos juntos, no de a uno.
-- La corrección la hace un **subagente `fixer-fast`**, no el orquestador. Si el hallazgo es un bug, `hd-debug` obligatorio: causa raíz primero, un cambio por hipótesis, la reproducción del hallazgo antes y después.
-- Cambio mínimo, sin rediseñar, sin ampliar alcance, sin tests nuevos. Reporta en el chat; no commitea.
-- El orquestador revisa el diff de la corrección y **commitea**: `hd-fast: corrección — <resumen>`. No amendees el commit anterior.
-- Pedile al auditor **una confirmación acotada a los hallazgos**, no una auditoría completa de nuevo.
-- Si confirma, el cambio queda cerrado. Si vuelve a denegar, **no hay segunda ronda automática**: reportá al humano con diagnóstico. Si el mismo problema resiste **3 fixes**, es arquitectura: frená y discutí con el humano.
-- Si la corrección cambia comportamiento, decile al humano que vuelva a probar.
-
-La auditoría no crea artefactos `.hd/`: la conversación y los mensajes de commit son el registro. El reporte final del cambio resume los hallazgos y cómo se resolvieron.
+```
+**Cambio**: <2-3 líneas de qué se hizo y por qué>
+**Commit**: <sha> — <mensaje>
+**Archivos**: <git status --short / diff --stat, por repo>
+**Riesgo**: <bajo/medio/alto + el motivo que importa>
+**Para probar**: <pasos exactos> | nada que probar
+**Registro**: .hd/fast/<archivo>.md
+**No verifiqué**: <lo que no corriste o no probaste>
+```
 
 ## Varios pedidos a la vez
 
-La vía rápida está pensada para que el humano pueda pedir otro cambio **sin esperar a que termine una auditoría**. La regla es simple:
-
-- **Las ediciones son secuenciales**: un solo subagente implementador o fixer edita el árbol por vez. Si el humano pide otro cambio mientras se está editando, el orquestador termina el cambio atómico actual, lo commitea y después arranca el nuevo. No se mezclan dos cambios en el mismo diff.
-- **Las auditorías son paralelas**: la auditoría mira un commit, no el árbol de trabajo. Después de commitear el cambio A, el orquestador puede lanzar al auditor y empezar las preguntas o la implementación del cambio B. El auditor no bloquea.
-- **Si la auditoría devuelve hallazgos mientras hay otro cambio en curso**: el orquestador encola la corrección, termina y commitea el cambio en curso, y después despacha el fixer sobre el HEAD actual. Si el cambio posterior ya tocó las mismas líneas, se reconcilia; si el hallazgo ya no aplica, se le dice al auditor y se le pide confirmación.
-- **Si los hallazgos llegan mientras se está en las preguntas de otro cambio**: la corrección tiene prioridad; se aplica antes de empezar la nueva implementación. El humano puede seguir preguntando o pidiendo; no se bloquea.
-- **Cada cambio y cada corrección conservan su commit.** No hay squash ni un commit único al final. Si un cambio posterior deja obsoleto un hallazgo anterior, se anota en el reporte.
-
-Mantené una cola corta en la conversación (cambio, estado, SHA). No hace falta un archivo: la vía rápida no deja artefactos.
-
-> **El humano nunca espera a que termine una auditoría para pedir otro cambio. Lo que no se hace es editar dos cambios a la vez.**
-
-## Cierre: los checks, cuando el humano da el OK
-
-Las tres fases terminan con la auditoría. **El cierre estático es aparte** y lo dispara el orquestador cuando el humano dice que está todo bien, que funciona, que está terminado.
-
-1. **Corré todos los checks que haya**, en **cada repo tocado**, en este orden:
-   - **Build / typecheck** — el comando del repo. Sin errores nuevos.
-   - **Lint / formato** — el comando del repo. Sin errores nuevos; los preexistentes con la misma firma se anotan, no se arreglan.
-   - **Estándares** — si el repo tiene un comando único de chequeo (`make check`, `pnpm verify`, `npm run check`), corrélo. Si no, el chequeo de convenciones lo hizo el auditor.
-2. **Si todo pasa**: reporte de cierre con la evidencia fresca, los commits y los veredictos del auditor. La vía rápida se cierra.
-3. **Si algo falla**:
-   - si el fallo es del cambio, **despachá un subagente fixer-fast**, que corrija con `hd-debug`, y commiteá la corrección; volvé a correr **todos** los checks;
-   - si el fix cambia comportamiento, pasalo por el auditor para una confirmación acotada;
-   - si el fallo es preexistente y no lo causaste, reportalo como residual y cerrá con esa salvedad; no lo arregles fuera de alcance;
-   - si el fallo es atribuible al cambio y no se puede dejar verde, reportá con diagnóstico: la vía rápida no se cierra.
-4. **No hay "verde" antes del cierre.** Durante la iteración no hay evidencia estática: hay código editado por un subagente, commits y una auditoría semántica. El reporte de cierre es el primero que puede decir "build OK / lint OK".
-
-Si hay migraciones, el reporte de cierre dice si quedaron aplicadas o pendientes y en qué entorno. No las corras contra producción sin autorización explícita.
-
-No hay push ni rama nueva. Los commits quedan locales.
-
-## Qué pasa si HD está en curso
-
-HD corre autónomo: discovery con el humano, y después spec, implementación, revisión y cierre sin intervención. **La vía rápida no se encadena desde HD.**
-
-- Si el humano pide un cambio chico mientras HD está en una fase, **terminá la fase en curso, commiteá lo que corresponda y esperá**: la vía rápida trabaja sobre un árbol estable, no sobre una ola a medio consolidar.
-- Si el cambio es sobre trabajo ya cerrado, la vía rápida arranca normal, en la rama actual.
-- Si el cambio no entra (varios objetivos, deploy/secretos/CI/generados, alcance nuevo), ofrecé `hd-discovery`.
-
-## Si el cambio crece (salida de la vía rápida)
-
-La vía rápida se sale por las mismas tres razones de la puerta de entrada, una vez adentro: el cambio deja de ser **un solo cambio** (varios objetivos distintos, un diff que no se revisa de una vez), empieza a tocar **deploy, secretos, CI o generados**, o deja de poder describirse en **dos o tres frases**.
-
-1. Decí qué creció y por qué ya no es fast.
-2. Si todavía no se editó: no edites; ofrecé `hd-discovery`.
-3. Si ya se editó: **commiteá los archivos como WIP** (`hd-fast: WIP — <motivo>`) para no perderlo, y mostrá qué quedó (`git log --oneline -n 3`, `git show --stat <sha>`). Ofrecé dos salidas:
-   - conservar ese commit y arrancar `hd-discovery` desde ahí (el trabajo HD decide si lo incorpora al spec o lo revierte);
-   - revertir ese commit con autorización (`git revert <sha>`) y arrancar HD desde un árbol limpio.
-4. **No reviertas ni reescribas historia sin autorización explícita.** Nunca `git checkout .`, `git reset --hard`, `git clean`, `git rebase` ni `git commit --amend`.
-
-Si el humano insiste en seguir fuera de alcance, es su decisión, pero decilo como **excepción explícita** en el reporte: la vía rápida ya no aplica y no hay garantías HD.
+- **Las ediciones son secuenciales**: un solo worker edita el árbol por vez. Si el humano pide otro cambio mientras uno está en curso, terminá y commiteá el actual y después arrancá el nuevo.
+- **Un commit y un registro por cambio.** Nada se mezcla en el mismo diff.
+- Podés contestar, preguntar o planear el siguiente mientras el worker trabaja.
 
 ## Relación con las otras skills
 
 | Skill | Relación |
 |---|---|
-| `hd-discovery` | La salida cuando el cambio cae en una de las tres excepciones. |
+| `hd-discovery` | Se ofrece una sola vez si el cambio pide contrato. No es obligatoria: el humano decide. |
 | `hd-spec` | No se usa acá: no hay spec, technical spec ni planes. |
-| `hd-implement` | No se usa dentro de la vía rápida. HD no la invoca: corre autónomo hasta el cierre. |
-| `hd-review` | No la invoca. La revisión de HD ya no tiene prueba del humano; la vía rápida es solo para pedidos directos. |
-| `hd-close` | Los commits fast se conservan; el cierre los lista, corre los checks si hace falta y pushea la rama si corresponde. |
-| `hd-debug` | Para bugs y correcciones de la auditoría: causa raíz primero. |
+| `hd-implement` | No se usa acá. HD no invoca la vía rápida. |
+| `hd-review` | No se usa acá: la vía rápida no tiene revisión. |
+| `hd-close` | Conserva los commits `hd-fast: ...` y los lista; si hay cambios fast posteriores a la revisión, corre los checks antes de cerrar. |
+| `hd-debug` | Para bugs: causa raíz primero, un cambio por hipótesis. |
 
 ## Racionalizaciones comunes (y su realidad)
 
 | Excusa | Realidad |
 |---|---|
-| "Es rapidito, no hace falta mirar el codebase" | El reconocimiento mínimo evita romper un llamador que no viste. Y la fase 1 es código primero: sin mirar, no preguntes. |
-| "Pregunto primero y después miro" | Al revés. El código responde la mitad de las dudas y hace mejores las preguntas. |
-| "Le mando todas las preguntas juntas" | Hasta 2-3, después de inspeccionar. No es una entrevista ni un discovery. |
-| "Hago el cambio yo, total es rápido" | No: el código lo escribe un subagente. El orquestador escribe el brief, revisa el diff y commitea. |
-| "Lanzo un subagente para que lo haga más rápido" | El subagente no es un acelerador opcional: es el que implementa. El orquestador no edita producción. |
-| "El auditor es el mismo modelo, no hace falta" | La auditoría es un subagente independiente. La autolectura del diff no es una auditoría. |
-| "El auditor encontró algo, lo arreglo y listo" | La corrección la hace un subagente fixer; el orquestador revisa y commitea. Sin commit no hay punto de retorno. |
-| "Una corrección más y converge" | Una pasada por auditoría. Si no alcanza, el diagnóstico está mal o el problema es estructural: reportá. |
-| "El humano dijo que anda, ya está" | El OK habilita el cierre, pero el cierre corre todos los checks igual. |
-| "Los checks fallan, pero el humano ya aprobó" | No se cierra: se corrige con un subagente, se commitea y se vuelven a correr. |
-| "Lo dejo sin commitear hasta el final" | Cada implementación y cada corrección se commitean al terminar. |
-| "Commiteo todo junto al final" | No: un commit por implementación y uno por corrección. |
-| "Hago amend del commit anterior para no ensuciar el historial" | No: cada iteración es un commit nuevo. |
-| "Es un bug, pruebo cambiando X" | `hd-debug`: causa raíz primero, con la reproducción que aporta el humano. |
-| "Creció, pero ya casi está" | "Ya casi" es la alarma, no el argumento: salí a HD. |
-| "El auditor puede corregir" | No: el auditor lee y reporta; la corrección la hace un subagente fixer. |
-| "El auditor puede pedir tests" | No: la vía rápida no agrega tests salvo que el humano los pida. |
-| "El orquestador puede hacer el fix, total es chico" | No: el código lo escriben subagentes. El orquestador commitea y corre los checks. |
-| "Todos los subagentes con el modelo default, total es rápido" | El catálogo existe para aprovecharlo: impl y fixer calidad/precio, auditoría el mejor. Los premium, solo con permiso. |
-| "El premium es mejor, lo uso sin preguntar" | Más de 5 USD/M en cualquier precio publicado exige permiso del humano. Si dice que no, el mejor dentro del presupuesto, anotado en el reporte. |
-
-## Reporte de implementación (después de cada cambio)
-
-```
-**Cambio**: <2-3 líneas de qué se hizo y por qué>
-**Commit**: <sha> — <mensaje>
-**Archivos/repos**: <git status --short / git diff --stat, separado por repo>
-**Decisiones**: <las preguntas que hiciste y qué elegiste>
-**Modelos**: <modelo de cada subagente> | default (catálogo no disponible)
-**Para probar**: <pasos exactos o caso que el humano tiene que validar>
-**Migración**: no aplica | <archivo, DDL, destructiva sí/no, qué se pierde, cómo aplicarla>
-**Checks**: no corridos (por diseño; se corren en el cierre)
-**Auditoría**: <en curso | sin hallazgos | hallazgos corregidos (sha)>
-**Pendiente / riesgo**: <lo que quedó fuera de alcance o no se pudo verificar>
-```
-
-No declares que compila ni que pasa el lint: no lo corriste. Lo único que podés afirmar es qué cambió el subagente, qué commiteaste y qué tiene que probar el humano.
-
-## Reporte de cierre (después del OK del humano)
-
-```
-**Cambio**: <2-3 líneas de qué se hizo y por qué>
-**Commits**: <N> implementaciones y <M> correcciones — último `<sha>` (<mensaje>)
-**Archivos/repos**: <git status --short / git diff --stat, separado por repo>
-**Migración**: no aplica | <archivo, aplicada en <entorno> | pendiente>
-**Auditorías**: <una por cambio, con veredicto: sin hallazgos | corregido | residual>
-**Checks de cierre**: Build <resultado> · Lint <resultado> · Estándares <resultado>
-**No toqué**: <fuera de alcance / preexistente>
-**Riesgo / pendiente**: <lo que el humano todavía tiene que decidir>
-**Siguiente paso**: los commits quedaron locales; el push lo decidís vos (o lo hace el cierre de HD si estabas en un spec).
-```
-
-El reporte de cierre es lo que el humano tiene para decidir. Que sea honesto: lo que no probaste, no lo declares probado; lo que no corrió, no lo declares verde.
+| "Pregunto todo antes de mirar el código" | El código responde la mitad. Preguntá solo el porqué, y solo si el pedido es ambiguo. |
+| "Es ambiguo, hago un discovery chiquito" | No: 1-2 preguntas cortas y se delega. |
+| "El cambio es grande, lo derivo a HD" | No lo decidís vos. Se registra el riesgo y se sigue si el humano quiere. |
+| "Lo hago yo, total es rápido" | No: el código lo escribe un subagente. El orquestador delega y commitea. |
+| "Reviso el cambio antes de entregar" | Revisás que el diff sea el pedido, no si está bien implementado: no hay auditor en esta vía. |
+| "Le pido a otro agente que lo audite" | No hay auditores. Eso es `hd-review` o un pedido explícito del humano. |
+| "Lo dejo sin commitear" | No: un commit por cambio, y el SHA va al registro. |
+| "Commiteo todo junto" / "hago amend" | No: un commit por cambio y sin reescribir historia. |
+| "No hace falta registrar, está en el chat" | El chat se pierde. El registro dice qué se pidió, cuándo, por qué y qué riesgo tiene. |
+| "Registro después, cuando termine" | Se abre antes de editar: si el cambio crece, el "por qué" original ya no se reconstruye. |
+| "Corro build y lint para asegurarme" | Si querés, corrélos y reportá la salida. Lo que no podés es declararlos verdes sin haberlos corrido. |
+| "El worker dice que compila, lo repito" | La palabra del worker no es evidencia. |
 
 ## Fin de la vía rápida
 
-La vía rápida termina cuando el humano aprobó el comportamiento, los checks del cierre corrieron (o su "no aplica" explícito) y cada implementación y cada corrección quedaron commiteadas. No hay fase siguiente ni encadenado a otra skill.
+Termina cuando el worker entregó, el cambio está commiteado, el registro está completo y el humano recibió "probalo" o "está listo". No hay fase siguiente ni encadenado a otra skill.
