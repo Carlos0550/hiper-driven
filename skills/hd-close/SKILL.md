@@ -18,6 +18,7 @@ description: Fase 5 (final) del framework Hiper-driven (HD), automática y sin i
 | Stashes | Si el trabajo usó stashes (con nombre `hd(<trabajo>)` o registrados en el ledger), se dropean. |
 | Checkpoints por ola | **Se conservan**: son el historial del trabajo; el cierre no los colapsa ni los squashea. Los commits de la vía rápida (`hd-fast: ...`) también se conservan. |
 | Cambios fast posteriores a la revisión | **Se conservan** y se listan en el resumen. Si los hay, el cierre corre **build + lint + estándares** antes de terminar; si fallan, no se cierra. |
+| Artefactos de `hd-e2e` (`.hd/e2e/`) | **No se tocan**: son del repo, no del trabajo. El catálogo y los runs tienen su propio commit. |
 | `--force` | **Nunca.** |
 
 Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framework ya resolvió solo le agrega ruido al humano.

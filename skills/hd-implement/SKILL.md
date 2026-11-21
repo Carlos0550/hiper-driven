@@ -66,6 +66,7 @@ Antes de despachar, consultá el catálogo del harness con `list_subagent_models
 11. **El humano no está presente.** Lo que falte se resuelve con la memoria, con el código o con un ruling anotado en el ledger. Solo un cambio de alcance vuelve al humano, y eso es un freno real. La única excepción es la pregunta única por un modelo premium sin ruling previo (ver Catálogo de modelos).
 12. **Cada agente se despacha con el modelo que corresponde a su tarea** según el catálogo y la estrategia de la memoria; los premium (más de 5 USD/M) solo con permiso explícito.
 13. **La fase 3 no revisa.** No hay revisión por ola, ni revisor, ni auditor, ni autoauditoría del orquestador, y no se escriben hallazgos. El control de esta fase es el gate (mecánico) y la inspección de zonas (contrato). La revisión semántica, de seguridad y de comportamiento es **solo** de `hd-review`, al final y sobre todas las olas.
+14. **El catálogo de `hd-e2e` se actualiza con la ola.** Si el repo tiene `.hd/e2e/`, toda ola que cambie comportamiento observable agrega o actualiza sus casos, con el plan como fuente y en el mismo commit. El esperado se escribe desde el contrato, nunca mirando lo que la app hace: eso certifica bugs.
 
 ## Paso 0 — Re-derivación (antes de tocar nada)
 
@@ -241,8 +242,21 @@ git -C <wt> diff --stat
 - **Copiá el tablero** a `.hd/<trabajo>/reports/ola-<N>-tablero.md` y borralo del worktree: el archivo de coordinación no se commitea, pero sus decisiones quedan como artefacto.
 - **Commit de transporte**: el orquestador stagea **solo los archivos de los planes** (creados, modificados y eliminados), nunca el tablero, y commitea en el worktree. Los agentes no commitean.
 - **Traé el código sin commitear**: `git cherry-pick -n <sha-wip>` en la rama. Cherry-pick y no merge: el worktree salió de la base de la ola. Si conflictúa, hubo dos versiones del mismo archivo sin nota en el tablero: **frená y revisá la ola** antes de seguir.
-- **Commit de la ola**: `hd(<trabajo>): ola N — <qué entró>` (código + ledger + waves). **Va antes del gate, no después**: es la base real del gate y del fixer si algo falla.
+- **Commit de la ola**: `hd(<trabajo>): ola N — <qué entró>` (código + ledger + waves + catálogo de `hd-e2e`, ver 4b). **Va antes del gate, no después**: es la base real del gate y del fixer si algo falla.
 - **Respaldo**: si está habilitado, subí el commit a `hd-backup/<trabajo>` inmediatamente después del commit, antes del gate. Si falla, anotá y seguí.
+
+### 4b. El catálogo de `hd-e2e`
+
+Se hace **al consolidar, antes del commit de la ola**. Si el repo no tiene `.hd/e2e/`, no aplica: no se crea un catálogo desde acá.
+
+**Lo escribe el orquestador, no el team.** El plan ya trae el comportamiento esperado: esto es transcribir y asignar IDs, no investigar.
+
+- **Qué entra**: los casos de lo nuevo y la actualización de los que la ola cambió —ruta, permiso, estado, texto de error, endpoint—. Las exclusiones también se escriben: si algo no se va a probar, va con su motivo.
+- **Desde el plan, nunca desde la app.** El esperado sale del plan de la ola. Si el código hace otra cosa, eso es un bug que va a encontrar la revisión: escribir el esperado mirando la app convierte la suite en un certificado de los bugs.
+- **Estado**: cada caso nuevo entra como `NUEVO`; el que se tocó vuelve a `SIN_VERIFICAR`. No hay caso que nazca verde.
+- **IDs**: no se reusan. Lo que la ola se llevó queda `RETIRADO` con el commit de la ola.
+- **Commit**: el catálogo viaja **en el commit de la ola**, con el código y el ledger. Si el cambio se revierte, el caso se revierte con él.
+- **Drift barato**: `git diff --name-only <base-ola>..HEAD` contra los anclajes del `app-map.md`. Si toca archivos anclados y ningún caso cambió, anotá `posible drift: <archivos>` en `.hd/e2e/estado.md`. No frena la ola; lo levanta la revisión.
 
 ### 5. Gate de la ola
 

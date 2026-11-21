@@ -24,7 +24,7 @@ Esta skill **no es una fase de HD**. Es la vía rápida para cambiar algo que ya
 
 ## Nada bloquea
 
-Entra **cualquier cambio** sobre algo existente: chico, mediano o grande; de un archivo o de tres repos; un rename, un refactor, un bug, una migración con backfill, una dependencia nueva, un ajuste de auth o pagos, una feature nueva, un rediseño.
+Entra **cualquier cambio** sobre algo existente: chico, mediano o grande; de un archivo o de tres repos; un rename, un refactor, un bug (también uno que devolvió una corrida de `hd-e2e`), una migración con backfill, una dependencia nueva, un ajuste de auth o pagos, una feature nueva, un rediseño.
 
 **No hay puerta de entrada.** Si el cambio es grande, riesgoso o mezcla objetivos, no se frena ni se deriva: se **registra el riesgo** y se sigue. La decisión de ir por la vía rápida es del humano y el modelo no la revierte. Una sola vez, y sin insistir, podés ofrecer `hd-discovery` si el cambio te parece que pide contrato; si dice que no, seguí y anotá `excepción asumida: <motivo>`.
 
@@ -60,7 +60,8 @@ Es el paso que evita romper algo. Antes de delegar:
 2. **Memoria**: si el proyecto tiene `.hd/memory.md`, leela para no contradecir decisiones ya tomadas (convenciones, migraciones, modelos). La vía rápida **lee** la memoria, no la escribe.
 3. **Migraciones**: si hay, identificá cómo se generan y dónde se aplican. La escribe el worker; se aplica solo donde el humano diga.
 4. **Modelo del worker**: si el harness expone `list_subagent_models`, consultalo y elegí la **mejor relación calidad/precio**. Los precios se buscan en internet (páginas oficiales), nunca al provider. Premium (más de 5 USD/M publicado) solo con permiso del humano, una vez por modelo. Sin permiso, el mejor dentro del presupuesto y anotalo. Despachá siempre con `provider`, `model` y `reasoning_effort` explícitos.
-5. **Abrí el registro antes de editar**: `.hd/fast/<YYYY-MM-DD-HHmm>-<slug>.md` y una fila en `.hd/fast/index.md` (fecha | cambio | commit | riesgo). Así queda guardado qué se pidió y por qué aunque después el contexto se pierda.
+5. **Catálogo de `hd-e2e`**: si el repo tiene `.hd/e2e/casos.md`, leé los casos del área que se va a tocar: dicen qué está prometido, qué se va a ver afectado y qué casos quedan viejos con el cambio.
+6. **Abrí el registro antes de editar**: `.hd/fast/<YYYY-MM-DD-HHmm>-<slug>.md` y una fila en `.hd/fast/index.md` (fecha | cambio | commit | riesgo). Así queda guardado qué se pidió y por qué aunque después el contexto se pierda.
 
 ```md
 # <slug>
@@ -72,6 +73,7 @@ Es el paso que evita romper algo. Antes de delegar:
 **Riesgo**: bajo | medio | alto — <motivos de la tabla>
 **Decisión**: vía rápida por pedido directo del humano
 **Excepción asumida**: <si el cambio es grande o riesgoso, decilo acá>
+**Catálogo e2e**: <caso nuevo / actualizado / sin cambios — motivo>
 ```
 
 Si `.hd/` está ignorado por git, el registro se escribe igual y se avisa que queda local.
@@ -91,7 +93,7 @@ Trabaja **en el árbol actual**, no en un worktree. Si el cambio es un bug, inve
 
 Cuando termina: `git status --short` y `git diff -- <rutas>`. Verificá que tocó lo del brief y que no quedaron restos de debug ni cambios fuera del pedido. Si está mal, devolveselo **una vez** con el problema concreto; no lo arregles vos.
 
-**Commit**: stageá **solo** las rutas del cambio (nunca `git add -A`), mensaje con la convención del repo o `hd-fast: <resumen>`, y anotá el SHA en el registro. Nunca `amend`, `squash`, `rebase`, `reset --hard`, `checkout .` ni `clean`.
+**Commit**: stageá **solo** las rutas del cambio (nunca `git add -A`), mensaje con la convención del repo o `hd-fast: <resumen>`, y anotá el SHA en el registro. Si el cambio altera comportamiento observable, antes de commitear actualizá el catálogo de `hd-e2e` (ver *El catálogo de `hd-e2e`*) y stagealo con el mismo commit: es parte del cambio, no un extra. Nunca `amend`, `squash`, `rebase`, `reset --hard`, `checkout .` ni `clean`.
 
 ## Paso 4 — Entregar
 
@@ -111,8 +113,23 @@ Antes de decir nada: completá el registro (`**Commit**`, `**Resultado**`, riesg
 **Riesgo**: <bajo/medio/alto + el motivo que importa>
 **Para probar**: <pasos exactos> | nada que probar
 **Registro**: .hd/fast/<archivo>.md
+**Catálogo**: <caso nuevo / actualizado / sin cambios — motivo>
 **No verifiqué**: <lo que no corriste o no probaste>
 ```
+
+## El catálogo de `hd-e2e`
+
+La vía rápida es donde más se desincroniza el catálogo, porque nadie revisa. Por eso el cambio también lo deja al día — **sin convertirlo en gate**:
+
+- **Cuándo**: si el cambio altera comportamiento observable (ruta, permiso, estado, texto de error, endpoint, texto de UI) y el repo tiene `.hd/e2e/`. Si no lo tiene, no se crea: eso no es tarea de esta vía.
+- **Quién**: lo escribe el orquestador, no el `worker-fast`. El worker sigue con su alcance y su prohibición de tests.
+- **Qué**: el caso nuevo o el que cambió, con el esperado que pidió el humano. Si el pedido es vago, el caso lleva el esperado más concreto que se pueda sostener y una nota `esperado a confirmar` en su historial.
+- **Estado**: entra como `NUEVO`; el tocado vuelve a `SIN_VERIFICAR`. Nunca se marca verde: acá no se ejecuta nada.
+- **Contradicción**: si el cambio deja viejo un caso existente, ese caso se actualiza con el registro del cambio como evidencia, o se deja rojo a propósito y se dice en el registro. No se borra.
+- **Commit**: va en el mismo commit del cambio. Si el cambio se revierte, se revierte el caso.
+- **No bloquea**: si no se puede actualizar —no hay `.hd/e2e/`, el pedido es demasiado vago—, se anota `catálogo: sin cambios — <motivo>` en el registro y se sigue. Nada se frena por esto.
+
+Y al revés: si el cambio **arregla un bug** que devolvió una corrida de `hd-e2e`, el registro anota el ID del caso y el próximo run es el que lo valida. Acá no se declara arreglado.
 
 ## Varios pedidos a la vez
 
@@ -130,6 +147,7 @@ Antes de decir nada: completá el registro (`**Commit**`, `**Resultado**`, riesg
 | `hd-review` | No se usa acá: la vía rápida no tiene revisión. |
 | `hd-close` | Conserva los commits `hd-fast: ...` y los lista; si hay cambios fast posteriores a la revisión, corre los checks antes de cerrar. |
 | `hd-debug` | Para bugs: causa raíz primero, un cambio por hipótesis. |
+| `hd-e2e` | Comparten el catálogo: la vía rápida lo mantiene al día (caso `NUEVO`, sin ejecutar). La suite completa la corre solo el humano. |
 
 ## Racionalizaciones comunes (y su realidad)
 
@@ -147,6 +165,9 @@ Antes de decir nada: completá el registro (`**Commit**`, `**Resultado**`, riesg
 | "Registro después, cuando termine" | Se abre antes de editar: si el cambio crece, el "por qué" original ya no se reconstruye. |
 | "Corro build y lint para asegurarme" | Si querés, corrélos y reportá la salida. Lo que no podés es declararlos verdes sin haberlos corrido. |
 | "El worker dice que compila, lo repito" | La palabra del worker no es evidencia. |
+| "La vía rápida no toca el catálogo" | Si cambió el comportamiento, el catálogo queda viejo y la próxima corrida miente. Se actualiza acá, sin ejecutarlo. |
+| "Actualizo el caso y lo marco verde" | Acá no se ejecuta nada: entra `NUEVO` o `SIN_VERIFICAR`. El verde lo pone una corrida. |
+| "Es un cambio chico, no hace falta caso" | Chico no es invisible: si cambia lo que ve el usuario, el caso se escribe. |
 
 ## Fin de la vía rápida
 

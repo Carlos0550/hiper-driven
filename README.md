@@ -1,6 +1,6 @@
 # Hiper-driven (HD)
 
-**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido, confirma los comportamientos nuevos y aprueba el resumen y el prototipo. Después, la cadena corre sola hasta el cierre.
+**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido, confirma los comportamientos nuevos y aprueba el resumen y el prototipo. Después, la cadena corre sola hasta el cierre. Fuera de la cadena hay dos puertas más para el humano: la vía rápida (`hd-fast-implement`) y la suite real (`hd-e2e`), la app entera probada como una persona.
 
 Dos pilares:
 
@@ -58,7 +58,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 
 ## Una sola conversación, sin humano en el medio
 
-Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final.
+Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final. Fuera de la cadena, en cambio, es él quien decide cuándo correr `hd-fast-implement` o `hd-e2e`.
 
 La fuente es el paquete, no el chat: el orquestador relee el spec, el technical spec y los planes, y verifica el código antes de despachar.
 
@@ -102,7 +102,7 @@ El orquestador re-deriva el paquete contra el código, corre el baseline y arma 
 - **Esta fase no tiene revisor.** La revisión independiente es la fase 4.
 - **Cada agente lleva el modelo que corresponde a su tarea** según el catálogo y la estrategia aprobada en discovery. Si hace falta un premium (más de 5 USD/M) sin permiso previo, se pregunta **una sola vez** —la única excepción a la autonomía de la fase—; si no, se usa el mejor dentro del presupuesto.
 
-Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera.
+Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera. Si el repo mantiene la suite de `hd-e2e`, la ola también deja su catálogo al día: el caso entra en el mismo commit, escrito desde el plan y no desde lo que la app hace.
 
 ### Fase 4 — Revisión y auditoría visual (autónoma, en serie)
 
@@ -111,7 +111,7 @@ Dos subfases, **una después de la otra**:
 1. **Revisores de código**: uno por ola, **tantos como permita el harness y todos en una sola tanda**. Antes de despachar, el orquestador avisa al humano cuántos agentes lanza y el costo en tokens. Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada. Si hay hallazgos, **un fixer** los corrige, el orquestador commitea y corre el gate.
 2. **Auditor visual**: recién entonces, sobre el árbol ya corregido, levanta el proyecto entero y lo prueba como un humano. Si hay frontend, por la UI (login, navegación, cada control, estados, bordes, persistencia). Si no hay frontend, **contra la API con `curl`/`fetch`, como con Postman o APIdog**: auth real, secuencias completas, códigos de error, permisos y persistencia. **Si el navegador no arranca** (sin Docker, `spawn` bloqueado, faltan dependencias, no hay display), cae a **modo API** y declara qué flujos de UI quedaron sin probar como residuales. Lo que no puede probar lo declara no verificable.
 
-Revisores y auditor visual se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos.
+Revisores y auditor visual se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos. Los revisores además marcan el **drift** del catálogo de `hd-e2e` (cambió el comportamiento y no el caso) y el auditor anota qué casos ejercitó y qué caminos encontró sin caso: el catálogo se mantiene entre corridas, no solo cuando alguien lo corre.
 
 Si la auditoría visual encuentra fallos, **un fixer** los corrige, el orquestador commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
 
@@ -182,6 +182,8 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 
 **Los revisores y el auditor visual nunca son opcionales.** Sin tests, son la única lectura del trabajo. La independencia es parte del gate: el que implementa no revisa, el que revisa no corrige, el que corrige no audita.
 
+La suite `hd-e2e` **no es un gate de la cadena**: la corre el humano cuando quiere y su veredicto es evidencia para su decisión, no una puerta automática. `hd-review` sub2 sigue auditando la feature del trabajo; `hd-e2e` audita la app entera.
+
 ## Reglas de oro (no negociables)
 
 1. **El contrato manda.** Ningún código sin paquete aprobado. Ni el spec ni los planes contienen lógica ni implementaciones; única excepción: firmas, tipos, constantes y formatos cuando son contrato (Ola 0).
@@ -208,6 +210,19 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
 23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva.
 24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. El catálogo solo lista modelos: **los precios se verifican buscando en internet** (páginas oficiales), nunca consultándole al provider, y un precio no verificable se trata como desconocido. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
+
+## La suite real: `hd-e2e`
+
+`hd-e2e` es el reemplazo de una suite de tests por una persona. **No es una fase**: no está en la cadena, ninguna skill la encadena y `hd-close` no la espera. **La invoca únicamente el humano**, cuando quiere saber si la app entera sigue funcionando.
+
+- **La primera corrida mapea.** Varios agentes levantan la lógica de negocio, los endpoints, las vistas y los roles, y escriben en `.hd/e2e/` un `app-map.md` y un `casos.md` con **todos los casos de uso**: rol, precondición, pasos exactos, resultado esperado y acción evasiva ante 401, 403, 404, 409, 422, 429, 5xx, timeouts y estados de UI.
+- **Las siguientes son incrementales.** Se re-mapea solo lo que cambió contra git y se ejecuta el catálogo como cada rol real —admin, usuario, staff—, por la UI o contra la API.
+- **Cualquier desvío es rojo.** Si el resultado difiere de lo que prevé el catálogo, el caso falla y se clasifica en **catálogo mal escrito**, **catálogo desactualizado** o **bug real**. El catálogo se corrige con evidencia; los bugs se entregan al humano. Código de producción no se toca.
+- **Solo local, y hay que probarlo.** La app y la base se resuelven a loopback; un túnel SSH o un host con dominio es remoto. Si hay que crear usuarios o sembrar datos, puede usar la base **local** —con respaldo previo y limpieza por namespace— y escribir scripts de utilidad en `.hd/e2e/utilidades/`.
+- **Terceros en sandbox o no se usan.** Cada credencial de pagos, mails, storage o IA se inventaría y se clasifica; si parece productiva o puede generar costos, la corrida **se frena** y se pide confirmación explícita servicio por servicio.
+- **Pide permiso antes de arrancar.** Es la corrida más cara del framework: el orquestador muestra alcance, agentes, entorno, datos a tocar y costo, y **no ejecuta nada sin un "sí"**.
+
+El catálogo se versiona en git (`app-map.md`, `casos.md`, `estado.md`); las credenciales, los dumps y la evidencia quedan fuera. Cada corrida deja un commit `hd(e2e): ...`, nunca un push.
 
 ## La vía rápida: `hd-fast-implement`
 
@@ -240,6 +255,7 @@ Tiene **cuatro pasos por cambio**:
 - **No hay revisión de ningún tipo**: no hay auditor, ni revisor, ni fixer, ni corrección automática, ni segunda pasada. La confianza la pone el humano al probar.
 - **Nada bloquea**: si el cambio es grande, riesgoso o mezcla objetivos, no se deriva ni se frena — se **registra el riesgo** y se sigue. La decisión de usar la vía rápida es del humano, y la responsabilidad también.
 - **Cada cambio deja un registro** en `.hd/fast/<fecha>-<slug>.md`: qué se pidió, cuándo, por qué, qué se hizo y qué riesgos tiene haberlo hecho por esta vía.
+- **Si el repo mantiene `.hd/e2e/`, el cambio deja el catálogo al día**: el caso entra `NUEVO` en el mismo commit. No es un gate y no se ejecuta: la suite completa la corre solo el humano.
 
 La vía rápida **no da las garantías de HD**: no hay spec, planes, gate por ola, revisión ni auditoría visual. Hay registro y hay commit, pero la verificación es la prueba del humano.
 
@@ -251,6 +267,7 @@ El costo crece con **el contexto del orquestador**, no con el de sus subagentes:
 - **Sin scripts en los subagentes**: el team no compila ni lintea; el orquestador corre el gate una vez sobre la rama. Menos ruido en el contexto y una sola fuente de evidencia.
 - **Un worktree por ola**: el team entero comparte el árbol y ve el trabajo de sus compañeros; las dependencias se enlazan por symlink en vez de reinstalarse.
 - **Rutas, no contenido**: los planes, los diffs y los logs se leen por ruta.
+- **La corrida de `hd-e2e` es cara por diseño** y por eso pide confirmación: varios mapeadores leyendo la app entera y un ejecutor por rol.
 
 ## Respaldo temporal y push al cerrar
 
@@ -291,6 +308,9 @@ hiper-driven/
     │   ├── SKILL.md
     │   └── templates/         # review-progress.md
     ├── hd-close/              # Fase 5: cierre automático, push de rama nueva, limpieza y respaldo
+    ├── hd-e2e/                # Fuera de la cadena: la suite real (solo humano); mapeo, catálogo y ejecución por rol
+    │   ├── SKILL.md
+    │   └── templates/         # app-map, casos, reporte de corrida, estado, credenciales
     ├── hd-debug/              # Transversal: causa raíz antes que fix
     └── hd-fast-implement/     # Vía rápida (fuera de la cadena): pedido directo del humano
 ```

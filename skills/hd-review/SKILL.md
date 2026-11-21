@@ -23,7 +23,7 @@ olas cerradas
 
 **Por qué en serie y no en paralelo:** el auditor visual tiene que probar el árbol **ya corregido**. Si corre junto con los revisores, prueba bugs que todavía vas a arreglar y su reporte nace viejo.
 
-**No hay humano en esta fase.** Aparece recién cuando el trabajo está cerrado o si hay un freno real. El aviso de tokens del Paso 1 es un aviso, no una pregunta.
+**No hay humano en esta fase.** Aparece recién cuando el trabajo está cerrado o si hay un freno real. El aviso de tokens del Paso 1 es un aviso, no una pregunta. La app entera, con todos sus roles, tampoco es de esta fase: eso lo corre el humano con `hd-e2e`, fuera de la cadena.
 
 ## Subagentes
 
@@ -95,7 +95,8 @@ Cada `revisor-ola-<N>` recibe, por ruta:
 - el **tablero** de la ola (`reports/ola-<N>-tablero.md`), si existe: dice qué decidió cada agente y por qué;
 - `spec.md`, `technical_spec.md`, los planes de esa ola y el prototipo;
 - las convenciones del repo y los comandos de verificación;
-- la memoria (para no reportar como error algo que el humano decidió).
+- la memoria (para no reportar como error algo que el humano decidió);
+- el catálogo de `hd-e2e` (`.hd/e2e/casos.md`), si el repo lo tiene: dice qué comportamiento está prometido para cada flujo.
 
 Qué busca, contra el spec, el technical spec y el plan:
 
@@ -107,6 +108,7 @@ Qué busca, contra el spec, el technical spec y el plan:
 6. **Prototipo**: si hay UI, ¿la implementación respeta los flujos, estados y componentes aprobados?
 7. **Estándares y calidad**: convenciones, manejo de errores, duplicación evitable, complejidad, dependencias nuevas sin justificar, restos de debug, tests agregados (prohibido).
 8. **Footprints**: archivos fuera del plan, archivos compartidos tocados, generados modificados. Un archivo compartido está bien si el tablero declara al dueño de la región y la decisión.
+9. **Drift del catálogo de `hd-e2e`**: si el diff cambia comportamiento observable —una ruta, un permiso, un estado, un texto de error, un endpoint, un texto de UI— y no hay un caso nuevo o actualizado en `.hd/e2e/`, es hallazgo. El catálogo quedó viejo y la próxima corrida va a mentir.
 
 **Formato de salida** (`.hd/<trabajo>/reports/revision-ola-<N>.md`):
 
@@ -126,10 +128,11 @@ Cuando terminan **todos** los revisores:
 - Leé los reportes (no los pegues en el chat).
 - Consolidá una lista única: una fila por hallazgo, deduplicado, ordenado por severidad.
 - Volcá el resultado a `review-progress.md` (template en `templates/review-progress-template.md`).
+- **Los hallazgos de catálogo no van al fixer**: el `fixer-review` corrige código, no el catálogo. Los casos se agregan o actualizan en `.hd/e2e/` —orquestador, desde el plan— y se commitean con la corrección; si no hubo corrección de código, van en un commit propio: `hd(e2e): <trabajo> — casos de la revisión`.
 - **Sin hallazgos → saltá al Paso 3.**
 - **Con hallazgos → una corrección**, y después el Paso 3.
 
-La corrección: un solo `fixer-review`, con **todos** los hallazgos en un mismo prompt, uno por uno:
+La corrección: un solo `fixer-review`, con **todos los hallazgos de código** en un mismo prompt, uno por uno:
 
 - para cada hallazgo: archivo, comportamiento esperado, qué falló y severidad;
 - `hd-debug` **obligatorio**: causa raíz primero, un cambio por hipótesis;
@@ -164,6 +167,7 @@ Brief:
   - **Si el navegador no arranca** (sin Docker, headless bloqueado por el sandbox —`spawn` con `EPERM`—, faltan dependencias del sistema, no hay display, crash al abrir): **no se declara la auditoría imposible**. Se pasa a **modo API** y se prueba todo lo que la API exponga, como un dev con Postman o APIdog. El reporte dice `Modo: API (navegador no disponible: <motivo exacto>)` y lista **qué flujos de UI quedaron sin probar** (clicks, estados visuales, responsive, consola del cliente): esos son **residuales declarados**, no verdes. Un intento de arreglar el entorno es válido (instalar deps, usar `--headless`, otro puerto) pero si no hay navegador, la API es la evidencia. Si además no hay API, ahí sí es `no verificable` y se reporta como tal.
 - **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, `curl`, `jq`, `httpie`, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
 - **No modifica código de producción.** Si para probar hace falta un dato o un usuario, lo crea en la base de prueba o con seeds, no en el código.
+- **El catálogo de `hd-e2e` es parte de su evidencia, no de su tarea.** Si el repo lo tiene, anotá qué casos de esta feature ejercitó y con qué resultado, y listá como `DESCUBIERTO` todo camino que probó y el catálogo no tenía, con pasos y esperado. No lo edita: lo incorpora el orquestador.
 - Puede ejecutar comandos y navegar (o pegarle a la API): es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
 - Si el entorno no permite probar algo, lo declara **explícitamente** en el reporte como no verificable; no lo cuenta como verde.
 
@@ -188,6 +192,12 @@ Veredicto: OK | CON_FALLOS
 
 ## No verificado
 - <flujos de UI que el modo API no cubre>: residual declarado, no verde
+
+## Casos del catálogo ejercitados
+- <ID>: PASA | FALLA | no aplica
+
+## Descubierto (no está en el catálogo)
+- <flujo> — pasos exactos — esperado
 ```
 
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
@@ -218,11 +228,13 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 
 1. Actualizá `review-progress.md`: bloque por ola, bloque de auditoría visual, correcciones y re-prueba, veredicto global.
 2. Actualizá el ledger: `Revisión: <N> revisores en una tanda, <n> hallazgos, corregidos <sha>`, `Auditoría visual: OK (<fecha>)`, `Re-prueba: OK | no aplica (sin corrección visual)`, `Gate: build <r>, lint <r>, estándares <r>`.
-3. **Cargá la skill `hd-close` VOS MISMO** y ejecutá la fase 5. No esperes aprobación humana: la aprobación de producto ocurrió en discovery y el comportamiento lo validó el auditor visual.
+3. Si el auditor marcó casos ejercitados o descubrió caminos, actualizá `.hd/e2e/casos.md` —IDs nuevos en `NUEVO`, los ejercitados con su fecha y resultado— y commiteá `hd(e2e): <trabajo> — casos de la revisión`. Sin push.
+4. **Cargá la skill `hd-close` VOS MISMO** y ejecutá la fase 5. No esperes aprobación humana: la aprobación de producto ocurrió en discovery y el comportamiento lo validó el auditor visual.
 
 ## Lo que no se hace en esta fase
 
 - No se lanza el auditor visual en paralelo con los revisores ni antes de corregir: probaría un árbol viejo.
+- No se corre la suite de la app entera: eso es `hd-e2e`, que invoca el humano y no forma parte de esta fase.
 - No se le pide al humano que pruebe (el auditor visual lo reemplaza).
 - No se invoca `hd-fast-implement` desde acá: la vía rápida es solo para pedidos directos del humano.
 - No se re-revisa el código después de la corrección: la re-prueba visual y el gate son la confirmación.
