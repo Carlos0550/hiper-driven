@@ -305,6 +305,12 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - No pegues el plan entero en el prompt del agente: pasale la ruta.
 - Cuando el trabajo supera las tres olas, **el ledger es tu memoria**: releelo en vez de confiar en el historial.
 
+**Presupuesto de reloj:**
+
+- **Cada turno de un subagente cuesta cerca de un minuto.** Un agente de veinte turnos es media hora, aunque cada turno sea trivial. El trabajo se agrupa: un script o una tanda por turno, no un paso por turno.
+- **Un fixer va al hallazgo, no explora el repo.** Lee lo que el hallazgo señala y lo que toca de verdad; si no logra reproducirlo en los primeros minutos, lo anota como no reproducido con lo que vio y sigue con el siguiente. Media hora investigando un hallazgo menor cuesta más que el hallazgo.
+- **Presupuesto por agente**: un `dev-<zona>` cubre su zona, un `fixer-ola-<N>` cubre su tanda. Si un agente pasa del doble del tiempo que tardó la ola, el orquestador lo corta, mira el tablero y decide con lo que haya: el agente no es dueño del reloj.
+
 **Ledger** (`.hd/<trabajo>/ledger.md`): anotá baseline, olas, teams, worktrees, consolidación, gate, correcciones, pushes, estrategia de modelos, permisos premium, enmiendas y rulings. Después de una compactación, creéle al ledger y a git.
 
 ## Enmiendas y rulings

@@ -171,6 +171,13 @@ Brief:
 - Puede ejecutar comandos y navegar (o pegarle a la API): es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
 - Si el entorno no permite probar algo, lo declara **explícitamente** en el reporte como no verificable; no lo cuenta como verde.
 
+**Presupuesto de tiempo y forma de trabajar.** La auditoría es una inspección, no una exploración: tiene tope de reloj y una sola forma de trabajar.
+
+- **Presupuesto**: **10 minutos de reloj** para una pantalla o una feature chica; **20 como techo** para una feature grande con varios flujos. Se cuenta desde el primer comando hasta el reporte escrito. Agotado el presupuesto se corta: se reporta lo probado y lo que faltó va a `No verificado` como residual declarado. No se estira el presupuesto para "terminar de mirar".
+- **Un recorrido, un script.** El auditor escribe **un script de recorrido** (Playwright/CDP headless si es UI; un `.sh` con `curl`/`fetch` si es API) que hace todo el camino en una sola pasada: login, flujos, estados, bordes, capturas y volcado de consola/red a un log. Lo corre, lee el resultado y recién ahí vuelve a mirar el material con ojo. **No se hace una captura por turno**: cada turno cuesta cerca de un minuto de reloj y veinte capturas sueltas son veinte minutos de auditoría.
+- **El script se guarda** en `.hd/<trabajo>/reports/evidencia/recorrido.<ext>` junto con su log: es la evidencia y es lo que corre la re-prueba. Se limpia lo instalado y lo efímero, pero el script y el log quedan.
+- **Explorar es la excepción, no el método.** Un tramo que no se puede automatizar (captcha, OTP a mano) se hace a mano y se declara.
+
 Qué prueba, en este orden:
 
 1. **Arranque**: levanta el proyecto entero, sin atajos, como lo haría un humano.
@@ -213,11 +220,12 @@ El orquestador repite la mecánica del Paso 2: worktree, revisar el diff, `cherr
 
 ## Paso 5 — Re-prueba visual
 
-Con el gate verde, lanzá **el mismo auditor visual** a probar **la feature completa de nuevo**, no solo los fallos:
+Con el gate verde, lanzá **el mismo auditor visual** a correr **el mismo recorrido completo** contra el árbol corregido, no solo los fallos:
 
-- mismos flujos, mismos controles, mismos estados y bordes que la primera pasada;
-- además, los casos que fallaron, con los pasos originales;
-- reporte nuevo en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`.
+- primero **re-ejecutá el script de la primera pasada** (`.hd/<trabajo>/reports/evidencia/recorrido.<ext>`): mismos flujos, mismos controles, mismos estados y bordes, mismas capturas. La re-prueba es barata porque el recorrido ya está escrito;
+- después sumá al script los pasos de los fallos corregidos, con los pasos originales, y corré **el recorrido entero** de nuevo;
+- **presupuesto: la mitad de la primera pasada, con techo de 10 minutos.** No se re-explora: se re-ejecuta;
+- reporte nuevo en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`, con el log del recorrido como evidencia.
 
 - **OK**: todo verde. Anotá el veredicto en `review-progress.md` y pasá al cierre.
 - **CON_FALLOS**: **freno real**. Reportá al humano con diagnóstico: qué falló, qué se intentó y por qué no alcanzó. No hay segunda corrección ni segunda re-prueba automática.
@@ -255,7 +263,10 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 | "Total el navegador falló, cierro con OK igual" | No: se declara el modo API, los residuales de UI y el motivo. El cierre los reporta; no se inventa un verde. |
 | "El auditor probó la API y respondió 200" | Un 200 suelto no verifica nada: hacen falta la secuencia completa, los estados, los permisos y la persistencia. |
 | "El fixer ya arregló, no hace falta re-probar" | El fixer no ejecuta nada. La re-prueba completa es la única evidencia de que la feature quedó entera. |
-| "Re-pruebo solo lo que falló" | Un cambio puede romper otra parte del flujo. Se re-prueba la feature completa. |
+| "Re-pruebo solo lo que falló" | Un cambio puede romper otra parte del flujo. Se re-prueba la feature completa: el script entero, no solo el tramo corregido. |
+| "Una captura por turno es más ordenada" | Cada turno cuesta cerca de un minuto: veinte capturas sueltas son veinte minutos. Un script recorre todo y saca las veinte en un par de minutos. |
+| "La re-prueba completa es volver a explorar" | Es correr el mismo script sobre el árbol corregido: mismos flujos, misma evidencia, una fracción del tiempo. |
+| "El presupuesto se estira para terminar de mirar" | Se corta y lo que faltó es residual declarado. Una auditoría de una hora no es más confiable: es la misma evidencia con veinte turnos de por medio. |
 | "Una ronda más y converge" | No hay ronda 2: si no converge, el diagnóstico está mal o el problema es estructural. Se reporta. |
 | "El auditor visual puede tocar el código un poquito" | No: si toca el producto, deja de ser auditor. |
 | "Los revisores pueden corregir lo que encuentran" | No: el que revisa no corrige. El fixer es otro y va después. |

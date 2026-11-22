@@ -334,6 +334,13 @@ Cómo se ejecuta, en orden:
 4. **Registra**: resultado por caso, evasiva usada y evidencia (captura, request/response, log).
 5. **No arregla nada**, ni siquiera un typo.
 
+**Forma de trabajar: un recorrido por rol, no un turno por caso.**
+
+- **Un script recorre los casos.** El ejecutor escribe `recorrido-<rol>` (Playwright/CDP si es UI; `curl`/`fetch` si es API) que entra con la cuenta del rol, ejecuta sus casos en orden, guarda la evidencia de cada uno y vuelca consola, red y códigos a un log. Lo corre, lee el resultado y arma la tabla. **Un caso por turno son ~20 minutos por cada veinte casos**: cada turno cuesta cerca de un minuto.
+- **El script se versiona** en `.hd/e2e/utilidades/recorrido-<rol>.<ext>`: la próxima corrida del mismo rol lo reusa, y la re-ejecución del Paso 5 sale casi gratis.
+- **Presupuesto por caso**: si un caso no resuelve en ~2 minutos de reloj después de aplicar su evasiva, queda `BLOQUEADO` con el motivo escrito y el ejecutor sigue con el siguiente. No se investiga un caso media hora: se reporta y se decide.
+- **Descubrir un camino nuevo no alarga la corrida**: se anota como `DESCUBIERTO` con lo que se vio y queda para el catálogo.
+
 Formato (`.hd/e2e/runs/<fecha>/ejecucion-<rol>.md`):
 
 ```md
@@ -427,6 +434,8 @@ Se pueden combinar: `CON_FALLOS (3) · INCOMPLETA (2)`. **Ninguno de los tres es
 | "El 401 era el token, lo salteo" | Se evade y se registra. Si después de evadir vuelve a fallar, es rojo. |
 | "Casi funciona, el botón está pero tarda" | Casi = rojo. El esperado dice estado y tiempo, no intención. |
 | "Ese caso ya fallaba antes, lo marco conocido" | Un fallo conocido es un bug abierto en `estado.md`, no un pase. |
+| "Cada caso merece su turno para mirarlo bien" | Un turno cuesta cerca de un minuto; veinte casos sueltos son veinte minutos. El script recorre los veinte y deja la misma evidencia en un par de minutos. |
+| "El caso es raro, lo investigo hasta entenderlo" | Dos minutos y evasiva aplicada: si sigue raro, `BLOQUEADO` con el motivo. La corrida no se detiene por un caso. |
 | "El catálogo estaba mal, lo borro" | Se corrige con evidencia o se retira con el commit; el ID no se borra. |
 | "Cambió el código, actualizo el esperado" | Solo si hay un commit o una decisión que lo respalde. Si no, es bug. |
 | "Es una base de desarrollo, puedo borrar todo" | La base local es del humano: respaldo y limpieza por namespace. |
