@@ -4,9 +4,11 @@
   de la fase 4 (revisores por ola + auditoría visual + corrección + re-prueba).
   La fase 4 corre en dos subfases EN SERIE: primero revisores de código
   (uno por ola, todos los que permita el harness, en una sola tanda) y,
-  después de corregir y con el gate verde, el auditor visual (UI, o API con
-  curl/fetch si no hay frontend). Los revisores escriben SOLO hallazgos en
-  su archivo; el orquestador consolida acá.
+  después de corregir y con el gate verde, la auditoría visual en tres
+  tramos: recon (entorno, credenciales, modo UI o API), entre 2 y 4 áreas
+  en paralelo (UI, o API con curl/fetch si no hay frontend) y consolidación.
+  Los revisores escriben SOLO hallazgos en su archivo; el orquestador
+  consolida acá.
 
   No hay prueba del humano ni tests: la evidencia es build + lint +
   estándares, la revisión semántica y la prueba de comportamiento de punta
@@ -57,12 +59,24 @@
      Si el harness no alcanza, se cubren olas consecutivas en tandas y se
      anota acá. -->
 
-## Auditoría visual — OK | CON_FALLOS
+## Auditoría visual — OK | CON_FALLOS | NO_VERIFICABLE
 
-**Auditor**: auditor-visual
-**Reporte**: .hd/<trabajo>/reports/auditoria-visual.md
-**Modo**: UI | API (navegador no disponible: <motivo>)
-**Entorno**: <cómo se levantó, qué se instaló, datos usados>
+**Recon**: recon-auditoria — .hd/<trabajo>/reports/auditoria/entorno.md
+**Modo**: UI | API (navegador no disponible: <motivo>) — decidido en el recon
+**Entorno**: <comando de arranque, puerto, usuarios, seeds, qué se instaló>
+**Presupuesto usado**: recon <min/turnos> · auditorías <min/turnos por área> · consolidación <min/turnos>
+
+### Áreas
+
+| Área | Auditor | Alcance | Veredicto | Presupuesto usado |
+|---|---|---|---|---|
+| <área> | auditor-auditoria-<área> | <flujos que cubre> | OK | CON_FALLOS | <min/turnos> |
+
+<!-- Si el trabajo era una sola pantalla indivisible, va un solo auditor y acá
+     se escribe el motivo. Nunca más de 4 áreas ni un corte por cantidad de casos. -->
+
+**Reporte consolidado**: .hd/<trabajo>/reports/auditoria-visual.md
+**Evidencia**: .hd/<trabajo>/reports/evidencia/<área>/recorrido.<ext>
 
 ### Fallos
 
@@ -70,7 +84,9 @@
 
 ### No verificable
 
-<!-- Lo que el entorno no permitió probar. No cuenta como verde.
+<!-- NO_VERIFICABLE (el recon no consiguió entorno ni modo API) frena el
+     cierre y se reporta al humano: no es verde y no hay corrección posible.
+     Lo que el entorno no permitió probar tampoco cuenta como verde.
      Si la auditoría corrió en modo API porque el navegador no arrancó,
      acá van los flujos de UI sin probar (clicks, estados visuales,
      responsive, consola del cliente) y el motivo. -->
@@ -94,7 +110,7 @@
 
 ## Corrección de la auditoría visual
 
-<!-- Solo si el auditor visual devolvió fallos. Una sola pasada. -->
+<!-- Solo si la auditoría devolvió fallos. Una sola pasada. -->
 
 - **Fixer**: fixer-visual
 - **Fallos asignados**: <N>
@@ -109,7 +125,8 @@
 ## Re-prueba visual — OK | CON_FALLOS
 
 **Reporte**: .hd/<trabajo>/reports/auditoria-visual-reprueba.md
-**Alcance**: feature completa, no solo los fallos.
+**Alcance**: feature completa, no solo los fallos: los mismos roles y los mismos scripts por área.
+**Presupuesto usado**: <tiempo de los scripts + min/turnos por área>
 
 ### Resultado
 

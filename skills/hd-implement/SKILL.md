@@ -30,9 +30,9 @@ Leé primero `technical_spec.md`, después `spec.md`, los planes, el README del 
 | **Orquestador** | Re-deriva, arma olas y teams, despacha, integra, commitea, corre el gate | **No escribe código de producción** |
 | **Team** (`dev-<zona>`, hasta 5) | Implementa su zona en el worktree compartido, en paralelo con el resto del team, y deja sus decisiones en el tablero | No sale de su zona sin anotarlo en el tablero, no ejecuta scripts, no commitea, no escribe tests |
 | **Fixer** (`fixer-ola-<N>`) | Corrige los **fallos del gate** de una ola | No revisa ni busca problemas: no rediseña, no amplía alcance, no ejecuta scripts, no commitea |
-| **Revisores y auditor visual** (fase 4) | Auditan el trabajo completo | No participaron de la implementación |
+| **Revisores y auditoría visual** (fase 4) | Auditan el trabajo completo, en serie | No participaron de la implementación |
 
-**Esta fase no revisa.** No hay revisor, ni auditor, ni lectura independiente, ni autoauditoría: **no lances un subagente para revisar el código, no te pongas a juzgar la intención del código vos mismo y no escribas hallazgos.** Revisar es trabajo de `hd-review`, una sola vez, con todas las olas cerradas y en paralelo con el auditor visual.
+**Esta fase no revisa.** No hay revisor, ni auditor, ni lectura independiente, ni autoauditoría: **no lances un subagente para revisar el código, no te pongas a juzgar la intención del código vos mismo y no escribas hallazgos.** Revisar es trabajo de `hd-review`, una sola vez, con todas las olas cerradas: primero los revisores de código, después la auditoría visual por áreas, siempre en serie.
 
 Lo que sí existe acá, por ola, es el **gate** (evidencia mecánica: compila, linta, cumple estándares) y la **inspección de zonas** (¿cada agente se quedó en su lugar y lo dejó anotado?). Ninguno de los dos es una revisión: no opinan sobre diseño, seguridad ni sobre si el comportamiento es el del spec.
 

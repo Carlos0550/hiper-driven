@@ -1,6 +1,6 @@
 ---
 name: hd-review
-description: "Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en serie. Primero, revisores independientes —uno por ola, tantos como permita el harness, todos en una sola tanda y avisando al humano el costo en tokens— leen el código y escriben solo sus hallazgos; un fixer los corrige, el orquestador commitea y corre el gate. Recién entonces un auditor visual levanta el proyecto entero y prueba la feature como un humano: por la UI si hay frontend, o con curl/fetch contra la API —como con Postman o APIdog— si no lo hay. Si la auditoría visual encuentra fallos, un fixer los corrige y el mismo auditor re-prueba la feature completa. Los revisores y el auditor se despachan con el modelo de mayor calidad disponible según el catálogo y la estrategia de la memoria (premium solo con permiso ya dado). Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests."
+description: "Fase 4 del framework Hiper-driven (HD), autónoma y en dos subfases en serie. Primero, revisores independientes —uno por ola, tantos como permita el harness, todos en una sola tanda y avisando al humano el costo en tokens— leen el código y escriben solo sus hallazgos; un fixer los corrige, el orquestador commitea y corre el gate. Recién entonces la auditoría visual se reparte en tres tramos: un recon acotado levanta y verifica el entorno, consigue credenciales y decide modo UI o API; entre 2 y 4 auditores prueban áreas disjuntas en paralelo, con presupuesto en turnos; y el orquestador consolida en un solo reporte. Si hay fallos, un fixer los corrige y los mismos recorridos se re-ejecutan enteros. Los revisores y el auditor se despachan con el modelo de mayor calidad disponible según el catálogo y la estrategia de la memoria (premium solo con permiso ya dado). Si sale bien, hd-close se invoca solo. No hay prueba del humano ni tests."
 ---
 
 # HD — Fase 4: Revisión y auditoría visual
@@ -15,13 +15,18 @@ olas cerradas
    ├─ Paso 1 · sub1: revisores de código (uno por ola, todos a la vez) ──→ hallazgos
    │      └─ Paso 2 · si hay: un fixer corrige → commit → gate
    │
-   ├─ Paso 3 · sub2: auditor visual (UI, o API con curl/fetch) ──→ fallos
+   ├─ Paso 3 · sub2: auditoría visual en tres tramos ──→ fallos
+   │      ├─ 3.0 recon: entorno, credenciales, modo UI/API, áreas (5 min)
+   │      ├─ 3.1 entre 2 y 4 áreas en paralelo (6 min cada una)
+   │      └─ 3.2 consolidación (orquestador)
    │      └─ Paso 4 · si hay: un fixer corrige → commit → gate
    │
-   └─ Paso 5 · re-prueba visual completa ──→ Paso 6 · hd-close automático
+   └─ Paso 5 · re-prueba: los mismos scripts, completos ──→ Paso 6 · hd-close automático
 ```
 
-**Por qué en serie y no en paralelo:** el auditor visual tiene que probar el árbol **ya corregido**. Si corre junto con los revisores, prueba bugs que todavía vas a arreglar y su reporte nace viejo.
+**Por qué en serie y no en paralelo:** el auditor visual tiene que probar el árbol **ya corregido**. Si corre junto con los revisores, prueba bugs que todavía vas a arreglar y su reporte nace viejo. El paralelismo vive **dentro** de sub2, nunca entre sub1 y sub2.
+
+**Por qué en áreas y no un auditor solo:** el costo fijo de auditar no es probar: es levantar el proyecto, autenticarse y descubrir cómo se navega. Un solo agente lo paga una vez por pasada y, con el presupuesto que se le da, se queda sin reloj antes de probar. El recon paga ese costo una sola vez; las áreas prueban en paralelo lo que ya está resuelto.
 
 **No hay humano en esta fase.** Aparece recién cuando el trabajo está cerrado o si hay un freno real. El aviso de tokens del Paso 1 es un aviso, no una pregunta. La app entera, con todos sus roles, tampoco es de esta fase: eso lo corre el humano con `hd-e2e`, fuera de la cadena.
 
@@ -29,30 +34,31 @@ olas cerradas
 
 | Subagente | Qué hace | Qué no hace |
 |---|---|---|
-| **Orquestador** | Coordina, consolida, commitea, corre el gate, decide | **No escribe código de producción** |
+| **Orquestador** | Levanta el servidor, despacha, consolida, commitea, corre el gate, decide | **No escribe código de producción** |
 | **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta, no narra |
-| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y lo prueba como un humano: UI o API con `curl`/`fetch` | No edita el producto |
+| **Recon** (`recon-auditoria`) | Verifica el entorno, consigue credenciales, decide modo UI/API, deja el script base y propone las áreas | No audita la feature, no edita el producto |
+| **Auditor de área** (`auditor-auditoria-<área>`) | Prueba su área como un humano: UI o API con `curl`/`fetch` | No sale de su área, no edita el producto, no consolida |
 | **Fixer** (`fixer-review`, `fixer-visual`) | Corrige todos los hallazgos de una tanda, uno por uno | No rediseña, no amplía alcance, no commitea |
 
-**Independencia:** los revisores no participaron de ninguna ola; el auditor visual tampoco; el fixer no audita. La corrección la confirma el comportamiento, no el autor.
+**Independencia:** los revisores no participaron de ninguna ola; el recon y los auditores de área tampoco; el fixer no audita. La corrección la confirma el comportamiento, no el autor.
 
 ## Catálogo de modelos: la auditoría va con el mejor
 
-La auditoría con criterio —revisores y auditor visual— es la tarea que más calidad necesita: sin tests, es la única lectura del trabajo.
+La auditoría con criterio —revisores y auditores por área— es la tarea que más calidad necesita: sin tests, es la única lectura del trabajo.
 
 1. **Leé la estrategia de `.hd/memory.md`**: el modelo por tipo de tarea y los permisos premium se aprobaron en discovery (o con la pregunta única de `hd-implement`). No se vuelve a preguntar.
 2. **Consultá el catálogo** con `list_subagent_models` si el harness lo permite, para verificar que los modelos de la estrategia siguen disponibles y elegir el esfuerzo de razonamiento. Si no está disponible, usá el default y anotalo en el ledger. **El catálogo no publica precios**: si hace falta un precio —por ejemplo, para decidir si un modelo supera el umbral de 5 USD/M—, se busca en internet (páginas oficiales); no se le pregunta al provider, y un precio no verificable se trata como desconocido.
-3. **Asigná**: revisores y auditor visual con el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos); los fixers con la mejor relación calidad/precio.
+3. **Asigná**: revisores y recon y auditores con el de **mayor calidad disponible** (p. ej. Qwen4 u Opus 5.5 si están en el catálogo y permitidos); los fixers con la mejor relación calidad/precio.
 4. **Premium (más de 5 USD/M en cualquier precio publicado)**: solo con permiso ya registrado en la memoria. **Esta fase no pregunta**: la excepción de la pregunta única es de `hd-implement`. Sin permiso, usá el mejor dentro del presupuesto y anotá el ruling.
 5. **Dispatch explícito**: pasá `provider`, `model` y `reasoning_effort` en cada `subagent`; anotá en el ledger qué modelo llevó cada revisor y el auditor.
 
 ## Reglas duras
 
-1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento.
+1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento. Dentro de sub2, el paralelismo es entre áreas, no entre sub1 y sub2.
 2. **Un revisor por ola, todos los que permita el harness, en una sola tanda.** Nada de cuatro y después otra tanda: se cubre todo el trabajo de una pasada.
 3. **El costo en tokens se avisa.** Antes de despachar los revisores, una línea al humano con cuántos agentes se lanzan y por qué; no se espera respuesta.
 4. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
-5. **El auditor visual prueba como un humano, de punta a punta.** Por la UI si hay frontend; si no, contra la API con `curl`/`fetch`, como con Postman o APIdog: auth real, secuencias completas, errores, permisos y persistencia. **Si el navegador no arranca, cae a modo API** y declara qué parte de la UI quedó sin probar: nunca se declara verde lo que no se probó.
+5. **Cada auditor prueba como un humano, de punta a punta, pero solo su área.** Por la UI si hay frontend; si no, contra la API con `curl`/`fetch`, como con Postman o APIdog: auth real, secuencias completas, errores, permisos y persistencia. **Si el navegador no arranca, cae a modo API** y declara qué parte de la UI quedó sin probar: nunca se declara verde lo que no se probó.
 6. **Una corrección por tanda de hallazgos, con todos juntos.** Un hallazgo, un cambio. Nada de refactors colados.
 7. **Una sola re-prueba.** Si después de corregir los fallos visuales la re-prueba vuelve a fallar, es **freno real** con diagnóstico. No hay segunda ronda.
 8. **La re-prueba es completa**, no solo de lo que falló: la misma feature entera, de nuevo.
@@ -60,6 +66,10 @@ La auditoría con criterio —revisores y auditor visual— es la tarea que más
 10. **El orquestador no escribe producción.** El fix lo hace un subagente.
 11. **Sin tests.** Ni los fixers ni el auditor agregan tests; el orquestador no los pide.
 12. **Verde no es aprobación humana.** Si la revisión y la re-prueba salen bien, se cierra solo.
+13. **El presupuesto está en turnos de herramienta, no solo en minutos.** Cada turno cuesta cerca de un minuto: un tope en reloj no tiene checkpoint y se estira "para terminar de mirar". Agotado el suyo, el agente corta y declara residual.
+14. **Tres presupuestos separados.** Recon (5 min / 8 turnos), auditoría por área (6 min / 8 turnos cada una) y corrección del fixer (reloj propio). El reloj del auditor **no** incluye al fixer, al gate ni a la re-prueba.
+15. **El alcance es la feature, no la app.** Los flujos que promete el spec y los controles que esos flujos tocan. La app entera, con todos sus roles, es `hd-e2e`, y la corre el humano.
+16. **El reparto es por superficies, no por casos.** Entre 2 y 4 áreas disjuntas, todas en una tanda. Si la feature es una sola pantalla indivisible, un solo auditor y el motivo escrito en `review-progress.md`.
 
 ## Paso 0 — Estado de cierre
 
@@ -70,7 +80,7 @@ Verificá que el trabajo esté realmente listo para revisarse:
 - Rama limpia: solo pueden quedar artefactos `.hd/` sin commitear.
 - `.hd/<trabajo>/` actualizado: `ledger.md`, `waves.md`, `review-progress.md`.
 - Respaldo al día si está habilitado.
-- El proyecto **se puede levantar**: dependencias instaladas, variables de entorno, seeds o datos de demo, comando de arranque identificado. Si no se puede, el auditor visual lo va a declarar y eso es rojo: resolvelo antes de lanzar.
+- El proyecto **se puede levantar**: dependencias instaladas, variables de entorno, seeds o datos de demo, comando de arranque identificado. **Lo levanta el orquestador**, como job en background, antes de despachar el recon: un servidor que arranca un subagente muere con él. Si no arranca, se resuelve antes de lanzar.
 - La memoria `.hd/memory.md` al día (el auditor la lee para no inventar datos de prueba que no existen).
 
 Prepará el material por **rutas**:
@@ -150,55 +160,72 @@ El orquestador:
 
 El código corregido **no se re-revisa**: la re-prueba visual y el gate son la confirmación.
 
-## Paso 3 — Sub2: auditor visual
+## Paso 3 — Sub2: auditoría visual
 
 Se lanza **solo ahora**: después de que terminaron todos los revisores y, si hubo hallazgos, después de la corrección y con el gate en verde. Nunca antes, nunca en paralelo con el Paso 1.
 
-Su trabajo es sentarse como un humano y probar la feature de punta a punta.
+Va en tres tramos —**recon → áreas en paralelo → consolidación**— porque el costo fijo de auditar no es probar: es levantar el proyecto, autenticarse y descubrir cómo se navega. Un solo agente lo paga una vez por pasada y, con el presupuesto que se le da, se queda sin reloj antes de probar.
 
-Brief:
+### 3.0 — Recon (presupuesto: 5 min / 8 turnos)
 
-- El proyecto, cómo levantarlo y qué entorno usar (dev/staging local, docker, seeds).
-- La feature y los flujos que el spec promete, con los criterios de aceptación.
-- **Qué probar: UI o API.**
-  - Si hay frontend: la UI, click por click.
-  - Si no hay frontend: la **API como un humano con Postman o APIdog**, con `curl` o `fetch` contra el servidor. Auth real (login, token, refresh), secuencias completas de punta a punta (`POST` → `GET` → `PATCH` → `DELETE`), códigos de estado, validaciones, permisos, paginación y persistencia consultando después. Un endpoint suelto que responde 200 no es una feature.
-  - Si hay UI pero la feature tiene partes que la UI no expone, se prueban por API además de la UI.
-  - **Si el navegador no arranca** (sin Docker, headless bloqueado por el sandbox —`spawn` con `EPERM`—, faltan dependencias del sistema, no hay display, crash al abrir): **no se declara la auditoría imposible**. Se pasa a **modo API** y se prueba todo lo que la API exponga, como un dev con Postman o APIdog. El reporte dice `Modo: API (navegador no disponible: <motivo exacto>)` y lista **qué flujos de UI quedaron sin probar** (clicks, estados visuales, responsive, consola del cliente): esos son **residuales declarados**, no verdes. Un intento de arreglar el entorno es válido (instalar deps, usar `--headless`, otro puerto) pero si no hay navegador, la API es la evidencia. Si además no hay API, ahí sí es `no verificable` y se reporta como tal.
-- **Puede instalar o crear lo que necesite para trabajar bien** (dependencias, navegador automatizado, `curl`, `jq`, `httpie`, datos de demo). Preferí instalaciones efímeras o fuera del repo; si algo queda instalado en el repo, anotalo y limpialo al terminar.
-- **No modifica código de producción.** Si para probar hace falta un dato o un usuario, lo crea en la base de prueba o con seeds, no en el código.
-- **El catálogo de `hd-e2e` es parte de su evidencia, no de su tarea.** Si el repo lo tiene, anotá qué casos de esta feature ejercitó y con qué resultado, y listá como `DESCUBIERTO` todo camino que probó y el catálogo no tenía, con pasos y esperado. No lo edita: lo incorpora el orquestador.
-- Puede ejecutar comandos y navegar (o pegarle a la API): es la excepción a la regla de "sin scripts", porque su evidencia es el comportamiento.
-- Si el entorno no permite probar algo, lo declara **explícitamente** en el reporte como no verificable; no lo cuenta como verde.
+Antes de despachar, el **orquestador** ya levantó el proyecto como job en background con el comando del `technical_spec.md` y comprobó que responde. Después va **un** `recon-auditoria`, que es el único que puede gastar tiempo en descubrir el entorno:
 
-**Presupuesto de tiempo y forma de trabajar.** La auditoría es una inspección, no una exploración: tiene tope de reloj y una sola forma de trabajar.
+- confirmar que el proyecto quedó vivo, o decir exactamente qué falta (dependencias, env, migración, seed);
+- conseguir credenciales reales y sembrar los datos de prueba que el spec necesita;
+- **decidir el modo**: `UI` si hay frontend y el navegador arranca; `API` si no hay frontend; `API` con el motivo exacto si el navegador no arranca (sin Docker, `spawn` con `EPERM`, sin display, crash al abrir). La decisión se toma acá, no a mitad de la auditoría;
+- escribir el **script base del recorrido**: inicio de sesión y navegación mínima, listo para que las áreas lo usen;
+- proponer las **áreas**, cada una con su alcance en una línea y por qué no comparte estado con las otras.
 
-- **Presupuesto**: **10 minutos de reloj** para una pantalla o una feature chica; **20 como techo** para una feature grande con varios flujos. Se cuenta desde el primer comando hasta el reporte escrito. Agotado el presupuesto se corta: se reporta lo probado y lo que faltó va a `No verificado` como residual declarado. No se estira el presupuesto para "terminar de mirar".
-- **Un recorrido, un script.** El auditor escribe **un script de recorrido** (Playwright/CDP headless si es UI; un `.sh` con `curl`/`fetch` si es API) que hace todo el camino en una sola pasada: login, flujos, estados, bordes, capturas y volcado de consola/red a un log. Lo corre, lee el resultado y recién ahí vuelve a mirar el material con ojo. **No se hace una captura por turno**: cada turno cuesta cerca de un minuto de reloj y veinte capturas sueltas son veinte minutos de auditoría.
-- **El script se guarda** en `.hd/<trabajo>/reports/evidencia/recorrido.<ext>` junto con su log: es la evidencia y es lo que corre la re-prueba. Se limpia lo instalado y lo efímero, pero el script y el log quedan.
+Deja `reports/auditoria/entorno.md` con comando y puerto, URL base, usuarios y cómo se crearon, modo decidido y motivo, ruta del script base y áreas propuestas. **Sin ese archivo no se despacha la auditoría.**
+
+Si agota su presupuesto sin entorno, no se estira: se sigue en modo API con lo que haya o, si tampoco hay API, el veredicto es `NO_VERIFICABLE` y se frena.
+
+### 3.1 — Áreas en paralelo (presupuesto: 6 min / 8 turnos por área)
+
+**Cuántos: entre 2 y 4 `auditor-auditoria-<área>`, todos en un solo mensaje.** Si el trabajo es una sola pantalla o un flujo indivisible, va **un solo auditor** y el motivo queda en `review-progress.md`: partir por partir duplica preparación y fragmenta la evidencia.
+
+El corte es por **superficies que no comparten estado**: pantallas o rutas disjuntas, roles con permisos distintos, o UI para lo que la UI expone y API para lo que no. Nunca por cantidad de casos, y nunca dos áreas sobre el mismo flujo.
+
+Cada auditor recibe, por ruta: `entorno.md`, el script base, **su** área con los flujos y criterios de aceptación del spec, la memoria y el catálogo de `hd-e2e`. **No vuelve a levantar el proyecto ni a autenticarse desde cero**: reusa el servidor y las credenciales del recon.
+
+Qué prueba cada uno **en su área**, en este orden:
+
+1. **Camino principal de su área**, de punta a punta, como el usuario final.
+2. **Los controles y operaciones que ese camino toca**: cada botón, formulario, selector y menú del flujo; o cada endpoint, método y parámetro del flujo, con los códigos `400`/`401`/`403`/`404`/`409`/`422`/`5xx` donde correspondan. **El resto de la app no es de esta fase**: es `hd-e2e`.
+3. **Auth y permisos** dentro de su área: qué puede y qué no puede hacer el rol que le toca.
+4. **Estados y errores**: vacío, carga, error, éxito, permisos insuficientes.
+5. **Bordes**: datos raros, campos vacíos, límites, doble click, paginación, duplicados, volver atrás, refrescar.
+6. **Persistencia**: lo que se guarda se ve después de recargar, en la sesión siguiente o consultando de nuevo la API.
+7. **Consola, red y logs**: errores de consola, requests fallidos, warnings relevantes y los logs del servidor.
+
+Reglas del auditor:
+
+- **Puede instalar lo que necesite** (navegador, `curl`, `jq`, datos de demo), pero prefiere lo efímero o fuera del repo; si algo queda en el repo, lo anota y lo limpia al terminar.
+- **No modifica código de producción.** Si para probar hace falta un dato o un usuario, se crea en la base de prueba o con seeds.
+- **El catálogo de `hd-e2e` es evidencia, no tarea**: anota qué casos ejercitó y qué caminos descubrió; no lo edita.
+- Si el entorno no permite probar algo, lo declara **no verificable**; no lo cuenta como verde.
+
+**Forma de trabajar.** La auditoría es una inspección, no una exploración.
+
+- **Un recorrido, un script.** Cada auditor escribe **un script** (Playwright/CDP headless si es UI; `.sh` con `curl`/`fetch` si es API) que hace todo su camino en una sola pasada: login, flujos, estados, bordes, capturas y volcado de consola/red a un log. Lo corre, lee el resultado y recién ahí mira el material con ojo. **No se hace una captura por turno**: cada turno cuesta cerca de un minuto y veinte capturas sueltas son veinte minutos.
+- **El script se guarda** junto con su log: es la evidencia y es lo que corre la re-prueba.
 - **Explorar es la excepción, no el método.** Un tramo que no se puede automatizar (captcha, OTP a mano) se hace a mano y se declara.
 
-Qué prueba, en este orden:
+Deja dos cosas:
 
-1. **Arranque**: levanta el proyecto entero, sin atajos, como lo haría un humano.
-2. **Auth y permisos**: inicia sesión o consigue el token; verifica qué puede y qué no puede hacer.
-3. **Camino principal**: recorre la feature completa —UI o API— y la usa como el usuario final.
-4. **Todos los controles / todas las operaciones**: cada botón, link, formulario, selector y menú; o cada endpoint, método y parámetro de la feature.
-5. **Estados y errores**: vacío, carga, error, éxito, permisos insuficientes; y en API los códigos `400`/`401`/`403`/`404`/`409`/`422`/`5xx` donde correspondan.
-6. **Bordes**: datos raros, campos vacíos, límites, doble click, paginación, duplicados, volver atrás, refrescar.
-7. **Persistencia**: lo que se guarda, se ve después de recargar, en la sesión siguiente o consultando de nuevo la API.
-8. **Consola, red y logs**: errores de consola, requests fallidos, warnings relevantes, y los logs del servidor.
+- `reports/auditoria/<área>.md` con sus fallos, en el formato de abajo;
+- `reports/evidencia/<área>/recorrido.<ext>` y su log. Con una sola área: `reports/evidencia/recorrido.<ext>`.
 
-**Formato de salida** (`.hd/<trabajo>/reports/auditoria-visual.md`):
+**Formato del área**:
 
 ```md
-# Auditoría visual
+# Auditoría — <área>
 Modo: UI | API (navegador no disponible: <motivo>)
 Veredicto: OK | CON_FALLOS
 - [severidad] <flujo> — pasos exactos — esperado — obtenido — evidencia (captura/log/ruta)
 
 ## No verificado
-- <flujos de UI que el modo API no cubre>: residual declarado, no verde
+- <lo que no se pudo probar en esta área>: residual declarado, no verde
 
 ## Casos del catálogo ejercitados
 - <ID>: PASA | FALLA | no aplica
@@ -207,25 +234,42 @@ Veredicto: OK | CON_FALLOS
 - <flujo> — pasos exactos — esperado
 ```
 
+### 3.2 — Consolidación (orquestador, presupuesto: 2 min / 2 turnos)
+
+- Un solo `reports/auditoria-visual.md`: deduplicá por flujo, ordená por severidad y poné el área delante de cada fallo.
+- **Veredicto**: `OK` si ninguna área reportó fallos; `CON_FALLOS` si al menos una los reportó; **`NO_VERIFICABLE`** si el recon no consiguió entorno ni modo API. Ese último frena el cierre y se reporta al humano: no es verde.
+- Un fallo sin pasos reproducibles no se manda al fixer: se devuelve **una vez** al área que lo reportó.
+
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
+
+**Presupuesto de la subfase 2.** El reloj de cada tramo es propio; el del auditor **no** incluye al fixer, al gate ni a la re-prueba.
+
+| Tramo | Quién | Presupuesto | Si se agota |
+|---|---|---|---|
+| Recon | `recon-auditoria` | 5 min / 8 turnos | modo API con lo que haya, o `NO_VERIFICABLE` |
+| Auditoría | 2-4 `auditor-auditoria-<área>` en paralelo | 6 min / 8 turnos cada uno | corta y declara residual de su área |
+| Consolidación | orquestador | 2 min / 2 turnos | consolida con lo que haya |
+| Corrección | `fixer-visual` | 10 min / 10 turnos, reloj propio | freno real con diagnóstico |
+| Re-prueba | los mismos roles y scripts | el tiempo de los scripts + 5 min / 6 turnos | reporta lo que faltó |
 
 ## Paso 4 — Corrección de los fallos visuales
 
 - **Veredicto OK → saltá al Paso 6.**
 - **CON_FALLOS → una corrección**, y después el Paso 5.
+- **NO_VERIFICABLE → freno real**: se reporta al humano qué no se pudo probar y por qué. No hay corrección posible ni verde.
 
-Un `fixer-visual` con todos los fallos juntos, cada uno con sus pasos de reproducción, `hd-debug` obligatorio, guarda de alcance, sin scripts y sin commitear. Reporta en `.hd/<trabajo>/reports/fixer-visual.md`.
+Un `fixer-visual` con todos los fallos juntos, cada uno con sus pasos de reproducción, `hd-debug` obligatorio, guarda de alcance, sin scripts y sin commitear. **Su presupuesto es propio: 10 minutos o 10 turnos**, y no consume el reloj de la auditoría. Reporta en `.hd/<trabajo>/reports/fixer-visual.md`.
 
 El orquestador repite la mecánica del Paso 2: worktree, revisar el diff, `cherry-pick -n`, commit `hd(<trabajo>): corrección de auditoría visual`, respaldo y **build + lint + estándares**. Rojo → **freno real**.
 
 ## Paso 5 — Re-prueba visual
 
-Con el gate verde, lanzá **el mismo auditor visual** a correr **el mismo recorrido completo** contra el árbol corregido, no solo los fallos:
+Con el gate verde, lanzá **los mismos roles por área con los mismos scripts** contra el árbol corregido, no solo los fallos:
 
-- primero **re-ejecutá el script de la primera pasada** (`.hd/<trabajo>/reports/evidencia/recorrido.<ext>`): mismos flujos, mismos controles, mismos estados y bordes, mismas capturas. La re-prueba es barata porque el recorrido ya está escrito;
-- después sumá al script los pasos de los fallos corregidos, con los pasos originales, y corré **el recorrido entero** de nuevo;
-- **presupuesto: la mitad de la primera pasada, con techo de 10 minutos.** No se re-explora: se re-ejecuta;
-- reporte nuevo en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`, con el log del recorrido como evidencia.
+- primero **re-ejecutá los scripts de la primera pasada** (`reports/evidencia/<área>/recorrido.<ext>`): mismos flujos, mismos controles, mismos estados y bordes, mismas capturas. La re-prueba es barata porque el recorrido ya está escrito;
+- después sumá a cada script los pasos de los fallos corregidos en su área, con los pasos originales, y corré **el recorrido entero** de nuevo;
+- **presupuesto: el tiempo de los scripts más 5 minutos o 6 turnos por área**, con techo de 10 minutos por área si la primera pasada fue grande. No se re-explora: se re-ejecuta;
+- cada área deja `reports/auditoria/<área>-reprueba.md` y el orquestador consolida en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`, con los logs de los recorridos como evidencia.
 
 - **OK**: todo verde. Anotá el veredicto en `review-progress.md` y pasá al cierre.
 - **CON_FALLOS**: **freno real**. Reportá al humano con diagnóstico: qué falló, qué se intentó y por qué no alcanzó. No hay segunda corrección ni segunda re-prueba automática.
@@ -236,13 +280,15 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 
 1. Actualizá `review-progress.md`: bloque por ola, bloque de auditoría visual, correcciones y re-prueba, veredicto global.
 2. Actualizá el ledger: `Revisión: <N> revisores en una tanda, <n> hallazgos, corregidos <sha>`, `Auditoría visual: OK (<fecha>)`, `Re-prueba: OK | no aplica (sin corrección visual)`, `Gate: build <r>, lint <r>, estándares <r>`.
-3. Si el auditor marcó casos ejercitados o descubrió caminos, actualizá `.hd/e2e/casos.md` —IDs nuevos en `NUEVO`, los ejercitados con su fecha y resultado— y commiteá `hd(e2e): <trabajo> — casos de la revisión`. Sin push.
+3. Si alguna área marcó casos ejercitados o descubrió caminos, actualizá `.hd/e2e/casos.md` —IDs nuevos en `NUEVO`, los ejercitados con su fecha y resultado— y commiteá `hd(e2e): <trabajo> — casos de la revisión`. Sin push.
 4. **Cargá la skill `hd-close` VOS MISMO** y ejecutá la fase 5. No esperes aprobación humana: la aprobación de producto ocurrió en discovery y el comportamiento lo validó el auditor visual.
 
 ## Lo que no se hace en esta fase
 
 - No se lanza el auditor visual en paralelo con los revisores ni antes de corregir: probaría un árbol viejo.
 - No se corre la suite de la app entera: eso es `hd-e2e`, que invoca el humano y no forma parte de esta fase.
+- No se despacha la auditoría sin `reports/auditoria/entorno.md`: sin entorno y sin credenciales, el auditor explora en vez de inspeccionar.
+- No se parte la auditoría en más de cuatro áreas ni por cantidad de casos: más áreas son más preparación y una consolidación que pierde fallos.
 - No se le pide al humano que pruebe (el auditor visual lo reemplaza).
 - No se invoca `hd-fast-implement` desde acá: la vía rápida es solo para pedidos directos del humano.
 - No se re-revisa el código después de la corrección: la re-prueba visual y el gate son la confirmación.
@@ -273,3 +319,8 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
 | "El humano igual va a querer probar" | El humano recibe el trabajo cerrado y un resumen; si quiere probar, prueba, pero no es una puerta del proceso. |
 | "Auditar con el modelo default alcanza" | Sin tests, la auditoría es la única lectura del trabajo: va con el mejor modelo disponible y permitido. El premium sin permiso no se usa; se anota el ruling. |
+| "Con un auditor para todo alcanza" | El costo fijo de levantar y autenticar se paga una vez: el recon. Las áreas prueban en paralelo lo que ya está resuelto. |
+| "Parto la auditoría en diez áreas y termino antes" | Entre 2 y 4, por superficies disjuntas. Más áreas son más preparación duplicada y una consolidación que pierde fallos. |
+| "El tope de minutos se cumple solo" | No se cumple: se cumple el de turnos, que tiene checkpoint. 8 turnos por área y se corta. |
+| "El auditor audita la app entera, total es chica" | Audita su área: los flujos del spec y los controles que tocan. La app entera es `hd-e2e`. |
+| "El fixer entra en el mismo presupuesto" | No: relojes separados. Mezclarlos es lo que hizo que una pasada de 10 minutos se reportara como 70. |
