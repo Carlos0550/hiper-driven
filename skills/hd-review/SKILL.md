@@ -82,6 +82,7 @@ La fija quien reporta. La consolidación puede **subirla**, nunca bajarla: bajar
 16. **El reparto es por superficies, no por casos.** Entre 2 y 4 áreas disjuntas, todas en una tanda. Si la feature es una sola pantalla indivisible, un solo auditor y el motivo escrito en `review-progress.md`.
 17. **La evidencia viaja con el veredicto.** Cada pasada de auditoría commitea sus reportes, scripts, logs y capturas antes de pasar a la corrección. Un veredicto sin evidencia commiteada no existe.
 18. **Nada se instala dentro del repo.** Ni el recon ni los auditores: las herramientas van fuera del árbol y lo que haya que tocar en el repo lo hace el orquestador. Un `package-lock.json` que apareció solo es un residuo, no un cambio.
+19. **Un comentario en el código es un hallazgo.** Explicativo, TODO, separador o cabecera: se corrige borrándolo, y lo que justificaba va al ledger o al reporte. No se parkea si el archivo ya está en el diff; si no lo está, queda como deuda de limpieza anotada. Excepción: directivas de compilador o linter, shebang y licencia.
 
 ## Paso 0 — Estado de cierre
 
@@ -128,7 +129,7 @@ Qué busca, contra el spec, el technical spec y el plan:
 4. **Desviaciones**: todo lo implementado se traza al spec y a un plan; todo lo prometido está implementado. Lo que sobra y lo que falta se reporta.
 5. **Comportamiento esperado**: ¿hace lo que dice el plan, con entradas, salidas, casos borde y errores? **Esto reemplaza a los tests.**
 6. **Prototipo**: si hay UI, ¿la implementación respeta los flujos, estados y componentes aprobados?
-7. **Estándares y calidad**: convenciones, manejo de errores, duplicación evitable, complejidad, dependencias nuevas sin justificar, restos de debug, tests agregados (prohibido).
+7. **Estándares y calidad**: convenciones, manejo de errores, duplicación evitable, complejidad, dependencias nuevas sin justificar, restos de debug, **comentarios en el código (hallazgo: se borran)**, tests agregados (prohibido).
 8. **Footprints**: archivos fuera del plan, archivos compartidos tocados, generados modificados. Un archivo compartido está bien si el tablero declara al dueño de la región y la decisión.
 9. **Drift del catálogo de `hd-e2e`**: si el diff cambia comportamiento observable —una ruta, un permiso, un estado, un texto de error, un endpoint, un texto de UI— y no hay un caso nuevo o actualizado en `.hd/e2e/`, es hallazgo. El catálogo quedó viejo y la próxima corrida va a mentir.
 
@@ -159,6 +160,7 @@ La corrección: un solo `fixer-review`, con **todos los hallazgos de código** e
 - para cada hallazgo: archivo, comportamiento esperado, qué falló y severidad;
 - `hd-debug` **obligatorio**: causa raíz primero, un cambio por hipótesis;
 - guarda de alcance: un hallazgo, un cambio; si el hallazgo revela un problema más grande, se anota y se reporta, no se expande;
+- **sin comentarios**: no agrega ninguno y borra los que el archivo ya traiga, salvo directivas de herramienta, shebang y licencia;
 - **no ejecuta scripts** (build, lint, tests, servidores): el gate lo corre el orquestador;
 - **no commitea**; reporta en `.hd/<trabajo>/reports/fixer-review.md` del repo principal.
 

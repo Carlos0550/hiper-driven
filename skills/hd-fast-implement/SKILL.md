@@ -18,6 +18,8 @@ Esta skill **no es una fase de HD**. Es la vía rápida para cambiar algo que ya
 
 **El orquestador no edita código de producción.** Escribe el brief, delega, revisa que el diff sea el del pedido, commitea y entrega.
 
+**Ningún comentario en el código.** Ni el worker ni el orquestador escriben comentarios: ni explicativos, ni TODOs, ni separadores, ni cabeceras. Lo que haya que explicar va al registro del cambio. Si el worker toca un archivo con comentarios, los borra en ese mismo cambio —salvo directivas de herramienta, shebang y licencia— y lo anota en el reporte.
+
 **Cada cambio tiene su commit y su registro.** No hay squash, amend ni rebase. Los subagentes no commitean.
 
 **No tiene**: spec, technical spec, planes, rama nueva, worktree, gate, auditoría, artefactos de trabajo. Sí tiene **registro** (paso 2 y 4): sin él no quedaría constancia de qué se pidió y por qué.

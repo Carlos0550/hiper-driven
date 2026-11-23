@@ -71,4 +71,8 @@
        migraciones, ni servidores. El orquestador corre la evidencia.
      - no commitea, no toca git, no crea archivos de verificación;
      - no escribe tests: si el plan no dice qué pasa en un caso borde,
-       reporta NECESITA_CONTEXTO; no inventa comportamiento. -->
+       reporta NECESITA_CONTEXTO; no inventa comportamiento.
+     - NO escribe comentarios en el código: ni explicativos, ni TODOs, ni
+       separadores. Lo que haya que explicar va al ledger, al tablero o al
+       reporte; si el archivo que toca ya los trae, los borra en ese cambio
+       (salvo directivas de herramienta, shebang y licencia). -->

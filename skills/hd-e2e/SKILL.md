@@ -61,7 +61,7 @@ HUMANO pide la corrida
 8. **Tres salidas y ninguna cuarta.** Cada fallo es `CATALOGO_MAL`, `DESACTUALIZADO` o `BUG_REAL`. En la duda, `BUG_REAL`.
 9. **El ejecutor no edita el catálogo.** El que falla no certifica su propio fallo: corrige el orquestador, con evidencia.
 10. **Los bugs no se arreglan acá.** Se reportan con pasos exactos, esperado, obtenido, severidad y evidencia. El humano decide `hd-debug`, `hd-fast-implement` o un trabajo HD.
-11. **Nunca código de producción.** Sí scripts de utilidad en `.hd/e2e/utilidades/` (respaldo, usuarios, seeds, limpieza), idempotentes y con nombres de prueba identificables.
+11. **Nunca código de producción.** Sí scripts de utilidad en `.hd/e2e/utilidades/` (respaldo, usuarios, seeds, limpieza), idempotentes y con nombres de prueba identificables. Esos scripts tampoco llevan comentarios: lo que haya que explicar va al reporte o al catálogo.
 12. **Antes de mutar, respaldo; después, limpieza selectiva.** Un restore completo puede borrar el trabajo del humano: no se hace sin permiso.
 13. **Cada corrida commitea el catálogo y su reporte. Nunca push.**
 14. **El árbol se declara.** Un verde sobre código sin commitear no es un verde de release.

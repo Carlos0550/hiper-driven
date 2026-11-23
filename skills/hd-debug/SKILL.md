@@ -50,7 +50,7 @@ En HD los subagentes que tocan código **no ejecutan scripts**: no corren build,
 ## Fase 4 — Implementación del fix
 
 1. **Reproducción ANTES del fix, y la misma reproducción después.** HD no escribe tests: la prueba es un caso concreto y repetible —un comando, un input, unos pasos— que falla hoy y deja de fallar con el fix. Si no podés reproducirlo, o no entendiste la causa (volvé a la Fase 1) o es intermitente y necesitás más instrumentación, no un fix a ciegas. La reproducción queda escrita en el reporte y en el ledger.
-2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados.
+2. **Un solo cambio** que ataca la causa raíz. Nada de "ya que estoy" ni refactors colados. **Sin comentarios**: el fix no agrega ninguno y borra los del archivo que toca, salvo directivas de herramienta, shebang y licencia.
 3. **El fix no está listo hasta que build, lint y estándares pasan limpios en la rama.** Los subagentes no ejecutan nada: las corridas que cuentan las hace el orquestador **sobre la rama consolidada**, y en revisión el auditor visual re-prueba el comportamiento.
 4. Si el fix **no funciona**: STOP y contá. Menos de 3 intentos → volvé a Fase 1 con la información nueva. **3 o más fixes fallidos = problema de arquitectura**: frená, cuestioná los fundamentos y reportalo como freno real. El cuarto fix sin esa conversación está prohibido.
 

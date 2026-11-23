@@ -67,6 +67,7 @@ Antes de despachar, consultá el catálogo del harness con `list_subagent_models
 12. **Cada agente se despacha con el modelo que corresponde a su tarea** según el catálogo y la estrategia de la memoria; los premium (más de 5 USD/M) solo con permiso explícito.
 13. **La fase 3 no revisa.** No hay revisión por ola, ni revisor, ni auditor, ni autoauditoría del orquestador, y no se escriben hallazgos. El control de esta fase es el gate (mecánico) y la inspección de zonas (contrato). La revisión semántica, de seguridad y de comportamiento es **solo** de `hd-review`, al final y sobre todas las olas.
 14. **El catálogo de `hd-e2e` se actualiza con la ola.** Si el repo tiene `.hd/e2e/`, toda ola que cambie comportamiento observable agrega o actualiza sus casos, con el plan como fuente y en el mismo commit. El esperado se escribe desde el contrato, nunca mirando lo que la app hace: eso certifica bugs.
+15. **Sin comentarios en el código.** Ningún agente de la fase escribe comentarios —explicativos, TODOs, separadores, cabeceras— y el que toca un archivo arrastra la limpieza de los que ya tenía. Excepción: directivas de compilador o linter, shebang y licencia. El gate lo chequea: comentarios agregados en el diff de la ola son rojo.
 
 ## Paso 0 — Re-derivación (antes de tocar nada)
 
@@ -218,7 +219,7 @@ Lanzá todos los agentes de la ola en **un solo mensaje**, cada uno con **rutas*
 6. **Puede corregir la zona de otro** solo si lo que encontró está roto o contradice lo declarado: lee primero su entrada del tablero para entender el motivo, hace el cambio mínimo y lo anota como `corrijo <archivo:región> de <agente>: <qué estaba mal> — <qué hice>`. No corrige por estilo ni por gusto.
 7. Respeta las convenciones del repo: linter, formatter, nombres, estructura, manejo de errores.
 8. **No ejecuta scripts de ningún tipo**: ni build, ni lint, ni typecheck, ni tests, ni migraciones, ni servidores, ni git. No commitea, no toca la rama.
-9. **No deja restos**: nada de `console.log` de debug, código comentado, TODOs sin dueño ni temporales.
+9. **No deja restos**: nada de `console.log` de debug, código comentado, TODOs sin dueño ni temporales. **Tampoco escribe comentarios**: ni explicativos, ni TODOs, ni separadores de sección; lo que haya que explicar va al tablero, al ledger o al reporte. Si un archivo que toca ya trae comentarios, los borra en ese cambio —salvo directivas de herramienta, shebang y licencias— y lo anota en el tablero.
 10. Si el plan no dice qué pasa en un caso borde, **reporta `NECESITA_CONTEXTO`**; no inventa comportamiento.
 11. Reporta estado (`LISTO` / `LISTO_CON_DUDAS` / `NECESITA_CONTEXTO` / `TRABADO`), archivos tocados, decisiones y qué parte de su zona quedó pendiente.
 
@@ -265,6 +266,7 @@ Corré en la rama consolidada, en este orden, con la salida a log:
 1. **Build / typecheck**: el comando `Build:` del spec. Si no compila, la ola no existe.
 2. **Lint / formato**: el comando `Lint:`. Sin errores nuevos; los del baseline con la misma firma se ignoran.
 3. **Estándares**: si el repo tiene un comando único de chequeo (`make check`, `pnpm verify`, `npm run check`), ese es el gate.
+4. **Comentarios**: el diff de la ola no puede agregar líneas de comentario. `git diff <base-ola>..HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.go' '*.py' '*.rb' '*.rs' '*.java' '*.kt' '*.cs' '*.php' '*.css' '*.scss' '*.sql' | grep -E '^\+[[:space:]]*(//|/\*|#)'` no debe devolver nada, salvo directivas de herramienta (`@ts-expect-error`, `eslint-disable`, `noqa`, `prettier-ignore`), shebang y licencias. Un comentario agregado en la ola es rojo como un build roto.
 
 **Si hay fallos nuevos**:
 

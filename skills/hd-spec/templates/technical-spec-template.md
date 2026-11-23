@@ -92,7 +92,9 @@
 ## Restricciones y convenciones
 
 <!-- Stack, capas, nombres, estructura, manejo de errores, logging,
-     seguridad, performance, compatibilidad, accesibilidad, i18n. -->
+     seguridad, performance, compatibilidad, accesibilidad, i18n.
+     Sin comentarios en el código: la nota va al ledger, al plan o al
+     reporte. Excepción: directivas de herramienta, shebang y licencia. -->
 
 ## Trampas conocidas
 
