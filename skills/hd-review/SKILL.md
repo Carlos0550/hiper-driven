@@ -52,6 +52,16 @@ La auditoría con criterio —revisores y auditores por área— es la tarea que
 4. **Premium (más de 5 USD/M en cualquier precio publicado)**: solo con permiso ya registrado en la memoria. **Esta fase no pregunta**: la excepción de la pregunta única es de `hd-implement`. Sin permiso, usá el mejor dentro del presupuesto y anotá el ruling.
 5. **Dispatch explícito**: pasá `provider`, `model` y `reasoning_effort` en cada `subagent`; anotá en el ledger qué modelo llevó cada revisor y el auditor.
 
+## La severidad
+
+La usan los revisores y los auditores, y significa lo mismo de los dos lados:
+
+- **alta** — el flujo no se completa, o se pierden o duplican datos, o un permiso deja hacer lo que no corresponde, o toca dinero o seguridad.
+- **media** — el flujo se completa pero el resultado visible es incorrecto, o falta una validación que deja pasar datos malos.
+- **baja** — cosmético, texto u orden: el resultado no cambia.
+
+La fija quien reporta. La consolidación puede **subirla**, nunca bajarla: bajarla es descartar un hallazgo, y eso solo con `Ruling:` en el ledger y mención en el cierre. La duda entre dos niveles se resuelve **hacia arriba**. Un `alta` **no se parkea nunca**: se corrige o se frena el trabajo.
+
 ## Reglas duras
 
 1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento. Dentro de sub2, el paralelismo es entre áreas, no entre sub1 y sub2.
@@ -70,6 +80,8 @@ La auditoría con criterio —revisores y auditores por área— es la tarea que
 14. **Tres presupuestos separados.** Recon (5 min / 8 turnos), auditoría por área (6 min / 8 turnos cada una) y corrección del fixer (reloj propio). El reloj del auditor **no** incluye al fixer, al gate ni a la re-prueba.
 15. **El alcance es la feature, no la app.** Los flujos que promete el spec y los controles que esos flujos tocan. La app entera, con todos sus roles, es `hd-e2e`, y la corre el humano.
 16. **El reparto es por superficies, no por casos.** Entre 2 y 4 áreas disjuntas, todas en una tanda. Si la feature es una sola pantalla indivisible, un solo auditor y el motivo escrito en `review-progress.md`.
+17. **La evidencia viaja con el veredicto.** Cada pasada de auditoría commitea sus reportes, scripts, logs y capturas antes de pasar a la corrección. Un veredicto sin evidencia commiteada no existe.
+18. **Nada se instala dentro del repo.** Ni el recon ni los auditores: las herramientas van fuera del árbol y lo que haya que tocar en el repo lo hace el orquestador. Un `package-lock.json` que apareció solo es un residuo, no un cambio.
 
 ## Paso 0 — Estado de cierre
 
@@ -125,7 +137,7 @@ Qué busca, contra el spec, el technical spec y el plan:
 ```md
 # Revisión ola <N>
 Veredicto: SIN_HALLAZGOS | CON_HALLAZGOS
-1. [severidad] <hallazgo> — archivo:línea — <por qué es un problema> — <cómo verificarlo>
+1. [alta|media|baja] <hallazgo> — archivo:línea — <por qué es un problema> — <cómo verificarlo>
 2. ...
 ```
 
@@ -168,7 +180,7 @@ Va en tres tramos —**recon → áreas en paralelo → consolidación**— porq
 
 ### 3.0 — Recon (presupuesto: 5 min / 8 turnos)
 
-Antes de despachar, el **orquestador** ya levantó el proyecto como job en background con el comando del `technical_spec.md` y comprobó que responde. Después va **un** `recon-auditoria`, que es el único que puede gastar tiempo en descubrir el entorno:
+Antes de despachar, el **orquestador** ya levantó el proyecto como job en background con el comando del `technical_spec.md`, comprobó que responde y guardó el estado del árbol: `git status --porcelain > reports/auditoria/arbol-antes.txt`. Después va **un** `recon-auditoria`, que es el único que puede gastar tiempo en descubrir el entorno:
 
 - confirmar que el proyecto quedó vivo, o decir exactamente qué falta (dependencias, env, migración, seed);
 - conseguir credenciales reales y sembrar los datos de prueba que el spec necesita;
@@ -177,6 +189,8 @@ Antes de despachar, el **orquestador** ya levantó el proyecto como job en backg
 - proponer las **áreas**, cada una con su alcance en una línea y por qué no comparte estado con las otras.
 
 Deja `reports/auditoria/entorno.md` con comando y puerto, URL base, usuarios y cómo se crearon, modo decidido y motivo, ruta del script base y áreas propuestas. **Sin ese archivo no se despacha la auditoría.**
+
+**Nada se instala dentro del repo.** Navegador, `curl`, `jq` y utilidades viven en un directorio de herramientas **fuera del árbol**, declarado en `entorno.md`. Lo que haya que tocar en el repo —dependencias, migración, seed con el CLI del proyecto— lo hace el **orquestador** antes de despachar o cuando el recon lo pide. El recon no commitea y no edita código.
 
 Si agota su presupuesto sin entorno, no se estira: se sigue en modo API con lo que haya o, si tampoco hay API, el veredicto es `NO_VERIFICABLE` y se frena.
 
@@ -200,7 +214,7 @@ Qué prueba cada uno **en su área**, en este orden:
 
 Reglas del auditor:
 
-- **Puede instalar lo que necesite** (navegador, `curl`, `jq`, datos de demo), pero prefiere lo efímero o fuera del repo; si algo queda en el repo, lo anota y lo limpia al terminar.
+- **No instala nada dentro del repo**, igual que el recon: las herramientas viven fuera del árbol y quedan declaradas en `entorno.md`. Tampoco commitea.
 - **No modifica código de producción.** Si para probar hace falta un dato o un usuario, se crea en la base de prueba o con seeds.
 - **El catálogo de `hd-e2e` es evidencia, no tarea**: anota qué casos ejercitó y qué caminos descubrió; no lo edita.
 - Si el entorno no permite probar algo, lo declara **no verificable**; no lo cuenta como verde.
@@ -222,7 +236,7 @@ Deja dos cosas:
 # Auditoría — <área>
 Modo: UI | API (navegador no disponible: <motivo>)
 Veredicto: OK | CON_FALLOS
-- [severidad] <flujo> — pasos exactos — esperado — obtenido — evidencia (captura/log/ruta)
+- [alta|media|baja] <flujo> — pasos exactos — esperado — obtenido — evidencia (captura/log/ruta)
 
 ## No verificado
 - <lo que no se pudo probar en esta área>: residual declarado, no verde
@@ -238,6 +252,8 @@ Veredicto: OK | CON_FALLOS
 
 - Un solo `reports/auditoria-visual.md`: deduplicá por flujo, ordená por severidad y poné el área delante de cada fallo.
 - **Veredicto**: `OK` si ninguna área reportó fallos; `CON_FALLOS` si al menos una los reportó; **`NO_VERIFICABLE`** si el recon no consiguió entorno ni modo API. Ese último frena el cierre y se reporta al humano: no es verde.
+- **Verificá el árbol**: `git status --porcelain` contra `reports/auditoria/arbol-antes.txt`. Una diferencia **fuera de `.hd/`** es residuo del entorno: se revierte, se anota en el reporte y se corrige donde se originó (el repo no es del auditor).
+- **Commiteá la evidencia acá**, con el veredicto y antes de decidir si hay corrección: `hd(<trabajo>): auditoría visual — reportes y evidencia`. Si el trabajo se frena en este punto, lo que prueba por qué queda adentro del repo. Script, log, capturas y reportes; video, nunca.
 - Un fallo sin pasos reproducibles no se manda al fixer: se devuelve **una vez** al área que lo reportó.
 
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
@@ -269,7 +285,8 @@ Con el gate verde, lanzá **los mismos roles por área con los mismos scripts** 
 - primero **re-ejecutá los scripts de la primera pasada** (`reports/evidencia/<área>/recorrido.<ext>`): mismos flujos, mismos controles, mismos estados y bordes, mismas capturas. La re-prueba es barata porque el recorrido ya está escrito;
 - después sumá a cada script los pasos de los fallos corregidos en su área, con los pasos originales, y corré **el recorrido entero** de nuevo;
 - **presupuesto: el tiempo de los scripts más 5 minutos o 6 turnos por área**, con techo de 10 minutos por área si la primera pasada fue grande. No se re-explora: se re-ejecuta;
-- cada área deja `reports/auditoria/<área>-reprueba.md` y el orquestador consolida en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`, con los logs de los recorridos como evidencia.
+- cada área deja `reports/auditoria/<área>-reprueba.md` y el orquestador consolida en `.hd/<trabajo>/reports/auditoria-visual-reprueba.md`, con los logs de los recorridos como evidencia;
+- **commiteá la re-prueba** con su veredicto: `hd(<trabajo>): re-prueba visual — veredicto y evidencia`. La evidencia no espera al cierre.
 
 - **OK**: todo verde. Anotá el veredicto en `review-progress.md` y pasá al cierre.
 - **CON_FALLOS**: **freno real**. Reportá al humano con diagnóstico: qué falló, qué se intentó y por qué no alcanzó. No hay segunda corrección ni segunda re-prueba automática.

@@ -50,7 +50,7 @@
      Buscar: seguridad, bugs lógicos, trampas del lenguaje, desviaciones
      spec/plan, comportamiento esperado, prototipo, estándares, footprints. -->
 
-1. [severidad] <hallazgo> — archivo:línea — <por qué> — <cómo verificarlo>
+1. [alta|media|baja] <hallazgo> — archivo:línea — <por qué> — <cómo verificarlo>
 
 ---
 
@@ -63,7 +63,7 @@
 
 **Recon**: recon-auditoria — .hd/<trabajo>/reports/auditoria/entorno.md
 **Modo**: UI | API (navegador no disponible: <motivo>) — decidido en el recon
-**Entorno**: <comando de arranque, puerto, usuarios, seeds, qué se instaló>
+**Entorno**: <comando de arranque, puerto, usuarios, seeds> · nada instalado dentro del repo; herramientas en <ruta fuera del árbol>
 **Presupuesto usado**: recon <min/turnos> · auditorías <min/turnos por área> · consolidación <min/turnos>
 
 ### Áreas
@@ -77,10 +77,12 @@
 
 **Reporte consolidado**: .hd/<trabajo>/reports/auditoria-visual.md
 **Evidencia**: .hd/<trabajo>/reports/evidencia/<área>/recorrido.<ext>
+**Evidencia commiteada**: <sha de "auditoría visual — reportes y evidencia">
+**Árbol**: sin residuos del entorno (verificado contra reports/auditoria/arbol-antes.txt) | diferencia revertida: <qué era>
 
 ### Fallos
 
-1. [severidad] <flujo> — <pasos> — <esperado> — <obtenido> — <evidencia>
+1. [alta|media|baja] <flujo> — <pasos> — <esperado> — <obtenido> — <evidencia>
 
 ### No verificable
 
@@ -126,6 +128,7 @@
 
 **Reporte**: .hd/<trabajo>/reports/auditoria-visual-reprueba.md
 **Alcance**: feature completa, no solo los fallos: los mismos roles y los mismos scripts por área.
+**Evidencia commiteada**: <sha de "re-prueba visual — veredicto y evidencia">
 **Presupuesto usado**: <tiempo de los scripts + min/turnos por área>
 
 ### Resultado
