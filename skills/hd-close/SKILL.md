@@ -28,6 +28,7 @@ Una decisión ya tomada no se vuelve a consultar: preguntar por lo que el framew
 
 - `hd-review` cerró en verde (precondición): revisores sin hallazgos abiertos, corrección commiteada y re-prueba visual OK.
 - Leé del `spec.md` y del `technical_spec.md`, por repo: `Rama` (y si es nueva), `Remote`, `commit base` y `Respaldo`.
+- **Comentarios**: el diff del trabajo (`git diff <commit base>..HEAD -- . ':(exclude).hd'`) no agrega líneas de comentario, salvo directivas de herramienta, shebang y licencia. Si aparecieron, se corrigen con un `fixer` antes de cerrar y se anota en el ledger; si el humano pidió dejarlos, se reporta como desviación aceptada.
 - Verificá que el **código** está commiteado en la rama (los commits por ola) y que lo único pendiente, si hay algo, son artefactos `.hd/`. `git status` no debe mostrar cambios de código sin commitear.
 - Verificá que `review-progress.md` tiene el veredicto global en verde, con el bloque de revisión por ola, la corrección y la re-prueba visual.
 - Buscá **residuos del entorno de auditoría**: si `git status` muestra algo fuera de `.hd/` que no venga de las olas ni de las correcciones —un `package-lock.json`, un `node_modules`, un `.env` de prueba—, **FRENÁ** y averiguá de dónde salió antes de commitear nada. El repo no es del auditor.
