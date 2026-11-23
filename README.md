@@ -1,11 +1,11 @@
 # Hiper-driven (HD)
 
-**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido, confirma los comportamientos nuevos y aprueba el resumen y el prototipo. Después, la cadena corre sola hasta el cierre. Fuera de la cadena hay dos puertas más para el humano: la vía rápida (`hd-fast-implement`) y la suite real (`hd-e2e`), la app entera probada como una persona.
+**HD** es un framework de trabajo con agentes. Un **orquestador** descubre, especifica, orquesta, commitea y cierra; los **subagentes** investigan, arman el prototipo, implementan, revisan, auditan visualmente y corrigen. El humano aparece **solo en discovery**: trae el pedido, confirma los comportamientos nuevos y aprueba el resumen y el prototipo. Después, la cadena corre sola hasta el cierre. Fuera de la cadena hay tres puertas más para el humano: la vía rápida (`hd-fast-implement`), la suite real (`hd-e2e`) —la app entera probada como una persona— y la lupa (`hd-logic-comprehension`), que explica visualmente cualquier flujo que se quiera entender.
 
 Dos pilares:
 
 - **SDD — Spec Driven Development**: ningún código se escribe sin un contrato que diga *qué*, *por qué* y *cómo se valida*.
-- **Verificación en tres capas**. **Estática**: build + lint + estándares en cada ola. **Semántica**: revisores independientes leen el diff contra el spec. **Visual**: un auditor levanta el proyecto entero y prueba la feature como un humano, de punta a punta. **No hay tests**: no se escriben, no se piden y no se aceptan.
+- **Verificación en tres capas**. **Estática**: build + lint + estándares en cada ola. **Semántica**: revisores independientes leen el diff contra el spec. **Visual**: un recon levanta el proyecto y entre 2 y 4 auditores prueban la feature por áreas, como un humano, con presupuesto en turnos. El alcance es la feature, nunca la app entera: eso es `hd-e2e`, y lo corre el humano. **No hay tests**: no se escriben, no se piden y no se aceptan.
 
 El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, esa confianza viene de contratos versionados, olas chicas, memoria compartida, evidencia fresca y revisores que nunca son opcionales.
 
@@ -29,7 +29,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
                                  |
                             fixer de código
                                  |
-                            auditor visual (UI o API)
+                    recon → auditores por área (UI o API)
                                  |        (si la auditoría falla)
                               fixers  ←──┘
 ```
@@ -42,7 +42,8 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 | `qa-artefactos` | Audita el paquete antes de implementar | No escribe el paquete |
 | **Team** (`dev-<zona>`) | Implementa su zona en el worktree compartido, en paralelo con el resto, y deja sus decisiones en el tablero | No sale de su zona sin anotarlo, **no ejecuta scripts**, no commitea |
 | **Revisor** (`revisor-ola-<N>`) | Lee el diff de su ola y escribe hallazgos | No corrige, no ejecuta |
-| **Auditor visual** (`auditor-visual`) | Levanta el proyecto y prueba como un humano: UI, o API con `curl`/`fetch` si no hay frontend | No edita el producto |
+| **Recon** (`recon-auditoria`) | Levanta y verifica el entorno, consigue credenciales, decide modo UI o API y propone las áreas | No audita la feature |
+| **Auditor de área** (`auditor-auditoria-<área>`) | Prueba su área como un humano: UI, o API con `curl`/`fetch` si no hay frontend | No sale de su área, no edita el producto |
 | **Fixer** (`fixer-*`) | Corrige hallazgos, uno por uno | No rediseña, no audita, no commitea |
 
 **El orquestador conduce; los subagentes hacen.** Ningún cambio de código de producción lo escribe el orquestador: siempre lo hace un implementador o un fixer.
@@ -58,7 +59,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 
 ## Una sola conversación, sin humano en el medio
 
-Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final. Fuera de la cadena, en cambio, es él quien decide cuándo correr `hd-fast-implement` o `hd-e2e`.
+Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final. Fuera de la cadena, en cambio, es él quien decide cuándo correr `hd-fast-implement` o `hd-e2e`; la lupa (`hd-logic-comprehension`) se activa sola cuando pide entender algo.
 
 La fuente es el paquete, no el chat: el orquestador relee el spec, el technical spec y los planes, y verifica el código antes de despachar.
 
@@ -109,15 +110,15 @@ Por ola: team → consolidación → commit → gate (build + lint + estándares
 Dos subfases, **una después de la otra**:
 
 1. **Revisores de código**: uno por ola, **tantos como permita el harness y todos en una sola tanda**. Antes de despachar, el orquestador avisa al humano cuántos agentes lanza y el costo en tokens. Leen el diff contra el spec, el technical spec y el plan, y escriben **solo hallazgos**: sin prosa, sin arreglos, sin ejecutar nada. Si hay hallazgos, **un fixer** los corrige, el orquestador commitea y corre el gate.
-2. **Auditor visual**: recién entonces, sobre el árbol ya corregido, levanta el proyecto entero y lo prueba como un humano. Si hay frontend, por la UI (login, navegación, cada control, estados, bordes, persistencia). Si no hay frontend, **contra la API con `curl`/`fetch`, como con Postman o APIdog**: auth real, secuencias completas, códigos de error, permisos y persistencia. **Si el navegador no arranca** (sin Docker, `spawn` bloqueado, faltan dependencias, no hay display), cae a **modo API** y declara qué flujos de UI quedaron sin probar como residuales. Lo que no puede probar lo declara no verificable.
+2. **Auditoría visual en tres tramos**: recién entonces, sobre el árbol ya corregido, **un recon** acotado (5 min / 8 turnos) levanta y verifica el entorno, consigue credenciales, **decide el modo** y propone las áreas. Después, **entre 2 y 4 auditores por área en paralelo** (6 min / 8 turnos cada uno) prueban lo suyo como un humano: si hay frontend, la UI (login, navegación, controles del flujo, estados, bordes, persistencia); si no, **contra la API con `curl`/`fetch`, como con Postman o APIdog** (auth real, secuencias completas, códigos de error, permisos y persistencia). **Si el navegador no arranca** (sin Docker, `spawn` bloqueado, faltan dependencias, no hay display), cae a **modo API** y declara qué flujos de UI quedaron sin probar como residuales. El orquestador consolida en un solo reporte con veredicto `OK`, `CON_FALLOS` o `NO_VERIFICABLE`, y **cada pasada commitea su evidencia con el veredicto**: script, log y capturas no esperan al cierre.
 
-Revisores y auditor visual se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos. Los revisores además marcan el **drift** del catálogo de `hd-e2e` (cambió el comportamiento y no el caso) y el auditor anota qué casos ejercitó y qué caminos encontró sin caso: el catálogo se mantiene entre corridas, no solo cuando alguien lo corre.
+Revisores, recon y auditores se despachan con el **modelo de mayor calidad disponible y permitido** de la estrategia: sin tests, su lectura es la garantía. Esta fase no vuelve a preguntar por modelos. Los revisores además marcan el **drift** del catálogo de `hd-e2e` (cambió el comportamiento y no el caso) y el auditor anota qué casos ejercitó y qué caminos encontró sin caso: el catálogo se mantiene entre corridas, no solo cuando alguien lo corre.
 
-Si la auditoría visual encuentra fallos, **un fixer** los corrige, el orquestador commitea y corre el gate, y **el mismo auditor visual re-prueba la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
+Si la auditoría visual encuentra fallos, **un fixer** los corrige, el orquestador commitea y corre el gate, y **los mismos roles re-ejecutan los mismos scripts sobre la feature completa**. Si sale bien, se cierra; si no, freno real con diagnóstico. No hay segunda ronda.
 
 ### Fase 5 — Cierre (automática)
 
-Cuando la revisión y la re-prueba están en verde: limpiar worktrees y stashes, commitear los artefactos que falten, pushear la rama de trabajo **solo si es nueva**, borrar la rama de respaldo y rendir cuenta de los rulings. Los commits por ola se conservan. **Nunca `--force`; `main` y ramas ajenas no se pushean sin autorización.**
+Cuando la revisión y la re-prueba están en verde: limpiar worktrees y stashes, **armar siempre el resumen visual del cambio** —una web estática de tres archivos (`index.html`, `styles.css`, `app.js`) en `.hd/<trabajo>/resumen-visual/` que muestra el antes y el después, el flujo del comportamiento nuevo, los arreglos, las piezas y cómo probarlo—, commitear los artefactos que falten junto con esa página, pushear la rama de trabajo **solo si es nueva**, borrar la rama de respaldo y rendir cuenta de los rulings. Los commits por ola se conservan. **Nunca `--force`; `main` y ramas ajenas no se pushean sin autorización.**
 
 ## El paquete de contrato
 
@@ -135,6 +136,7 @@ Todo vive en `.hd/`:
     ├── waves.md             # plan de olas y teams (fase 3)
     ├── ledger.md            # decisiones, evidencia, rulings
     ├── review-progress.md   # QA del paquete, revisión, auditoría visual y re-prueba
+    ├── resumen-visual/      # web que explica el cambio (fase 5): index.html, styles.css, app.js
     ├── reports/             # reportes de implementadores, revisores, auditor y fixers
     └── logs/                # salidas largas de build/lint (no se commitea)
 ```
@@ -150,6 +152,7 @@ Todo vive en `.hd/`:
 | `waves.md` | orquestador | re-derivación, teams por ola, olas, enmiendas y rulings |
 | `ledger.md` | todos | baseline, olas, evidencia, pushes, rulings, enmiendas |
 | `review-progress.md` | todos | QA del paquete, revisión por ola, auditoría visual, corrección y re-prueba |
+| `resumen-visual/` | humano | web estática que explica el cambio final: antes/después, flujo, arreglos, piezas, cómo probarlo y rulings |
 
 Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbol de trabajo, para que `git add -A` no se los lleve al commit. Los **logs** tampoco se commitean.
 
@@ -177,8 +180,8 @@ Los **worktrees** no viven acá: van en `.git/hd-wt/<trabajo>/`, fuera del árbo
 | **G0 — Paquete** | `qa-artefactos` | coherencia con lo aprobado, criterios verificables, planes completos, technical spec suficiente, prototipo, teams, sin lógica ni tests | una corrección; si sigue rojo, no se implementa |
 | **G1 — Ola (estático)** | orquestador | build + lint + estándares en la rama consolidada, contra el baseline | una corrección con fixer + `hd-debug`; si sigue rojo, freno real |
 | **G2 — Revisión (semántico)** | un `revisor-ola-<N>` por ola, todos los que permita el harness, en una sola tanda | seguridad, lógica, trampas, desviaciones, comportamiento esperado, prototipo, estándares, footprints | una corrección única con fixer; no hay segunda ronda |
-| **G3 — Auditoría visual** | `auditor-visual`, **después de G2 y de sus correcciones** | la feature de punta a punta, como un humano: UI, o API con `curl`/`fetch` si no hay frontend (auth, CRUD, errores, permisos, persistencia) | una corrección con fixer; después se re-prueba entera |
-| **G4 — Cierre** | orquestador | revisores sin hallazgos abiertos + re-prueba visual OK + gate limpio | freno real con diagnóstico al humano |
+| **G3 — Auditoría visual** | `recon-auditoria` + 2-4 `auditor-auditoria-<área>`, **después de G2 y de sus correcciones** | la feature de punta a punta, por áreas: UI, o API con `curl`/`fetch` si no hay frontend (auth, CRUD, errores, permisos, persistencia) | una corrección con fixer; después se re-prueba entera |
+| **G4 — Cierre** | orquestador | revisores sin hallazgos abiertos + re-prueba visual OK + gate limpio + resumen visual abierto sin errores | freno real con diagnóstico al humano |
 
 **Los revisores y el auditor visual nunca son opcionales.** Sin tests, son la única lectura del trabajo. La independencia es parte del gate: el que implementa no revisa, el que revisa no corrige, el que corrige no audita.
 
@@ -208,8 +211,10 @@ La suite `hd-e2e` **no es un gate de la cadena**: la corre el humano cuando quie
 20. **La aprobación de producto es una sola**: el resumen y el prototipo que el humano aprueba en discovery. Después no hay aprobaciones: el QA audita el paquete y el auditor visual valida el comportamiento.
 21. **Una conversación, y la fuente es el paquete.** Lo que no se salta es la relectura del paquete y la verificación del código antes de despachar.
 22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
-23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva.
+23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva. El cierre entrega además el cambio explicado en `.hd/<trabajo>/resumen-visual/`.
 24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. El catálogo solo lista modelos: **los precios se verifican buscando en internet** (páginas oficiales), nunca consultándole al provider, y un precio no verificable se trata como desconocido. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
+25. **El cierre se explica solo.** Siempre se genera `.hd/<trabajo>/resumen-visual/` —HTML, CSS y JS estáticos— con el antes y el después, el flujo del comportamiento nuevo, los arreglos, las piezas y cómo probarlo. No se pregunta, no se omite y no depende del tamaño del trabajo.
+26. **Entender no es tocar.** La lupa (`hd-logic-comprehension`) es solo lectura: documenta el flujo, las reglas, los bordes y los hallazgos en una web, y no arregla nada. El arreglo, si se pide, va por `hd-debug` o la vía rápida.
 
 ## La suite real: `hd-e2e`
 
@@ -259,6 +264,15 @@ Tiene **cuatro pasos por cambio**:
 
 La vía rápida **no da las garantías de HD**: no hay spec, planes, gate por ola, revisión ni auditoría visual. Hay registro y hay commit, pero la verificación es la prueba del humano.
 
+## La lupa: `hd-logic-comprehension`
+
+Entender una parte de la app también tiene su skill, y no es una fase: **`hd-logic-comprehension`** convierte un pedido de «explicame cómo funciona el flujo de pago» en una **web estática** —HTML, CSS y JS— que muestra el mapa de capas, el flujo paso a paso, las reglas de negocio, los casos borde, los hallazgos (bugs, validaciones faltantes, riesgos) y el impacto. Se guarda en `.hd/logic/<fecha>-<slug>/` y se abre con doble clic.
+
+- **Se activa con el pedido, no con el nombre.** «Explicame», «cómo funciona», «de qué depende», «qué pasa si falla», «qué validaciones faltan» o un onboarding sobre un módulo alcanzan para que el agente la cargue solo; también se puede invocar a mano.
+- **Es solo lectura.** No modifica código de producción, no crea rama, worktree, spec, olas ni tests, y no arregla lo que encuentra. Si el humano pide el arreglo, eso es `hd-debug` o `hd-fast-implement`.
+- **Cada afirmación lleva `archivo:línea`.** Lo que no se pudo verificar va a Límites; los bugs y las validaciones faltantes se separan de las inferencias.
+- **La página es el entregable.** El chat solo resume: qué hace el flujo, los 2-3 hallazgos importantes y la ruta.
+
 ## El costo: dónde se va el tiempo
 
 El costo crece con **el contexto del orquestador**, no con el de sus subagentes: los subagentes nacen limpios y mueren al terminar; el orquestador acumula lo que lee. Cuatro reglas lo mantienen acotado:
@@ -304,15 +318,20 @@ hiper-driven/
     ├── hd-implement/          # Fase 3: olas secuenciales con teams de hasta 5 en un worktree
     │   ├── SKILL.md
     │   └── templates/         # waves.md
-    ├── hd-review/             # Fase 4: revisores por ola + auditor visual + corrección + re-prueba
+    ├── hd-review/             # Fase 4: revisores por ola + recon y auditores por área + corrección + re-prueba
     │   ├── SKILL.md
     │   └── templates/         # review-progress.md
-    ├── hd-close/              # Fase 5: cierre automático, push de rama nueva, limpieza y respaldo
+    ├── hd-close/              # Fase 5: cierre automático, push de rama nueva, limpieza, respaldo y resumen visual
+    │   ├── SKILL.md
+    │   └── templates/         # web del resumen visual (index.html, styles.css, app.js)
     ├── hd-e2e/                # Fuera de la cadena: la suite real (solo humano); mapeo, catálogo y ejecución por rol
     │   ├── SKILL.md
     │   └── templates/         # app-map, casos, reporte de corrida, estado, credenciales
     ├── hd-debug/              # Transversal: causa raíz antes que fix
-    └── hd-fast-implement/     # Vía rápida (fuera de la cadena): pedido directo del humano
+    ├── hd-fast-implement/     # Vía rápida (fuera de la cadena): pedido directo del humano
+    └── hd-logic-comprehension/ # Fuera de la cadena: explica un flujo con una web (mapa, reglas, bordes, hallazgos)
+        ├── SKILL.md
+        └── templates/          # mapa de lógica (index.html, styles.css, app.js)
 ```
 
 ## Instalación

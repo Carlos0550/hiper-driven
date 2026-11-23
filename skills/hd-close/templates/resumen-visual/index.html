@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Resumen visual del cambio: qué se hizo, cómo funciona ahora y qué se arregló.">
+<title>Resumen del cambio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <span class="brand">HD <span class="brand__sep">·</span> cierre</span>
+    <span class="topbar__meta">
+      <span id="topbar-trabajo"></span>
+      <span id="topbar-fecha"></span>
+    </span>
+  </div>
+</header>
+
+<main id="contenido" class="page">
+  <section class="hero">
+    <p class="eyebrow">Resumen visual del cambio</p>
+    <h1 id="hero-titulo">Título del cambio</h1>
+    <p class="lead" id="hero-entradilla"></p>
+    <ul class="chips" id="hero-chips"></ul>
+    <div class="metricas" id="metricas"></div>
+  </section>
+
+  <nav class="toc" aria-label="Secciones del resumen">
+    <a href="#antes-despues">Antes y después</a>
+    <a href="#flujo">Cómo funciona</a>
+    <a href="#arreglos">Arreglos</a>
+    <a href="#piezas">Piezas</a>
+    <a href="#probar">Probar</a>
+    <a href="#decisiones">Decisiones</a>
+    <a href="#artefactos">Artefactos</a>
+  </nav>
+
+  <section class="seccion" id="antes-despues" aria-labelledby="h-antes-despues">
+    <header class="seccion__head">
+      <span class="seccion__num">01</span>
+      <div>
+        <h2 id="h-antes-despues">Antes y después</h2>
+        <p class="seccion__intro">Lo que hacía el sistema y lo que hace ahora, sin leer una línea de código.</p>
+      </div>
+    </header>
+    <div class="comparativa" id="comparativa"></div>
+    <div id="conserva"></div>
+  </section>
+
+  <section class="seccion" id="flujo" aria-labelledby="h-flujo">
+    <header class="seccion__head">
+      <span class="seccion__num">02</span>
+      <div>
+        <h2 id="h-flujo">Cómo funciona ahora</h2>
+        <p class="seccion__intro">El camino completo, paso por paso; cada paso se abre con su detalle.</p>
+      </div>
+    </header>
+    <div class="flujo__barra">
+      <div class="leyenda" id="leyenda" aria-hidden="true"></div>
+      <div id="flujo-toggle"></div>
+    </div>
+    <div id="flujo-actual"></div>
+    <div id="flujo-anterior" hidden></div>
+  </section>
+
+  <section class="seccion" id="arreglos" aria-labelledby="h-arreglos">
+    <header class="seccion__head">
+      <span class="seccion__num">03</span>
+      <div>
+        <h2 id="h-arreglos">Qué se arregló</h2>
+        <p class="seccion__intro">Síntoma, causa y arreglo. Si no hubo arreglos, acá se dice.</p>
+      </div>
+    </header>
+    <div id="arreglos-lista"></div>
+  </section>
+
+  <section class="seccion" id="piezas" aria-labelledby="h-piezas">
+    <header class="seccion__head">
+      <span class="seccion__num">04</span>
+      <div>
+        <h2 id="h-piezas">Piezas que cambiaron</h2>
+        <p class="seccion__intro">Los archivos que explican el cambio, agrupados por repo. El resto queda en una lista plegable.</p>
+      </div>
+    </header>
+    <div id="piezas-lista"></div>
+  </section>
+
+  <section class="seccion" id="probar" aria-labelledby="h-probar">
+    <header class="seccion__head">
+      <span class="seccion__num">05</span>
+      <div>
+        <h2 id="h-probar">Cómo probarlo</h2>
+        <p class="seccion__intro">Pasos concretos para reproducir el comportamiento nuevo, con el resultado que deberías ver.</p>
+      </div>
+    </header>
+    <div id="pruebas"></div>
+  </section>
+
+  <section class="seccion" id="decisiones" aria-labelledby="h-decisiones">
+    <header class="seccion__head">
+      <span class="seccion__num">06</span>
+      <div>
+        <h2 id="h-decisiones">Decisiones y límites</h2>
+        <p class="seccion__intro">Lo que se decidió en tu nombre, lo que quedó afuera y lo que no se pudo verificar.</p>
+      </div>
+    </header>
+    <div class="decisiones" id="decisiones-lista"></div>
+  </section>
+
+  <section class="seccion" id="artefactos" aria-labelledby="h-artefactos">
+    <header class="seccion__head">
+      <span class="seccion__num">07</span>
+      <div>
+        <h2 id="h-artefactos">Artefactos del trabajo</h2>
+        <p class="seccion__intro">El paquete completo, por si querés el detalle: contrato, planes, olas, revisión y ledger.</p>
+      </div>
+    </header>
+    <div class="artefactos" id="artefactos-lista"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="page footer__inner">
+    <p>Generado por <code>hd-close</code> el <span id="footer-fecha"></span>.</p>
+    <p>Datos tomados del diff, el spec, el ledger y la revisión. Esta página no forma parte del producto.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
