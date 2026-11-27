@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mapa visual de lógica: cómo funciona una feature, sus reglas, casos borde y hallazgos.">
+<title>Mapa de lógica</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <span class="brand">HD <span class="brand__sep">·</span> lupa</span>
+    <span class="topbar__meta">
+      <span id="topbar-feature"></span>
+      <span id="topbar-fecha"></span>
+    </span>
+  </div>
+</header>
+
+<main id="contenido" class="page">
+  <section class="hero">
+    <p class="eyebrow">Mapa de lógica</p>
+    <h1 id="hero-feature">Feature</h1>
+    <p class="lead" id="hero-resumen"></p>
+    <ul class="chips" id="hero-chips"></ul>
+    <div class="metricas" id="metricas"></div>
+  </section>
+
+  <nav class="toc" aria-label="Secciones del mapa">
+    <a href="#mapa">Mapa</a>
+    <a href="#flujo">Flujo</a>
+    <a href="#reglas">Reglas</a>
+    <a href="#bordes">Bordes</a>
+    <a href="#hallazgos">Hallazgos</a>
+    <a href="#impacto">Impacto</a>
+    <a href="#archivos">Archivos</a>
+    <a href="#limites">Límites</a>
+  </nav>
+
+  <section class="seccion" id="mapa" aria-labelledby="h-mapa">
+    <header class="seccion__head">
+      <span class="seccion__num">01</span>
+      <div>
+        <h2 id="h-mapa">El mapa</h2>
+        <p class="seccion__intro">Qué piezas participan y cómo se conectan: de la entrada a los datos y los servicios externos.</p>
+      </div>
+    </header>
+    <div id="mapa-lista"></div>
+  </section>
+
+  <section class="seccion" id="flujo" aria-labelledby="h-flujo">
+    <header class="seccion__head">
+      <span class="seccion__num">02</span>
+      <div>
+        <h2 id="h-flujo">El flujo, paso a paso</h2>
+        <p class="seccion__intro">El camino principal; cada paso se abre con archivos, datos y caminos alternativos.</p>
+      </div>
+    </header>
+    <div class="flujo__barra">
+      <div class="leyenda" id="leyenda" aria-hidden="true"></div>
+    </div>
+    <div id="flujo-lista"></div>
+  </section>
+
+  <section class="seccion" id="reglas" aria-labelledby="h-reglas">
+    <header class="seccion__head">
+      <span class="seccion__num">03</span>
+      <div>
+        <h2 id="h-reglas">Reglas de negocio</h2>
+        <p class="seccion__intro">Las reglas que el código realmente aplica, con la línea que las sostiene.</p>
+      </div>
+    </header>
+    <div id="reglas-lista"></div>
+  </section>
+
+  <section class="seccion" id="bordes" aria-labelledby="h-bordes">
+    <header class="seccion__head">
+      <span class="seccion__num">04</span>
+      <div>
+        <h2 id="h-bordes">Casos borde</h2>
+        <p class="seccion__intro">Los casos que no son el camino feliz: qué debería pasar, qué pasa hoy y con qué evidencia.</p>
+      </div>
+    </header>
+    <div id="bordes-lista"></div>
+  </section>
+
+  <section class="seccion" id="hallazgos" aria-labelledby="h-hallazgos">
+    <header class="seccion__head">
+      <span class="seccion__num">05</span>
+      <div>
+        <h2 id="h-hallazgos">Hallazgos</h2>
+        <p class="seccion__intro">Bugs, validaciones faltantes y riesgos encontrados leyendo el código. No se corrigió nada.</p>
+      </div>
+    </header>
+    <div id="filtros" class="filtros"></div>
+    <div id="hallazgos-lista"></div>
+  </section>
+
+  <section class="seccion" id="impacto" aria-labelledby="h-impacto">
+    <header class="seccion__head">
+      <span class="seccion__num">06</span>
+      <div>
+        <h2 id="h-impacto">Qué depende de esto</h2>
+        <p class="seccion__intro">Quién consume el flujo, qué se rompe si cambia y qué datos toca.</p>
+      </div>
+    </header>
+    <div id="impacto-lista"></div>
+  </section>
+
+  <section class="seccion" id="archivos" aria-labelledby="h-archivos">
+    <header class="seccion__head">
+      <span class="seccion__num">07</span>
+      <div>
+        <h2 id="h-archivos">Archivos clave</h2>
+        <p class="seccion__intro">Los archivos que hay que leer para entender el flujo, con su rol y su capa.</p>
+      </div>
+    </header>
+    <div id="archivos-lista"></div>
+  </section>
+
+  <section class="seccion" id="limites" aria-labelledby="h-limites">
+    <header class="seccion__head">
+      <span class="seccion__num">08</span>
+      <div>
+        <h2 id="h-limites">Límites de esta lectura</h2>
+        <p class="seccion__intro">Qué quedó fuera, qué es inferencia y qué no se pudo verificar.</p>
+      </div>
+    </header>
+    <div id="limites-lista"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="page footer__inner">
+    <p>Generado por <code>hd-logic-comprehension</code> el <span id="footer-fecha"></span>.</p>
+    <p>Lectura estática: esta página explica el código, no lo modifica ni forma parte del producto.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
