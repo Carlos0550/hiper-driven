@@ -98,8 +98,9 @@
 
 ## Ola 0 — contratos
 
-<!-- Solo si hay contratos nuevos que otras olas consumen. Va sola, con un
-     team mínimo o un agente, y se cierra antes de la Ola 1.
+<!-- Solo si hay contratos nuevos que otras olas consumen. Va sola (sin team),
+     con un agente o team mínimo, y se cierra antes de la Ola 1: commit + gate.
+     La Ola 1 se despacha enseguida; no hay pausa ni revisión humana.
      Si no hay, "No aplica". -->
 
 - **Aplica**: sí | no

@@ -58,7 +58,7 @@ El modo define la maquinaria, no el rigor. Viene definido desde discovery; si el
 
 Si es mega cambio, anotá UNA vez en el ledger (y en el reporte final) que:
 
-> En este modo no hay garantía de que todo salga bien a la primera. Por eso el trabajo se parte en olas chicas que se revisan una por una: es más barato encontrar un error en la ola 1 que en la ola 4, cuando ya hay código encima.
+> En este modo no hay garantía de que todo salga bien a la primera. Por eso el trabajo se parte en olas chicas: si algo sale mal, queda contenido en una ola y no se multiplica. La revisión es **una sola, al final** (fase 4), con un revisor por ola; no hay revisión ni aprobación humana después de cada ola.
 
 Anotá el modo en el spec, en el technical spec y en el ledger.
 
@@ -138,7 +138,7 @@ Cada plan declara, con valores exactos (sin globs, sin "y archivos relacionados"
 
 **Estructura de olas (mega cambio):**
 
-1. **Ola 0 — Contratos** (solo si hay contratos nuevos que otras olas consumen): tipos, esquemas, firmas, esqueleto inicial, migraciones de contrato. **Va sola y se revisa antes de seguir**: contrato mal = todo lo demás mal.
+1. **Ola 0 — Contratos** (solo si hay contratos nuevos que otras olas consumen): tipos, esquemas, firmas, esqueleto inicial, migraciones de contrato. **Va sola (sin team) y se cierra antes de seguir**: commit + gate de la ola. No hay revisión ni aprobación humana acá: el contrato ya se aprobó en discovery y la revisión es la fase 4; contrato mal = todo lo demás mal.
 2. **Olas siguientes**: secuenciales. Cada ola lleva un team de hasta 5 agentes; el paralelismo vive dentro de la ola, no entre olas.
 3. **Ola de datos**: todo lo que mueve datos existentes va en **su propia ola, al final, nunca en paralelo**. Antes: confirmar datos en producción, respaldo y prueba en seco.
 

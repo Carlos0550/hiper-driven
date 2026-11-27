@@ -126,8 +126,8 @@ Armá la matriz:
 
 Reglas:
 
-- **Olas secuenciales.** Se lanza una ola cuando la anterior está cerrada: commit hecho, gate verde, worktree borrado. Es más fácil contener un daño en una ola que en cinco a la vez.
-- **Ola 0 — contratos**: solo si hay contratos nuevos que otras olas consumen. Va sola, con un team mínimo (o un agente), y se cierra antes de lanzar la Ola 1.
+- **Olas secuenciales.** Se lanza una ola cuando la anterior está cerrada: commit hecho, gate verde, worktree borrado. **La siguiente arranca sola**: cerrar una ola no es un punto de entrega. Es más fácil contener un daño en una ola que en cinco a la vez.
+- **Ola 0 — contratos**: solo si hay contratos nuevos que otras olas consumen. Va sola porque no se parte en team —un agente o un team mínimo—, **no porque espere a nadie**: al cerrar con commit, gate verde y worktree borrado, la Ola 1 se despacha en el mismo flujo. No hay reporte, revisión ni aprobación intermedia: los rulings van al ledger.
 - **Team por ola**: 2 a 5 agentes cuando el trabajo se puede partir; un solo agente si la pieza es indivisible, con el motivo escrito.
 - **El corte es por piezas que arrancan juntas.** Antes de despachar, contá cuántas piezas pueden empezar **sin esperar a nadie**. Si son menos de dos, no hay team: es una fila. Re-cortá por otra dimensión (por archivo, por pantalla, por endpoint, por zona del árbol) hasta que haya trabajo simultáneo. Una pieza que depende de otra va en la misma zona que su dependencia o en la ola siguiente; nunca como agente que espera sentado.
 - **Zonas, no archivos sueltos.** Por agente: qué archivos **crea**, qué archivos **modifica y en qué región** (símbolo, función, bloque, con su ancla), qué archivos **comparte y con quién**, y qué **no toca**. Dos agentes pueden compartir un archivo si cada uno es dueño de una región distinta y declarada; lo que no puede pasar es que dos editen la misma región sin que quede escrito.
@@ -280,13 +280,13 @@ Corré en la rama consolidada, en este orden, con la salida a log:
 - Actualizá el ledger: `Ola N: base <sha>`, `team`, `zonas`, `worktree`, `consolidada <sha>`, `gate <resultado>`, `corrección <sha>`, `estado por agente (LISTO/TRABADO y por qué)`, `Push: ...`.
 - Actualizá `waves.md`: estado `cerrada`, commit y gate.
 - Borrá el worktree de la ola (`git worktree remove --force` + `git worktree prune`). Ningún worktree sobrevive a su ola.
-- Pasá a la siguiente ola.
+- Pasá a la siguiente ola sin pausa ni reporte: la secuencia la marca el gate, no el humano.
 
-**Si una ola no cierra, no se lanza la siguiente.** La dependencia no es solo de archivos: es de evidencia. La ola siguiente espera a que la anterior tenga gate verde y worktree borrado.
+**Si una ola no cierra, no se lanza la siguiente.** La dependencia no es solo de archivos: es de evidencia. La ola siguiente espera **el gate verde y el worktree borrado, no al humano**.
 
 ## Ola 0 y ola de datos
 
-- **Ola 0 (contratos)**: va sola, con un team mínimo o un agente, y se cierra antes de lanzar la Ola 1. Los contratos son código: no los escribe el orquestador.
+- **Ola 0 (contratos)**: va sola con un team mínimo o un agente —sin paralelismo, no sin continuidad— y se cierra antes de la Ola 1, que se despacha en el mismo flujo. Los contratos son código: no los escribe el orquestador. **No es un checkpoint humano**: el contrato ya se aprobó en discovery, las decisiones nuevas van como `Ruling:` y se sigue.
 - **Ola de datos**: última, sola, nunca en paralelo. Antes de aplicar nada: confirmación del humano de que hay datos en producción, respaldo verificado y prueba en seco. **La migración la escribe un subagente implementador; la aplica el orquestador**, nunca un subagente, después del respaldo y la prueba en seco. Si no hay respaldo o prueba en seco, no arranca.
 
 ## Evidencia, contexto y ledger
@@ -300,7 +300,9 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 - "Compila" exige la salida del build que corriste vos, en la rama consolidada. "Pasa el lint" exige lo mismo.
 - **Los agentes no ejecutan scripts**: su palabra no es evidencia ni siquiera como filtro. El único verde es el gate del orquestador.
 
-**Presupuesto de contexto:**
+**Economía de contexto (no es un tope ni una razón para cortar):**
+
+El contexto del orquestador se cuida para **llegar al final**, no para abandonar a mitad de camino. Si aprieta, se delega más y se lee por ruta; la fase no se entrega a medias, no se saltea una fase para ahorrar y el ledger se escribe antes de seguir.
 
 - No leas reportes completos. Leé el tablero y el reporte de un agente solo si necesitás su estado; para el resto, usá `git status`/`git diff --stat` contra sus zonas.
 - Redirigí toda salida larga a `.hd/<trabajo>/logs/<ola>-<paso>.log` y al contexto traé solo las líneas de fallo.
@@ -322,7 +324,7 @@ NINGUNA AFIRMACIÓN DE ÉXITO SIN EVIDENCIA FRESCA EN ESTE TURNO.
 
 ## Salida
 
-Todas las olas cerradas con evidencia en el ledger → **cargá la skill `hd-review` VOS MISMO** y arrancá la fase 4 en el mismo flujo. No hay pausa humana acá.
+Todas las olas cerradas con evidencia en el ledger → **cargá la skill `hd-review` VOS MISMO** y arrancá la fase 4 en el mismo flujo. No hay pausa humana acá, y tampoco una pausa por contexto: la revisión y la auditoría visual van en la misma corrida.
 
 Los cambios están en la rama **como un commit por ola**, los worktrees borrados y los commits respaldados en `hd-backup/<trabajo>`.
 
@@ -351,6 +353,8 @@ Los cambios están en la rama **como un commit por ola**, los worktrees borrados
 | "Lo arreglo yo, lanzar un agente es overhead" | El orquestador no escribe producción. Despachá un fixer. |
 | "El push falló, freno el trabajo" | Es un respaldo. Anotá y seguí. |
 | "El build no corre en este entorno, sigo igual" | Sin baseline no sabés qué estaba roto antes: el rojo no es atribuible y el verde no es evidencia. Freno real. |
+| "La ola 0 son contratos: conviene que el humano los revise antes de seguir" | No: el contrato se aprobó en discovery y el paquete ya lo fija. Las decisiones de la ola 0 van como `Ruling:` al ledger y se despacha la ola 1; una segunda aprobación contradice la regla de una sola aprobación. |
+| "Cierro la ola 0 y espero instrucciones" | Se despacha la ola 1 en el mismo flujo. Entre olas se espera gate verde y worktree borrado, no una respuesta. |
 | "El humano preguntó por el estado, le cuento todo" | No está en el loop. Lo que encontrás va al ledger y a `waves.md`; el humano lee el resumen final. |
 | "Todos los agentes con el modelo default, total funciona" | El catálogo existe para aprovecharlo: research barato y/o rápido, implementación y fixers calidad/precio, auditoría el mejor. |
 | "El modelo premium es mejor, lo uso y listo" | Más de 5 USD/M en cualquier precio publicado exige permiso explícito. Sin ruling previo se pregunta una sola vez; si no, el mejor dentro del presupuesto. |

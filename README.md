@@ -59,7 +59,7 @@ El objetivo: **poder confiar en un trabajo hecho 100% por agentes**. Sin tests, 
 
 ## Una sola conversación, sin humano en el medio
 
-Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final. Fuera de la cadena, en cambio, es él quien decide cuándo correr `hd-fast-implement` o `hd-e2e`; la lupa (`hd-logic-comprehension`) se activa sola cuando pide entender algo.
+Discovery, paquete, implementación, revisión y cierre son una sola cadena. El humano **no vuelve a aparecer** después de aprobar el resumen y el prototipo: ni para aprobar el spec, ni para probar el comportamiento, ni para dar el OK del cierre. Solo lo despiertan un **freno real** (un cambio de alcance, un contrato roto, un diagnóstico que no converge), la **pregunta única por un modelo premium** sin permiso previo en implementación, o el reporte final. **El presupuesto de contexto no es una pausa**: si al orquestador se le acorta el contexto, delega más, lee por ruta y sigue; nunca entrega la fase a mitad de camino ni saltea la auditoría visual para ahorrar. Fuera de la cadena, en cambio, es él quien decide cuándo correr `hd-fast-implement` o `hd-e2e`; la lupa (`hd-logic-comprehension`) se activa sola cuando pide entender algo.
 
 La fuente es el paquete, no el chat: el orquestador relee el spec, el technical spec y los planes, y verifica el código antes de despachar.
 
@@ -103,7 +103,7 @@ El orquestador re-deriva el paquete contra el código, corre el baseline y arma 
 - **Esta fase no tiene revisor.** La revisión independiente es la fase 4.
 - **Cada agente lleva el modelo que corresponde a su tarea** según el catálogo y la estrategia aprobada en discovery. Si hace falta un premium (más de 5 USD/M) sin permiso previo, se pregunta **una sola vez** —la única excepción a la autonomía de la fase—; si no, se usa el mejor dentro del presupuesto.
 
-Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera. Si el repo mantiene la suite de `hd-e2e`, la ola también deja su catálogo al día: el caso entra en el mismo commit, escrito desde el plan y no desde lo que la app hace.
+Por ola: team → consolidación → commit → gate (build + lint + estándares) → una corrección con fixer si hace falta → worktree borrado. La ola siguiente espera esa evidencia, no al humano: arranca sola. Si el repo mantiene la suite de `hd-e2e`, la ola también deja su catálogo al día: el caso entra en el mismo commit, escrito desde el plan y no desde lo que la app hace.
 
 ### Fase 4 — Revisión y auditoría visual (autónoma, en serie)
 
@@ -194,7 +194,7 @@ La suite `hd-e2e` **no es un gate de la cadena**: la corre el humano cuando quie
 3. **No se asume nada.** Lo existente se lee del código y la memoria; lo nuevo se confirma siempre, aunque parezca obvio. Cada comportamiento nuevo se explica con lujo y detalle y se confirma antes de la aprobación; el resumen final es el contrato real del humano.
 4. **El comportamiento esperado va antes que el código.** El plan fija en prosa qué debe hacer el código —entradas, salidas, casos borde, errores— y el revisor audita contra ese texto. Sin tests, es la única fuente de verdad semántica.
 5. **En HD, el framework no escribe tests.** La vía rápida es otra cosa: solo agrega tests si el humano los pide.
-6. **Ola 0 (contratos) va sola y se cierra antes de seguir.**
+6. **Ola 0 (contratos) va sola y se cierra antes de seguir.** No es un checkpoint humano: al cerrar con commit y gate verde, la ola siguiente se despacha en el mismo flujo; las decisiones van como `Ruling:` al ledger.
 7. **El paralelismo vive dentro de la ola.** Cada ola es un team de 2 a 5 agentes trabajando a la vez en el mismo worktree, con zonas (archivos y regiones) disjuntas, interfaces congeladas y un **tablero** donde cada uno deja sus decisiones; si comparten archivo, hay un dueño por región. **Las olas van secuenciales**: se paraleliza el trabajo, nunca olas enteras.
 8. **La ola de datos va última, sola, nunca en paralelo**: confirmación de datos en producción + respaldo + prueba en seco.
 9. **El orquestador no escribe código de producción.** Lo escriben los implementadores y fixers. **Los subagentes no ejecutan scripts**: no compilan, no lintean, no corren tests ni servidores. Solo el orquestador corre el gate y commitea; la única excepción es el auditor visual, que ejecuta para probar.
@@ -210,7 +210,7 @@ La suite `hd-e2e` **no es un gate de la cadena**: la corre el humano cuando quie
 19. **El orquestador no le narra el día a día al humano.** Lo que encuentra va al ledger y a `waves.md`; el humano recibe el reporte final o un freno real.
 20. **La aprobación de producto es una sola**: el resumen y el prototipo que el humano aprueba en discovery. Después no hay aprobaciones: el QA audita el paquete y el auditor visual valida el comportamiento.
 21. **Una conversación, y la fuente es el paquete.** Lo que no se salta es la relectura del paquete y la verificación del código antes de despachar.
-22. **El contexto es el costo.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo.
+22. **El contexto es el costo, no un tope.** Los planes, diffs y logs se pasan por **ruta**, no por contenido; la salida larga va al log y al contexto solo llegan las líneas de fallo. Se administra para llegar al final del trabajo: quedarse corto de contexto **no** habilita cortar la cadena, entregar una fase a medias ni saltear la auditoría visual.
 23. **El cierre deja el repo limpio**: ni un worktree, ni un stash del trabajo. La rama de respaldo se borra cuando el trabajo ya está en el remoto; si el push falló, se conserva. El cierre entrega además el cambio explicado en `.hd/<trabajo>/resumen-visual/`.
 24. **Cada tarea delegada lleva el modelo que le corresponde** según el catálogo del harness: research el más barato y/o rápido, implementación el mejor calidad/precio, auditoría el de mayor calidad. El catálogo solo lista modelos: **los precios se verifican buscando en internet** (páginas oficiales), nunca consultándole al provider, y un precio no verificable se trata como desconocido. Los premium (más de 5 USD/M en cualquier precio publicado) solo con permiso explícito del humano, registrado en la memoria.
 25. **El cierre se explica solo.** Siempre se genera `.hd/<trabajo>/resumen-visual/` —HTML, CSS y JS estáticos— con el antes y el después, el flujo del comportamiento nuevo, los arreglos, las piezas y cómo probarlo. No se pregunta, no se omite y no depende del tamaño del trabajo.
@@ -236,34 +236,35 @@ Para cambios directos sobre algo ya construido —renombrar, mover una pieza, co
 
 **La invoca el humano**, en cualquier conversación, cuando quiere velocidad y no trazabilidad. HD no la invoca desde ninguna fase: corre autónomo.
 
-Tiene **cuatro pasos por cambio**:
+Tiene **cinco pasos por cambio**:
 
 1. **Preguntas cortas**: solo si el pedido es ambiguo, 1-2 preguntas para entender el porqué o el resultado buscado.
 2. **Enriquecimiento de contexto**: el orquestador lee el código, las convenciones, git y la memoria, y abre el registro del cambio.
 3. **Worker**: un **subagente `worker-fast`** hace el cambio; el orquestador revisa el diff y commitea.
-4. **Entrega**: el humano recibe "probalo así" o "está listo". Nada más.
+4. **Auditoría exprés**: el orquestador levanta el proyecto y un **`auditor-fast`** prueba el cambio por UI o API, una sola pasada. Siempre se intenta; reporta y no bloquea.
+5. **Entrega**: el humano recibe "probalo así" o "está listo", con la auditoría a la vista. Nada más.
 
 | | HD (flujo completo) | Vía rápida |
 |---|---|---|
 | Spec, technical spec y planes | Sí | No |
 | Prototipo | Si hay UI | No |
 | Rama y worktree | Sí | No: trabaja sobre la rama actual |
-| Commit | Uno por ola | Uno por cambio |
-| Revisión | Revisores por ola + auditor visual | **Ninguna**: no hay auditor, revisor ni fixer |
+| Commit | Uno por ola | Uno de código por cambio, más el del registro y la auditoría |
+| Revisión | Revisores por ola + auditor visual | **Auditoría exprés**: un auditor, una pasada, se intenta siempre; no bloquea ni corrige |
 | Gate y checks | Por ola | No hay gate; se corren solo si el humano los pide |
-| Artefactos `.hd/` | Paquete, planes, waves, ledger | Un registro por cambio en `.hd/fast/` |
+| Artefactos `.hd/` | Paquete, planes, waves, ledger | Un registro y su evidencia por cambio en `.hd/fast/` |
 | Invocación | Al inicio del trabajo | Pedido directo del humano, en cualquier conversación |
-| Para qué | Trabajo que tiene que ser confiable | Cambio que el humano asume y prueba |
+| Para qué | Trabajo que tiene que ser confiable | Cambio que el humano asume y prueba, con un mínimo de auditoría |
 
 - **El orquestador no edita código**: delega, revisa que el diff sea el pedido y commitea.
 - **El worker lleva el modelo calidad/precio** del catálogo. **Los precios se buscan en internet**, nunca consultándole al provider; los premium (más de 5 USD/M publicado) solo con permiso del humano.
 - **Cada cambio tiene su commit**; no hay squash ni se reescribe historia.
-- **No hay revisión de ningún tipo**: no hay auditor, ni revisor, ni fixer, ni corrección automática, ni segunda pasada. La confianza la pone el humano al probar.
+- **No hay revisión de código ni gate**: hay una **auditoría exprés** que se intenta siempre —un auditor, un recorrido sobre el cambio— y que reporta sin bloquear. No hay revisor, ni fixer, ni corrección automática, ni segunda pasada. La confianza final la pone el humano al probar.
 - **Nada bloquea**: si el cambio es grande, riesgoso o mezcla objetivos, no se deriva ni se frena — se **registra el riesgo** y se sigue. La decisión de usar la vía rápida es del humano, y la responsabilidad también.
-- **Cada cambio deja un registro** en `.hd/fast/<fecha>-<slug>.md`: qué se pidió, cuándo, por qué, qué se hizo y qué riesgos tiene haberlo hecho por esta vía.
-- **Si el repo mantiene `.hd/e2e/`, el cambio deja el catálogo al día**: el caso entra `NUEVO` en el mismo commit. No es un gate y no se ejecuta: la suite completa la corre solo el humano.
+- **Cada cambio deja un registro** en `.hd/fast/<fecha>-<slug>.md`: qué se pidió, cuándo, por qué, qué se hizo, qué riesgos tiene haberlo hecho por esta vía y qué vio la auditoría exprés.
+- **Si el repo mantiene `.hd/e2e/`, el cambio deja el catálogo al día**: el caso entra `NUEVO` en el mismo commit. No es un gate: la auditoría exprés ejercita el caso tocado, pero la suite completa la corre solo el humano.
 
-La vía rápida **no da las garantías de HD**: no hay spec, planes, gate por ola, revisión ni auditoría visual. Hay registro y hay commit, pero la verificación es la prueba del humano.
+La vía rápida **no da las garantías de HD**: no hay spec, planes, gate por ola ni revisión. Hay registro, hay commit y hay una auditoría exprés que intenta probar el cambio y reporta lo que vio; no reemplaza la revisión ni la auditoría completas, y la verificación final sigue siendo la prueba del humano.
 
 ## La lupa: `hd-logic-comprehension`
 

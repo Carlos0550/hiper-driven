@@ -64,7 +64,7 @@ La fija quien reporta. La consolidación puede **subirla**, nunca bajarla: bajar
 
 ## Reglas duras
 
-1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento. Dentro de sub2, el paralelismo es entre áreas, no entre sub1 y sub2.
+1. **Sub1 y sub2 van en serie, nunca en paralelo.** Primero todas las lecturas de código; después, con los hallazgos corregidos y el gate verde, el comportamiento. Dentro de sub2, el paralelismo es entre áreas, no entre sub1 y sub2. **El contexto del orquestador no corta esta serie**: si se le acorta, anota el estado en el ledger, delega más y sigue; no entrega la fase en el borde de sub1.
 2. **Un revisor por ola, todos los que permita el harness, en una sola tanda.** Nada de cuatro y después otra tanda: se cubre todo el trabajo de una pasada.
 3. **El costo en tokens se avisa.** Antes de despachar los revisores, una línea al humano con cuántos agentes se lanzan y por qué; no se espera respuesta.
 4. **Los revisores escriben solo hallazgos.** Nada de prosa, nada de arreglos: archivo:línea, severidad, por qué y cómo verificarlo. Su veredicto es una línea.
@@ -82,7 +82,8 @@ La fija quien reporta. La consolidación puede **subirla**, nunca bajarla: bajar
 16. **El reparto es por superficies, no por casos.** Entre 2 y 4 áreas disjuntas, todas en una tanda. Si la feature es una sola pantalla indivisible, un solo auditor y el motivo escrito en `review-progress.md`.
 17. **La evidencia viaja con el veredicto.** Cada pasada de auditoría commitea sus reportes, scripts, logs y capturas antes de pasar a la corrección. Un veredicto sin evidencia commiteada no existe.
 18. **Nada se instala dentro del repo.** Ni el recon ni los auditores: las herramientas van fuera del árbol y lo que haya que tocar en el repo lo hace el orquestador. Un `package-lock.json` que apareció solo es un residuo, no un cambio.
-19. **Un comentario en el código es un hallazgo.** Explicativo, TODO, separador o cabecera: se corrige borrándolo, y lo que justificaba va al ledger o al reporte. No se parkea si el archivo ya está en el diff; si no lo está, queda como deuda de limpieza anotada. Excepción: directivas de compilador o linter, shebang y licencia.
+19. **El contexto no es un presupuesto que autorice a cortar.** El orquestador no tiene un tope de contexto que lo habilite a terminar antes: si aprieta, delega más, lee por ruta y sigue. Entregar sub1 y dejar sub2 "para el próximo turno" es la fase a mitad de camino, y no se acepta.
+20. **Un comentario en el código es un hallazgo.** Explicativo, TODO, separador o cabecera: se corrige borrándolo, y lo que justificaba va al ledger o al reporte. No se parkea si el archivo ya está en el diff; si no lo está, queda como deuda de limpieza anotada. Excepción: directivas de compilador o linter, shebang y licencia.
 
 ## Paso 0 — Estado de cierre
 
@@ -176,7 +177,7 @@ El código corregido **no se re-revisa**: la re-prueba visual y el gate son la c
 
 ## Paso 3 — Sub2: auditoría visual
 
-Se lanza **solo ahora**: después de que terminaron todos los revisores y, si hubo hallazgos, después de la corrección y con el gate en verde. Nunca antes, nunca en paralelo con el Paso 1.
+Se lanza **solo ahora**: después de que terminaron todos los revisores y, si hubo hallazgos, después de la corrección y con el gate en verde. Nunca antes, nunca en paralelo con el Paso 1, y **nunca se pausa**: ni el contexto del orquestador ni el cambio de turno la cancelan.
 
 Va en tres tramos —**recon → áreas en paralelo → consolidación**— porque el costo fijo de auditar no es probar: es levantar el proyecto, autenticarse y descubrir cómo se navega. Un solo agente lo paga una vez por pasada y, con el presupuesto que se le da, se queda sin reloj antes de probar.
 
@@ -260,7 +261,9 @@ Veredicto: OK | CON_FALLOS
 
 Cada fallo tiene que poder reproducirse con los pasos escritos. Un "no anda" no sirve.
 
-**Presupuesto de la subfase 2.** El reloj de cada tramo es propio; el del auditor **no** incluye al fixer, al gate ni a la re-prueba.
+**Presupuesto de la subfase 2.** Estos presupuestos son de los **subagentes**: son topes de su tramo, no del orquestador. El orquestador no tiene presupuesto de contexto que lo autorice a cortar la fase.
+
+El reloj de cada tramo es propio; el del auditor **no** incluye al fixer, al gate ni a la re-prueba.
 
 | Tramo | Quién | Presupuesto | Si se agota |
 |---|---|---|---|
@@ -308,6 +311,7 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 - No se corre la suite de la app entera: eso es `hd-e2e`, que invoca el humano y no forma parte de esta fase.
 - No se despacha la auditoría sin `reports/auditoria/entorno.md`: sin entorno y sin credenciales, el auditor explora en vez de inspeccionar.
 - No se parte la auditoría en más de cuatro áreas ni por cantidad de casos: más áreas son más preparación y una consolidación que pierde fallos.
+- No se entrega la fase en el borde de sub1 ni se deja sub2 "para otro turno" por presupuesto de contexto: la auditoría visual es obligatoria y va en la misma corrida.
 - No se le pide al humano que pruebe (el auditor visual lo reemplaza).
 - No se invoca `hd-fast-implement` desde acá: la vía rápida es solo para pedidos directos del humano.
 - No se re-revisa el código después de la corrección: la re-prueba visual y el gate son la confirmación.
@@ -336,6 +340,7 @@ Con los revisores sin hallazgos abiertos, todas las correcciones commiteadas y e
 | "El auditor visual puede tocar el código un poquito" | No: si toca el producto, deja de ser auditor. |
 | "Los revisores pueden corregir lo que encuentran" | No: el que revisa no corrige. El fixer es otro y va después. |
 | "Casi conforme con el spec" | Casi = residual. Se reporta con diagnóstico; no hay ronda 2. |
+| "Me quedé sin presupuesto de contexto: entrego sub1 y sigo en otro turno" | No: el orquestador no tiene ese presupuesto. Si el contexto aprieta, se delega más y se lee por ruta; cortar en el borde de sub1 deja el trabajo a mitad de camino y la auditoría visual sin correr. |
 | "El humano igual va a querer probar" | El humano recibe el trabajo cerrado y un resumen; si quiere probar, prueba, pero no es una puerta del proceso. |
 | "Auditar con el modelo default alcanza" | Sin tests, la auditoría es la única lectura del trabajo: va con el mejor modelo disponible y permitido. El premium sin permiso no se usa; se anota el ruling. |
 | "Con un auditor para todo alcanza" | El costo fijo de levantar y autenticar se paga una vez: el recon. Las áreas prueban en paralelo lo que ya está resuelto. |

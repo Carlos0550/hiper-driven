@@ -198,7 +198,7 @@ El catálogo no se actualiza solo cuando alguien corre la suite: entre corridas 
 | Quién | Qué aporta | Cuándo |
 |---|---|---|
 | `hd-implement` | escribe los casos de lo que la ola cambia, **desde el plan**, y los commitea con la ola | cada ola |
-| `hd-fast-implement` | deja el caso de su cambio en `NUEVO`, sin ejecutarlo | cada cambio directo |
+| `hd-fast-implement` | deja el caso de su cambio en `NUEVO`; la auditoría exprés ejercita el caso tocado, pero no lo marca verde | cada cambio directo |
 | `hd-review` | el revisor marca el drift (cambió el comportamiento y no el caso); el auditor marca qué casos ejercitó y qué caminos descubrió | al cerrar el trabajo |
 | `hd-e2e` | ejecuta el catálogo entero, lo corrige con evidencia y decide el veredicto | cuando el humano lo pide |
 

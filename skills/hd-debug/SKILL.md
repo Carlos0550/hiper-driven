@@ -20,7 +20,7 @@ En HD los subagentes que tocan código **no ejecutan scripts**: no corren build,
 - **hd-implement**: el orquestador corre el build, el lint y los estándares en la rama consolidada.
 - **hd-review**: el auditor visual corre el proyecto y produce la reproducción; el orquestador corre el gate después de la corrección.
 - **Un fixer** recibe la reproducción ya ejecutada (output, pasos y resultado esperado) y razona sobre eso. Si no la recibió, la pide en su reporte; no la inventa ni la ejecuta por su cuenta.
-- La única excepción es el **auditor visual** de `hd-review`, que necesita ejecutar y navegar para probar comportamiento.
+- Las excepciones son el **auditor visual** de `hd-review` y el **`auditor-fast`** de la vía rápida, que necesitan ejecutar y navegar para probar comportamiento.
 
 ## Cuándo se usa
 
